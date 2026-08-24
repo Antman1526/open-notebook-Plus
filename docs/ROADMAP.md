@@ -34,9 +34,11 @@ not a fix.
 `history.txt` — a SurrealDB dump carrying Fernet-encrypted credential blobs — is
 in history for the same reason and was staged for the same purge.
 
-### 1.2 Source visuals ship **disabled**, with no recorded reason
+### 1.2 Source visuals — **RESOLVED: enabled by default** (updated 2026-08-24)
 
-`source_visuals_enabled()` defaults to `False`. Behind that flag:
+`source_visuals_enabled()` now defaults to `True` and resolves through the
+registered `SOURCE_VISUALS_ENABLED` setting (`deeper_notebook/feature_flags.py:37`,
+`deeper_notebook/environment.py:187`). Behind that flag:
 
 | Piece | Size |
 |---|---|
@@ -45,13 +47,13 @@ in history for the same reason and was staged for the same purge.
 | `frontend/.../source-gallery/` | 9 components |
 | Visual proof matrix | 8 cells × 3 themes × 4 viewports |
 
-A complete, heavily tested subsystem that no user sees by default. Either it is
-not ready — in which case *why* belongs in writing — or it should be turned on.
-Right now it is neither, which is the worst of the three.
+The subsystem is on by default; the 2026-08-21 release smoke exercised both the
+default and the Source-Visuals-off configuration (see `Docs/CURRENT-SNAPSHOT.md`
+in the knowledge workspace).
 
-`research_runs_enabled()` is also off, but it gates one `ArtifactRail` surface
-rather than a subsystem; the main Guided Research workspace is live in the
-notebook page.
+`research_runs_enabled()` likewise defaults to `True` now; it gates one
+`ArtifactRail` surface rather than a subsystem, and the main Guided Research
+workspace is live in the notebook page.
 
 ### 1.3 Adopt a formatter — **DONE in v0.8.111**
 
@@ -199,14 +201,12 @@ runs, because it is gated behind `SURREAL_INTEGRATION=1`.
 * **Cold start is ~47s** (down from ~106s after freeing disk). Now dominated by
   a 4.9 GB GGUF cold-mmap, i.e. filesystem-bound rather than code-bound. Keep
   the volume off ~90% full; there is little left to win in code.
-* **`source_visuals_enabled()` is not a registered setting.** It reads
-  `os.environ` directly rather than going through `resolve_env`, so it alone
-  ignores the product's legacy-alias normalization. This looked like a one-line
-  inconsistency and is not: the name is absent from `environment.SETTINGS`, so
-  `resolve_env` cannot resolve it at all — routing it through anyway silently
-  makes the flag unreadable (verified: four tests fail immediately). The real
-  fix is to register the setting, which brings alias handling and deprecation
-  policy with it. Small, real, and larger than it appears.
+* **`source_visuals_enabled()` registration — RESOLVED 2026-08-20** (stale
+  entry corrected 2026-08-24): the flag now resolves through `resolve_env`, and
+  `SOURCE_VISUALS_ENABLED` is registered in `environment.SETTINGS`
+  (`deeper_notebook/environment.py:187`), bringing alias handling and
+  deprecation policy with it. `docs/TODO.md` §3.2 records the completion; this
+  roadmap entry had not been updated to match.
 
 ---
 
