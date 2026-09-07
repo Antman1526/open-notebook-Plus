@@ -6,7 +6,14 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from api.models import AskRequest, AskResponse, SearchRequest, SearchResponse
+from api.models import (
+    AskRequest,
+    AskResponse,
+    DeepResearchRequest,
+    DeepResearchResponse,
+    SearchRequest,
+    SearchResponse,
+)
 from api.source_visual_projection import project_search_source_visuals
 from deeper_notebook.ai.models import Model, model_manager
 from deeper_notebook.database.repository import ensure_record_id, repo_query
@@ -20,6 +27,7 @@ from deeper_notebook.exceptions import (
 from deeper_notebook.feature_flags import source_visuals_enabled
 from deeper_notebook.graphs.ask import graph as ask_graph
 from deeper_notebook.search.fusion import reciprocal_rank_fusion
+from deeper_notebook.search.reranker import rerank_results
 
 router = APIRouter()
 
@@ -181,7 +189,13 @@ async def search_knowledge_base(search_request: SearchRequest):
                         "database and embedding model."
                     ),
                 )
-            results = reciprocal_rank_fusion(legs, limit=search_request.limit)
+            candidate_limit = max(search_request.limit * 2, 20)
+            candidate_results = reciprocal_rank_fusion(legs, limit=candidate_limit)
+            results = await rerank_results(
+                search_request.query,
+                candidate_results,
+                top_n=search_request.limit,
+            )
         elif effective_type == "vector":
             # Check if embedding model is available for vector search
             if not await model_manager.get_embedding_model():
@@ -645,3 +659,85 @@ async def ask_knowledge_base_simple(ask_request: AskRequest, fastapi_request: Re
     except Exception as e:
         logger.error(f"Error in ask simple endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail="Ask operation failed")
+
+
+@router.post("/search/deep-research", response_model=DeepResearchResponse)
+async def deep_research_endpoint(
+    request: DeepResearchRequest,
+    fastapi_request: Request,
+):
+    """Execute a multi-step deep research investigation with hybrid search and reranking."""
+    try:
+        from deeper_notebook.graphs.deep_research import run_deep_research
+
+        strategy_model_id = request.strategy_model
+        synthesis_model_id = request.synthesis_model
+
+        if strategy_model_id:
+            model = await Model.get(strategy_model_id)
+            if not model:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Strategy model {strategy_model_id} not found",
+                )
+        else:
+            try:
+                default_model = (
+                    await model_manager.get_default_model("tools")
+                    or await model_manager.get_default_model("chat")
+                )
+                if default_model:
+                    strategy_model_id = default_model.id
+            except Exception as e:
+                logger.warning(f"Could not load default strategy model: {e}")
+
+        if synthesis_model_id:
+            model = await Model.get(synthesis_model_id)
+            if not model:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Synthesis model {synthesis_model_id} not found",
+                )
+        else:
+            try:
+                final_model = (
+                    await model_manager.get_default_model("reasoning")
+                    or await model_manager.get_default_model("transformation")
+                    or await model_manager.get_default_model("chat")
+                )
+                if final_model:
+                    synthesis_model_id = final_model.id
+            except Exception as e:
+                logger.warning(f"Could not load default synthesis model: {e}")
+
+        result = await run_deep_research(
+            objective=request.objective,
+            notebook_id=request.notebook_id,
+            max_queries=request.max_queries,
+            strategy_model=strategy_model_id,
+            synthesis_model=synthesis_model_id,
+        )
+
+        plan = result.get("plan")
+        plan_dict = plan.model_dump() if hasattr(plan, "model_dump") else (plan or {})
+        evidence = result.get("evidence") or []
+        research_brief = result.get("research_brief") or ""
+        citations = result.get("citations") or []
+        agent_state = result.get("agent_state") or "complete"
+
+        return DeepResearchResponse(
+            objective=request.objective,
+            plan=plan_dict,
+            evidence_count=len(evidence),
+            research_brief=research_brief,
+            citations=citations,
+            agent_state=agent_state,
+        )
+
+    except HTTPException:
+        raise
+    except (NotFoundError, InvalidInputError):
+        raise
+    except Exception as e:
+        logger.error(f"Error in deep_research endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail="Deep research operation failed")

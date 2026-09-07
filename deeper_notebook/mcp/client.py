@@ -244,22 +244,36 @@ def _env_headers() -> Optional[dict[str, str]]:
 
 
 @asynccontextmanager
-async def _open_session(url: str, headers: Optional[dict[str, str]] = None):
-    """Open an MCP ClientSession over streamable HTTP. Each call
-    is a fresh session — MCP's streamable-http transport doesn't
-    keep sessions across requests (per the openchronicle shim's
-    inline comment in v0.4)."""
+async def _open_session(
+    url: str,
+    headers: Optional[dict[str, str]] = None,
+    transport: str = "http",
+    command: Optional[str] = None,
+    args: Optional[list[str]] = None,
+    env: Optional[dict[str, str]] = None,
+):
+    """Open an MCP ClientSession over streamable HTTP or stdio subprocess.
+    Each call is a fresh session."""
     from mcp.client.session import ClientSession
-    from mcp.client.streamable_http import streamablehttp_client
 
+    if transport == "stdio" or (isinstance(url, str) and url.startswith("stdio://")):
+        from mcp.client.stdio import stdio_client, StdioServerParameters
+
+        cmd = command or url.removeprefix("stdio://").strip()
+        cmd_args = args or []
+        params = StdioServerParameters(command=cmd, args=cmd_args, env=env)
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+        return
+
+    from mcp.client.streamable_http import streamablehttp_client
     from deeper_notebook.security.mcp_transport import (
         build_mcp_httpx_client_factory,
         validate_mcp_url,
     )
 
-    # Registry rows can predate URL validation or be edited directly. Resolve
-    # and pin the destination at the transport boundary, preserving explicit
-    # loopback/private plugins while blocking link-local and redirect escapes.
     checked = await validate_mcp_url(url)
     factory = build_mcp_httpx_client_factory(checked)
 
@@ -279,13 +293,27 @@ async def _open_session(url: str, headers: Optional[dict[str, str]] = None):
 class MCPClient:
     url: str
     headers: Optional[dict[str, str]] = field(default=None)
+    transport: str = field(default="http")
+    command: Optional[str] = field(default=None)
+    args: Optional[list[str]] = field(default=None)
+    env: Optional[dict[str, str]] = field(default=None)
 
     def _headers(self) -> Optional[dict[str, str]]:
         return self.headers or _env_headers()
 
+    def _open(self):
+        return _open_session(
+            self.url,
+            self._headers(),
+            transport=self.transport,
+            command=self.command,
+            args=self.args,
+            env=self.env,
+        )
+
     async def list_tool_names(self) -> list[str]:
         async def _do() -> list[str]:
-            async with _open_session(self.url, self._headers()) as s:
+            async with self._open() as s:
                 result = await s.list_tools()
                 return [
                     tool["name"]
@@ -295,26 +323,8 @@ class MCPClient:
         return await asyncio.wait_for(_do(), timeout=_rpc_timeout())
 
     async def list_tools_full(self) -> list[dict[str, Any]]:
-        """v0.8.11 — Return the full tool surface: name, description,
-        and inputSchema (JSON Schema dict) per tool. This lets the
-        chat graph build LangChain `StructuredTool`s with proper
-        `args_schema` Pydantic models so `bind_tools` sends rich
-        function-call schemas to the LLM (real arg names + types)
-        instead of the no-schema fallback (single `input: str`).
-
-        Pre-v0.8.11 the graph's `_resolve_chat_tools` only knew
-        tool names — the LLM had to guess what args to pass, which
-        worked when the server happened to use common arg names
-        like `query`/`url` but failed silently otherwise.
-
-        Returns one dict per tool with keys: name, description,
-        input_schema. Missing/empty inputSchema falls back to a
-        permissive empty object schema (LangChain treats as "no
-        args"), so a tool with no args still binds cleanly.
-        """
-
         async def _do() -> list[dict[str, Any]]:
-            async with _open_session(self.url, self._headers()) as s:
+            async with self._open() as s:
                 result = await s.list_tools()
                 return _bounded_tool_specs(getattr(result, "tools", []))
 
@@ -323,42 +333,12 @@ class MCPClient:
         return await asyncio.wait_for(_do(), timeout=_rpc_timeout())
 
     async def call_tool(self, name: str, arguments: dict) -> dict:
-        """v0.8.13 — return ALL content blocks, not just the first,
-        and preserve the block type so non-text content (images,
-        embedded resources, PDFs) isn't silently dropped.
-
-        Output shape::
-
-            {
-                "ok": True,
-                "text": "concatenated text from all TextContent blocks",
-                "blocks": [
-                    {"type": "text", "text": "..."},
-                    {"type": "image", "mime_type": "image/png",
-                     "data": "<base64...>", "bytes": 12345},
-                    {"type": "resource", "uri": "...", "mime_type": "...",
-                     "text": "..."},
-                    {"type": "unknown", "repr": "<...>"},
-                ],
-            }
-
-        ``text`` is kept at the top level for back-compat with the
-        v0.8.11 closure that just wanted a string for the LLM. Empty
-        result → ``text=""``, ``blocks=[]``.
-
-        Pre-v0.8.13 only the FIRST content block was returned and
-        non-text content was either missing its mime type
-        (ImageContent) or silently lost (EmbeddedResource).
-        """
-        # v0.8.66 (audit MCP-1) — wrap the whole RPC in a timeout. The chat
-        # tool loop already wraps THIS call (v0.8.35e), but the `/test` endpoint
-        # and any direct caller did not; this makes the client safe by default.
         return await asyncio.wait_for(
             self._call_tool_inner(name, arguments), timeout=_rpc_timeout()
         )
 
     async def _call_tool_inner(self, name: str, arguments: dict) -> dict:
-        async with _open_session(self.url, self._headers()) as s:
+        async with self._open() as s:
             result = await s.call_tool(name, arguments=arguments)
             raw_content = getattr(result, "content", [])
             content = _bounded_iterable(raw_content, _MAX_CONTENT_BLOCKS)

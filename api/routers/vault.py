@@ -516,3 +516,37 @@ async def trust_summary(request: Request, vault_id: str) -> VaultTrustSummaryRes
         return VaultTrustSummaryResponse.model_validate(result.model_dump())
     except Exception as exc:
         raise _map_exception(exc) from None
+
+
+@router.post("/vaults/{vault_id}/git/init")
+async def init_git_repo(request: Request, vault_id: str) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import init_vault_git
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return init_vault_git(mount.approved_root)
+
+
+@router.post("/vaults/{vault_id}/git/snapshot")
+async def take_git_snapshot(
+    request: Request, vault_id: str, message: str | None = None
+) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import create_vault_snapshot
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return create_vault_snapshot(mount.approved_root, message=message)
+
+
+@router.get("/vaults/{vault_id}/git/history")
+async def read_git_history(
+    request: Request, vault_id: str, limit: int = Query(15, ge=1, le=100)
+) -> list[dict[str, Any]]:
+    from deeper_notebook.vault.git_sync import get_vault_history
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return get_vault_history(mount.approved_root, limit=limit)

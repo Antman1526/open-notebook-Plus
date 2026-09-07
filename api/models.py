@@ -135,6 +135,23 @@ class AskResponse(BaseModel):
     question: str = Field(..., description="Original question")
 
 
+class DeepResearchRequest(BaseModel):
+    objective: str = Field(..., description="Research question or topic to thoroughly investigate")
+    notebook_id: Optional[str] = Field(None, description="Optional notebook ID to scope search")
+    max_queries: int = Field(default=4, ge=1, le=10, description="Maximum sub-queries to explore")
+    strategy_model: Optional[str] = Field(None, description="Optional model ID for planning inquiry")
+    synthesis_model: Optional[str] = Field(None, description="Optional model ID for final synthesis")
+
+
+class DeepResearchResponse(BaseModel):
+    objective: str = Field(..., description="Original research objective")
+    plan: dict[str, Any] = Field(default_factory=dict, description="Inquiry plan and sub-questions")
+    evidence_count: int = Field(..., description="Number of unique evidence items retrieved")
+    research_brief: str = Field(..., description="Synthesized multi-section research brief")
+    citations: list[dict[str, Any]] = Field(default_factory=list, description="Citations and referenced items")
+    agent_state: str = Field(default="complete", description="Agent state (complete or clarify)")
+
+
 # Models API models
 class ModelCreate(BaseModel):
     name: str = Field(..., description="Model name (e.g., gpt-5-mini, claude, gemini)")

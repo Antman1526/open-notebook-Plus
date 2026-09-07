@@ -55,6 +55,37 @@ def _tail_lines(path: Path, n: int) -> str:
     return "".join(tail).rstrip()
 
 
+def find_companion_draft_model(target_model_path: Path) -> Path | None:
+    """Auto-detect a compatible draft model in the same folder for speculative decoding.
+
+    Pairs larger models (e.g. 7B, 8B, 9B, 3B) with smaller 1B/1.5B draft models
+    from the same family (e.g. Llama-3.2-1B with Llama-3.2-3B, or Qwen2.5-1.5B with 7B).
+    """
+    if not target_model_path.is_file():
+        return None
+    target_name = target_model_path.name.lower()
+    has_large = any(tag in target_name for tag in ("7b", "8b", "9b", "3b", "14b"))
+    if not has_large:
+        return None
+    parent = target_model_path.parent
+    if not parent.is_dir():
+        return None
+    for cand in sorted(parent.glob("*.gguf")):
+        if cand.resolve() == target_model_path.resolve():
+            continue
+        cand_name = cand.name.lower()
+        if "1b" in cand_name or "1.5b" in cand_name:
+            try:
+                if cand.stat().st_size >= MIN_GGUF_BYTES:
+                    if ("llama" in target_name and "llama" in cand_name) or (
+                        "qwen" in target_name and "qwen" in cand_name
+                    ) or ("deepseek" in target_name and "deepseek" in cand_name):
+                        return cand
+            except OSError:
+                continue
+    return None
+
+
 class LlamaCppProvider:
     name: str = "llamacpp"
 
@@ -158,16 +189,17 @@ class LlamaCppProvider:
             "--port",
             str(port),
         ]
-        if self._draft_model_path is not None:
+        draft_candidate = self._draft_model_path if self._draft_model_path is not None else find_companion_draft_model(path)
+        if draft_candidate is not None:
             # Skip silently if the configured path no longer exists or
             # is too small to be a real GGUF — spec'd as non-fatal so a
             # stale env var doesn't take the whole sidecar down. The
             # main model still loads; user just doesn't get the speedup.
             if (
-                self._draft_model_path.is_file()
-                and self._draft_model_path.stat().st_size >= MIN_GGUF_BYTES
+                draft_candidate.is_file()
+                and draft_candidate.stat().st_size >= MIN_GGUF_BYTES
             ):
-                argv.extend(["--model_draft", str(self._draft_model_path)])
+                argv.extend(["--model_draft", str(draft_candidate)])
                 # v0.8.2 Item C — also pass --n_predict_draft if the
                 # operator tuned it; otherwise llama_cpp.server uses
                 # its built-in default (currently 8 tokens / verify).
