@@ -427,6 +427,7 @@ def test_inventory_endpoint_includes_safe_launcher_config_summary(
         "model_dir": str(model_dir),
         "model_dir_matches_inventory": True,
         "active_gguf_model": "",
+        "active_mlx_model": "",
     }
     assert "do-not-leak" not in str(body)
     assert "also-do-not-leak" not in str(body)

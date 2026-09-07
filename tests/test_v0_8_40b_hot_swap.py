@@ -302,3 +302,42 @@ def test_set_active_launcher_rejection_maps_to_400(app, tmp_path, monkeypatch):
         assert "corrupted" in resp.json()["detail"]
     finally:
         srv.stop()
+
+
+def test_set_active_mlx_directory_happy_path(app, tmp_path, monkeypatch):
+    """POST /api/local-models/set-active supports MLX model directories."""
+    model_dir = tmp_path / "models"
+    mlx_dir = model_dir / "MLX" / "mlx-community__test-7b"
+    mlx_dir.mkdir(parents=True)
+    (mlx_dir / "config.json").write_text('{"model_type": "qwen"}')
+    (mlx_dir / "model.safetensors").write_bytes(b"mlx-weights")
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_MODEL_DIR", str(model_dir))
+    monkeypatch.delenv("DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL", raising=False)
+
+    received_paths: list[str] = []
+
+    def _cb(path: str) -> tuple[bool, str]:
+        received_paths.append(path)
+        return True, f"MLX swapped to {path}"
+
+    srv = ControlServer()
+    srv.start()
+    try:
+        srv.register_callback("hot_swap_chat", _cb)
+        monkeypatch.setenv("DEEPER_NOTEBOOK_LAUNCHER_CONTROL_URL", srv.url)
+        monkeypatch.setenv("DEEPER_NOTEBOOK_LAUNCHER_CONTROL_TOKEN", srv.token)
+
+        with TestClient(app) as client:
+            resp = client.post(
+                "/api/local-models/set-active",
+                json={"path": str(mlx_dir)},
+            )
+        assert resp.status_code == 200, resp.json()
+        assert resp.json()["ok"] is True
+        assert len(received_paths) == 1
+        assert received_paths[0] == str(mlx_dir.resolve())
+        assert os.environ["DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL"] == str(mlx_dir.resolve())
+    finally:
+        srv.stop()
+

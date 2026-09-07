@@ -37,7 +37,7 @@ def test_list_ollama_models_returns_names_when_reachable(monkeypatch):
     with patch("httpx.get", return_value=fake_response) as mock_get:
         result = _list_ollama_models()
 
-    mock_get.assert_called_once_with("http://127.0.0.1:11434/api/tags", timeout=1.0)
+    mock_get.assert_called_once_with("http://127.0.0.1:11434/api/tags", timeout=10.0)
     assert result == names
 
 
@@ -155,7 +155,7 @@ def test_auto_register_is_idempotent(tmp_path):
         # v0.8.65i — isolate the Osaurus path. This test predates the v0.8.36
         # Osaurus auto-register, which attempts its own credential POST (so the
         # count drifted 2 → 3) and was being masked by `build-mac-test | tail -3`.
-        patch("desktop.auto_register.register_osaurus_models", return_value=False),
+        patch("desktop.auto_register.register_osaurus_models", return_value=False), patch("desktop.auto_register.register_lmstudio_models", return_value=False),
         patch("httpx.Client") as mock_client_cls,
     ):
         # First run: no existing creds/models
@@ -246,7 +246,7 @@ def test_auto_register_retries_models_fetch_then_registers(tmp_path, monkeypatch
             return_value=["llama3.1:latest"],
         ),
         patch("desktop.auto_register._list_local_ggufs", return_value=[]),
-        patch("desktop.auto_register.register_osaurus_models", return_value=False),
+        patch("desktop.auto_register.register_osaurus_models", return_value=False), patch("desktop.auto_register.register_lmstudio_models", return_value=False),
         patch("httpx.Client", return_value=client),
     ):
         auto_register("http://127.0.0.1:9999", cfg)

@@ -55,7 +55,10 @@ router = APIRouter()
 _ALLOWED_ENV_VARS: frozenset[str] = frozenset(
     {
         "DEEPER_NOTEBOOK_LOCAL_N_CTX",
-        "DEEPER_NOTEBOOK_LOCAL_N_CTX",
+        "DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL",
+        "DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL",
+        "OPENAI_COMPATIBLE_BASE_URL",
+        "OPENAI_COMPATIBLE_API_KEY",
     }
 )
 

@@ -88,6 +88,8 @@ def _runtime_label(*, name: str, kind: str) -> str:
     lower_name = name.lower()
     if kind == "ollama":
         return "ollama"
+    if "lmstudio" in lower_name or "lm studio" in lower_name:
+        return "LM Studio"
     if "mlx" in lower_name or "osaurus" in lower_name:
         return "MLX"
     if "llama.cpp" in lower_name or "gguf" in lower_name:

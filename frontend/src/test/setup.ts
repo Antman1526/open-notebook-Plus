@@ -27,6 +27,43 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock localStorage for environments like Node 22 where built-in localStorage is incomplete/unconfigured in tests
+const createStorageMock = () => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value ? value.toString() : ''
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+    get length() {
+      return Object.keys(store).length
+    },
+  }
+}
+
+const mockStorage = createStorageMock()
+Object.defineProperty(window, 'localStorage', {
+  value: mockStorage,
+  configurable: true,
+  writable: true,
+})
+try {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: mockStorage,
+    configurable: true,
+    writable: true,
+  })
+} catch {
+  // Ignore if globalThis.localStorage is not configurable
+}
+
 // React Flow observes its viewport before laying out a mind map. JSDOM does
 // not implement this browser API, so provide the smallest no-op test double.
 class ResizeObserverMock {

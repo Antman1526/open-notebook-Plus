@@ -133,6 +133,7 @@ doc_exports/
 
 specs/
 .claude
+.codex/
 .sisyphus
 
 .playwright-mcp/
@@ -151,6 +152,7 @@ desktop/bin/
 # Un-ignore the desktop/build Python package (caught by bare build/ rule above)
 !desktop/build/
 !desktop/build/**
+desktop/build/**/__pycache__/
 # Local build venv created by `make build-mac` (separate from .venv used for tests)
 .build-venv/
 # v0.7.126 — Default output dir for `make backup`. Tarballs can be

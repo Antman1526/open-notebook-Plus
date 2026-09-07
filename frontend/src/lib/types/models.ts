@@ -81,3 +81,32 @@ export interface ModelTestResult {
   message: string
   details?: string
 }
+
+/**
+ * Format a human-friendly provider badge label for a model.
+ * Translates generic "openai_compatible" using credential hints like
+ * "LM Studio (local)", "MLX (local)", "llama.cpp (local)", "Ollama (local)".
+ */
+export function formatModelProviderLabel(
+  model?: { provider?: string | null; credential?: string | null } | null
+): string {
+  if (!model) return ''
+  if (model.credential) {
+    const cred = model.credential.toLowerCase()
+    if (cred.includes('lm studio')) return 'LM Studio'
+    if (cred.includes('mlx')) return 'MLX'
+    if (cred.includes('llama.cpp') || cred.includes('llamacpp')) return 'llama.cpp'
+    if (cred.includes('ollama')) return 'Ollama'
+  }
+  const prov = (model.provider || '').toLowerCase()
+  if (prov === 'openai_compatible') return 'OpenAI Compatible'
+  if (prov === 'openai') return 'OpenAI'
+  if (prov === 'anthropic') return 'Anthropic'
+  if (prov === 'google' || prov === 'gemini') return 'Google AI'
+  if (prov === 'groq') return 'Groq'
+  if (prov === 'deepseek') return 'DeepSeek'
+  if (prov === 'mistral') return 'Mistral AI'
+  if (prov === 'openrouter') return 'OpenRouter'
+  if (prov === 'ollama') return 'Ollama'
+  return model.provider || ''
+}

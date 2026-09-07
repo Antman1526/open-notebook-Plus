@@ -1878,19 +1878,56 @@ class Supervisor:
         if not new_path:
             return False, "Missing new_path"
         target = _P(new_path)
-        if not target.exists() or not target.is_file():
+        if not target.exists():
             return False, f"File not found: {new_path}"
-        if target.suffix.lower() != ".gguf":
-            return False, "new_path must be a .gguf file"
+        is_gguf = target.is_file() and target.suffix.lower() == ".gguf"
+        is_mlx = target.is_dir() and (target / "config.json").is_file()
+        if not is_gguf and not is_mlx:
+            return False, "new_path must be a .gguf file or an MLX model directory"
         if (
             self.cfg.model_dir not in target.parents
             and target.parent != self.cfg.model_dir
+            and target != self.cfg.model_dir
         ):
             # Path-traversal guard — must live under model_dir.
             return False, (
                 f"new_path must be inside the configured model_dir "
                 f"({self.cfg.model_dir})"
             )
+
+        if is_mlx:
+            provider = getattr(self, "model_provider_runtime", None)
+            if provider is None:
+                try:
+                    from desktop.providers.mlx import MlxProvider
+
+                    provider = MlxProvider(
+                        model_dir=Path(self.cfg.model_dir),
+                        python_executable=self.venv_python,
+                    )
+                    self.model_provider_runtime = provider
+                except Exception as exc:
+                    return False, f"MLX provider initialization failed: {exc}"
+
+            log.info("hot_swap_chat (mlx): target=%s", target)
+            try:
+                env = provider.start(str(target), validate=True, wait_for_ready=True)
+            except Exception as exc:
+                log.warning("hot_swap_chat (mlx) failed: %s", exc)
+                return False, f"MLX server restart failed: {exc}"
+
+            env_updates = {
+                "OPENAI_COMPATIBLE_BASE_URL": env.OPENAI_COMPATIBLE_BASE_URL,
+                "OPENAI_COMPATIBLE_API_KEY": env.OPENAI_COMPATIBLE_API_KEY,
+                "DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL": env.DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL,
+            }
+            self.session_env.update(env_updates)
+            try:
+                self._push_env_to_api(env_updates)
+            except Exception as exc:
+                log.warning("hot_swap_chat: env-refresh push failed: %s", exc)
+
+            return True, f"Chat model swapped to MLX model {target.name}."
 
         old_path = self.chat_llm_path
         # v0.8.42b — capture pre-swap n_ctx for full rollback. Pre-
@@ -1946,10 +1983,12 @@ class Supervisor:
         # sidecar is live with the new GGUF, the router just keeps
         # using the OLD n_ctx until app relaunch. That's the v0.8.40b
         # baseline behaviour, so we're never WORSE off here.
+        self.session_env["DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL"] = str(target)
         try:
             self._push_env_to_api(
                 {
                     "DEEPER_NOTEBOOK_LOCAL_N_CTX": str(self.chat_llm_n_ctx),
+                    "DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL": str(target),
                 }
             )
         except Exception as exc:

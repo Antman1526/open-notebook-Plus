@@ -34,6 +34,7 @@ import {
   Search,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { formatModelProviderLabel } from '@/lib/types/models'
 import { useModels, useDeleteModel, useModelDefaults, useUpdateModelDefaults, useAutoAssignDefaults, useAutoAssignCapability, useTestModel } from '@/lib/hooks/use-models'
 import {
   useCredentials,
@@ -836,7 +837,7 @@ function DefaultModelSelectors({
                         <SelectItem key={model.id} value={model.id}>
                           <div className="flex items-center justify-between w-full">
                             <span>{model.name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{model.provider}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{formatModelProviderLabel(model)}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -888,7 +889,7 @@ function DefaultModelSelectors({
                             <SelectItem key={model.id} value={model.id}>
                               <div className="flex items-center justify-between w-full">
                                 <span>{model.name}</span>
-                                <span className="text-xs text-muted-foreground ml-2">{model.provider}</span>
+                                <span className="text-xs text-muted-foreground ml-2">{formatModelProviderLabel(model)}</span>
                               </div>
                             </SelectItem>
                           ))}

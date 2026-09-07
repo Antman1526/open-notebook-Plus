@@ -184,10 +184,12 @@ def _ensure_model(
         return False
 
 
-def _list_ollama_models(base_url: str = "http://127.0.0.1:11434") -> list[str]:
+def _list_ollama_models(
+    base_url: str = "http://127.0.0.1:11434", timeout: float = 10.0
+) -> list[str]:
     """Return Ollama model names if the daemon is reachable, else []."""
     try:
-        r = httpx.get(f"{base_url}/api/tags", timeout=1.0)
+        r = httpx.get(f"{base_url}/api/tags", timeout=timeout)
         if r.status_code == 200:
             return [m["name"] for m in r.json().get("models", []) if "name" in m]
     except Exception:

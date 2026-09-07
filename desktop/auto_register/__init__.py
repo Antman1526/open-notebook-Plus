@@ -51,6 +51,7 @@ from desktop.auto_register.episode_profile import (
     register_default_episode_profile,  # noqa: F401
 )
 from desktop.auto_register.llamacpp import register_llamacpp_models
+from desktop.auto_register.lmstudio import register_lmstudio_models
 from desktop.auto_register.mlx import register_mlx_models
 from desktop.auto_register.ollama import register_ollama_models
 from desktop.auto_register.osaurus import register_osaurus_models
@@ -429,6 +430,14 @@ def _do_register(
     # probe details. Mac users with Osaurus get MLX-optimized inference
     # (typically 2-4× llama-cpp throughput) with zero manual config.
     if register_osaurus_models(
+        client=client,
+        existing_cred_names=existing_cred_names,
+        existing_model_keys=existing_model_keys,
+    ):
+        registered_any = True
+
+    # --- 4c. LM Studio (local OpenAI-compatible, :1234) --------------------
+    if register_lmstudio_models(
         client=client,
         existing_cred_names=existing_cred_names,
         existing_model_keys=existing_model_keys,

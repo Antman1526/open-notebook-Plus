@@ -505,6 +505,7 @@ def _launcher_provider_for_runtime(runtime: str | None) -> str | None:
 
 def _launcher_config_summary(model_dir: Path):
     active_gguf_model = resolve_env("DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL", "").strip()
+    active_mlx_model = resolve_env("DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL", "").strip()
     config_path = active_data_root() / "config.toml"
     if not config_path.exists():
         return {
@@ -515,6 +516,7 @@ def _launcher_config_summary(model_dir: Path):
             "model_dir": "",
             "model_dir_matches_inventory": False,
             "active_gguf_model": active_gguf_model,
+            "active_mlx_model": active_mlx_model,
         }
     try:
         raw = tomllib.loads(config_path.read_text())
@@ -527,6 +529,7 @@ def _launcher_config_summary(model_dir: Path):
             "model_dir": "",
             "model_dir_matches_inventory": False,
             "active_gguf_model": active_gguf_model,
+            "active_mlx_model": active_mlx_model,
         }
 
     raw_model_dir = str(raw.get("model_dir") or "")
@@ -547,6 +550,7 @@ def _launcher_config_summary(model_dir: Path):
         "model_dir": raw_model_dir,
         "model_dir_matches_inventory": matches_inventory,
         "active_gguf_model": active_gguf_model,
+        "active_mlx_model": active_mlx_model,
     }
 
 
@@ -563,19 +567,29 @@ def _local_model_to_dict(
     config_provider = (launcher_config or {}).get("provider") or ""
     config_default = (launcher_config or {}).get("default_model") or ""
     active_gguf = (launcher_config or {}).get("active_gguf_model") or ""
+    active_mlx = (launcher_config or {}).get("active_mlx_model") or ""
     is_launch_default = bool(
         launcher_provider
         and config_provider == launcher_provider
         and config_default == launcher_ref
     )
     is_live_active = bool(
-        (model.runtime or "").lower() == "gguf"
-        and active_gguf
-        and active_gguf in {model.path, launcher_ref}
+        (
+            (model.runtime or "").lower() == "gguf"
+            and active_gguf
+            and active_gguf in {model.path, launcher_ref}
+        )
+        or (
+            (model.runtime or "").lower() == "mlx"
+            and active_mlx
+            and active_mlx in {model.path, launcher_ref}
+        )
     )
     if is_live_active:
         activation_mode = "active_now"
-        activation_detail = "This GGUF is the live chat model."
+        activation_detail = (
+            f"This {model.runtime.upper() if model.runtime else 'model'} is the live chat model."
+        )
     elif is_launch_default:
         activation_mode = "launch_default"
         activation_detail = "This model is the native launch default."
@@ -959,7 +973,7 @@ def _local_model_runtime_capabilities(runtime: str | None):
     if normalized == "mlx":
         return {
             "runnable": True,
-            "activation_supported": False,
+            "activation_supported": True,
             "runtime_status": "runnable",
             "runtime_note": None,
             "setup_href": None,
@@ -1755,15 +1769,17 @@ async def local_models_set_active(body: dict):
         raise HTTPException(status_code=400, detail="Body must include `path`.")
 
     p = _Path(new_path)
-    if not p.exists() or not p.is_file():
+    if not p.exists():
         raise HTTPException(
             status_code=400,
-            detail=f"File not found or not a regular file: {new_path}",
+            detail=f"File not found: {new_path}",
         )
-    if p.suffix.lower() != ".gguf":
+    is_gguf = p.is_file() and p.suffix.lower() == ".gguf"
+    is_mlx = p.is_dir() and (p / "config.json").is_file()
+    if not is_gguf and not is_mlx:
         raise HTTPException(
             status_code=400,
-            detail="`path` must point to a `.gguf` file.",
+            detail="`path` must point to a `.gguf` file or an MLX model directory.",
         )
 
     # Resolve the configured model dir using the same precedence as
@@ -1789,7 +1805,7 @@ async def local_models_set_active(body: dict):
         resolved = p.resolve()
     except OSError:
         raise HTTPException(status_code=400, detail="Could not resolve path.")
-    if model_dir not in resolved.parents and resolved.parent != model_dir:
+    if model_dir not in resolved.parents and resolved.parent != model_dir and resolved != model_dir:
         raise HTTPException(
             status_code=400,
             detail=(
@@ -1858,9 +1874,14 @@ async def local_models_set_active(body: dict):
             or f"Launcher returned HTTP {status_code}",
         )
     if lbody.get("ok", False):
+        active_key = (
+            "DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL"
+            if is_mlx
+            else "DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL"
+        )
         os.environ.update(
             normalize_product_environment(
-                {"DEEPER_NOTEBOOK_ACTIVE_GGUF_MODEL": str(resolved)}
+                {active_key: str(resolved)}
             )
         )
     return {
