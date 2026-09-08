@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
+from pydantic import BaseModel
 
 from api.models import (
     DiscoverResult,
@@ -373,6 +374,112 @@ async def get_suggested_questions(notebook_id: str, limit: int = Query(4, ge=1, 
         if len(questions) >= limit:
             break
     return {"questions": questions}
+
+
+class ExecutiveSynthesisResponse(BaseModel):
+    notebook_id: str
+    notebook_name: str
+    synthesis: str
+    source_count: int
+    sources: list[str]
+
+
+_EXECUTIVE_SYNTHESIS_SYSTEM = (
+    "You are an elite research synthesizer and intelligence analyst. Your objective is "
+    "to analyze the provided notebook sources and produce an executive cross-source synthesis "
+    "that uncovers patterns, points of agreement, critical tensions, and actionable intelligence.\n\n"
+    "Structure your response strictly in clear, polished Markdown with the following sections:\n"
+    "## 🎯 Executive Summary\n"
+    "A tight, high-impact synthesis of the overall corpus.\n\n"
+    "## 🌐 Cross-Cutting Themes & Consensus\n"
+    "Key insights and common ground shared across the sources.\n\n"
+    "## ⚡ Points of Tension & Divergence\n"
+    "Disagreements, competing hypotheses, contrasting perspectives, or methodological differences.\n\n"
+    "## 🔍 Critical Gaps & Open Questions\n"
+    "What the current sources omit, assume without evidence, or leave unresolved.\n\n"
+    "## 🚀 Actionable Recommendations & Next Steps\n"
+    "Concrete next steps, follow-up inquiry vectors, or practical implications."
+)
+
+
+@router.post("/notebooks/{notebook_id}/synthesis", response_model=ExecutiveSynthesisResponse)
+async def generate_notebook_synthesis(notebook_id: str):
+    """Generate an executive cross-source synthesis uncovering themes, tensions, and next steps."""
+    import asyncio
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from deeper_notebook.ai.provision import provision_langchain_model
+    from deeper_notebook.utils import clean_thinking_content
+    from deeper_notebook.utils.text_utils import extract_text_content
+
+    try:
+        notebook = await Notebook.get(notebook_id)
+    except HTTPException:
+        raise
+    except (NotFoundError, InvalidInputError):
+        raise HTTPException(status_code=404, detail="Notebook not found")
+    except Exception as e:
+        logger.error(f"synthesis: notebook fetch failed {notebook_id}: {e}")
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    try:
+        sources = await notebook.get_sources()
+    except Exception as e:
+        logger.warning(f"synthesis: get_sources failed for {notebook_id}: {e}")
+        sources = []
+
+    if not sources:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot generate synthesis without sources in the notebook.",
+        )
+
+    # Build corpus representation with title, topics, and excerpt
+    source_lines = []
+    source_titles = []
+    for i, s in enumerate(sources[:20], 1):
+        title = (getattr(s, "title", None) or f"Source {i}").strip()
+        source_titles.append(title)
+        topics = ", ".join((getattr(s, "topics", None) or [])[:5])
+        raw_text = getattr(s, "full_text", None) or ""
+        excerpt = raw_text[:1200].replace("\n", " ") if raw_text else "(no full text)"
+        source_lines.append(f"### Source {i}: {title}\nTopics: {topics}\nExcerpt: {excerpt}\n")
+
+    corpus = (
+        f"Notebook Title: {notebook.name or 'Untitled Notebook'}\n"
+        f"Description: {notebook.description or '(no description)'}\n\n"
+        f"Sources ({len(sources)} total):\n" + "\n".join(source_lines)
+    )
+
+    try:
+        chain = await provision_langchain_model(
+            _EXECUTIVE_SYNTHESIS_SYSTEM + "\n" + corpus, None, "transformation", max_tokens=1500
+        )
+        response = await asyncio.wait_for(
+            chain.ainvoke(
+                [
+                    SystemMessage(content=_EXECUTIVE_SYNTHESIS_SYSTEM),
+                    HumanMessage(content=corpus),
+                ]
+            ),
+            timeout=60.0,
+        )
+        raw_text = clean_thinking_content(extract_text_content(response.content))
+        synthesis_text = raw_text.strip()
+    except Exception as e:
+        logger.error(f"synthesis: generation failed for {notebook_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate executive synthesis: {e}",
+        )
+
+    return ExecutiveSynthesisResponse(
+        notebook_id=notebook_id,
+        notebook_name=notebook.name or "Untitled Notebook",
+        synthesis=synthesis_text,
+        source_count=len(sources),
+        sources=source_titles,
+    )
+
 
 
 @router.get("/notebooks/{notebook_id}/graph", response_model=NotebookGraphResponse)

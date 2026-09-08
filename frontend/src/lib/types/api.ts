@@ -397,6 +397,8 @@ export type ExportFormat =
   | 'html_zip'
   | 'combined_md'
   | 'combined_html'
+  | 'obsidian_folder'
+  | 'obsidian_zip'
 
 // v0.7.119 — Zip compression algorithm. Only meaningful when
 // `format` ends in `zip`. Defaults to 'deflated' to match the backend.

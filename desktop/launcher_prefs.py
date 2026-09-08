@@ -58,6 +58,8 @@ ALLOWED_KEYS: frozenset[str] = frozenset(
         # only alternative was `launchctl setenv`, which does not survive a
         # reboot.
         "DEEPER_NOTEBOOK_SOURCE_VISUALS_ENABLED",
+        "DEEPER_NOTEBOOK_LLAMACPP_FLASH_ATTN",
+        "DEEPER_NOTEBOOK_LLAMACPP_KV_QUANT",
     }
 )
 

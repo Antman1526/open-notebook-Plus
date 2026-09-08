@@ -19,9 +19,28 @@ const mockMutate = vi.fn()
 const mockData: { prefs: Record<string, string> } = { prefs: {} }
 let mockIsPending = false
 
+const mockHardware = {
+  system: 'Darwin',
+  machine: 'arm64',
+  chip_name: 'Apple M4 Max',
+  is_apple_silicon: true,
+  total_ram_bytes: 137438953472,
+  total_ram_gb: 128.0,
+  tier_name: 'Ultra / Heavy Duty',
+  guidance: 'Fast unified memory',
+  recommended_context: 65536,
+  recommended_quant: 'Q8_0',
+  recommended_flash_attn: true,
+  recommended_kv_quant: 'q8_0',
+}
+
 vi.mock('@/lib/hooks/use-launcher-prefs', () => ({
   useLauncherPrefs: () => ({
     data: mockData,
+    isLoading: false,
+  }),
+  useHardwareProfile: () => ({
+    data: mockHardware,
     isLoading: false,
   }),
   useUpdateLauncherPrefs: () => ({
@@ -185,4 +204,21 @@ describe('LauncherPrefsPage', () => {
     expect(screen.getByTestId('draft-model-path')).toHaveValue('/canonical/draft.gguf')
     expect(screen.getByTestId('n-ctx')).toHaveValue(32768)
   })
+
+  it('renders hardware advisor card and applies recommendations on click', () => {
+    render(<LauncherPrefsPage />)
+
+    expect(screen.getByTestId('hardware-advisor-card')).toBeInTheDocument()
+    expect(screen.getByText('Apple M4 Max')).toBeInTheDocument()
+    expect(screen.getByText(/Ultra \/ Heavy Duty/)).toBeInTheDocument()
+
+    const applyBtn = screen.getByTestId('apply-hardware-recommendations')
+    fireEvent.click(applyBtn)
+
+    expect(screen.getByTestId('n-ctx')).toHaveValue(65536)
+    expect(screen.getByTestId('n-ctx-max')).toHaveValue(65536)
+    expect(screen.getByTestId('flash-attn')).toHaveValue('true')
+    expect(screen.getByTestId('kv-quant')).toHaveValue('q8_0')
+  })
 })
+

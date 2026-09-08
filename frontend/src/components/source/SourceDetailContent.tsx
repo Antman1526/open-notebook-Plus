@@ -123,6 +123,50 @@ const PdfSourceViewer = dynamic(() => import('./PdfSourceViewer'), {
   loading: () => null,
 })
 
+function renderHighlightedText(
+  node: React.ReactNode,
+  snippet: string,
+  markerRef: { matched: boolean },
+): React.ReactNode {
+  if (!snippet || !snippet.trim()) return node
+  if (typeof node === 'string') {
+    const rawTarget = snippet.trim()
+    let search = rawTarget
+    let idx = node.toLowerCase().indexOf(search.toLowerCase())
+    if (idx === -1 && search.length > 30) {
+      search = search.slice(0, 30)
+      idx = node.toLowerCase().indexOf(search.toLowerCase())
+    }
+    if (idx !== -1) {
+      const before = node.slice(0, idx)
+      const match = node.slice(idx, idx + search.length)
+      const after = node.slice(idx + search.length)
+      const isFirst = !markerRef.matched
+      if (isFirst) markerRef.matched = true
+      return (
+        <>
+          {before}
+          <mark
+            id={isFirst ? 'inline-cited-passage' : undefined}
+            data-testid="inline-cited-passage"
+            className="rounded bg-amber-300/40 dark:bg-amber-400/30 px-1 py-0.5 font-medium text-foreground ring-2 ring-primary/50 scroll-mt-32 transition-all shadow-sm"
+          >
+            {match}
+          </mark>
+          {after}
+        </>
+      )
+    }
+    return node
+  }
+  if (Array.isArray(node)) {
+    return node.map((child, i) => (
+      <span key={i}>{renderHighlightedText(child, snippet, markerRef)}</span>
+    ))
+  }
+  return node
+}
+
 export function SourceDetailContent({
   sourceId,
   showChatButton = false,
@@ -167,10 +211,18 @@ export function SourceDetailContent({
     // depend on full_text presence (not value) so we fetch once it's loaded
   }, [sourceId, highlightQuery, source?.full_text])
 
-  // v0.8.78 — scroll the cited-passage callout into view once it's resolved.
+  // v0.8.78 — scroll the cited-passage callout or in-text highlight into view once resolved.
   useEffect(() => {
-    if (citedPassage && citedPassageRef.current) {
-      citedPassageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (citedPassage) {
+      const timer = setTimeout(() => {
+        const inlineTarget = document.getElementById('inline-cited-passage')
+        if (inlineTarget) {
+          inlineTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } else if (citedPassageRef.current) {
+          citedPassageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 150)
+      return () => clearTimeout(timer)
     }
   }, [citedPassage])
   const [insights, setInsights] = useState<SourceInsightResponse[]>([])
@@ -781,11 +833,28 @@ export function SourceDetailContent({
                 {citedPassage && (
                   <div
                     ref={citedPassageRef}
-                    className="mb-4 rounded-lg border-l-4 border-primary bg-primary/10 p-3"
+                    className="mb-4 rounded-lg border-l-4 border-primary bg-primary/10 p-3 shadow-xs"
                   >
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                      {t('sources.citedPassage', { defaultValue: 'Cited passage' })}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                        {t('sources.citedPassage', { defaultValue: 'Cited passage' })}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-primary hover:bg-primary/20 gap-1 px-2"
+                        onClick={() => {
+                          const el = document.getElementById('inline-cited-passage')
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          }
+                        }}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        Jump to in-text passage
+                      </Button>
+                    </div>
                     <p className="text-sm leading-6 text-foreground/90">
                       <mark className="rounded bg-primary/20 px-0.5 text-foreground">
                         {citedPassage.snippet}
@@ -798,7 +867,16 @@ export function SourceDetailContent({
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                      p: ({ children }) => <p className="mb-4">{children}</p>,
+                      p: ({ children }) => {
+                        const marker = { matched: false }
+                        return (
+                          <p className="mb-4">
+                            {citedPassage?.snippet
+                              ? renderHighlightedText(children, citedPassage.snippet, marker)
+                              : children}
+                          </p>
+                        )
+                      },
                       // v0.7.183 — h1/h2 font-bold → font-semibold so
                       // markdown-rendered headers match the v0.7.180 H1/H2
                       // standard already applied to dashboard pages and the

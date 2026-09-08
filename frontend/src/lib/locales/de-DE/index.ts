@@ -338,6 +338,8 @@ export const deDE = {
         html_zip: "Einzelnes .zip mit HTML-Seiten",
         combined_md: "Einzelne kombinierte .md-Datei",
         combined_html: "Einzelne kombinierte .html-Datei",
+        obsidian_folder: "Obsidian-Tresor (Ordner)",
+        obsidian_zip: "Obsidian-Tresor (.zip)",
       },
       includeSources: "Quelldokumente einschließen",
       compressionLabel: "Komprimierung",

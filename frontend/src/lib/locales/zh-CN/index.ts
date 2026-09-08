@@ -334,6 +334,8 @@ export const zhCN = {
         html_zip: "HTML 页面 .zip 压缩包",
         combined_md: "合并为单个 .md 文件",
         combined_html: "合并为单个 .html 文件",
+        obsidian_folder: "Obsidian 知识库 (文件夹)",
+        obsidian_zip: "Obsidian 知识库 (.zip)",
       },
       includeSources: "包含源文档",
       compressionLabel: "压缩",

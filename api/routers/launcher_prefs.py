@@ -100,3 +100,33 @@ async def update_launcher_prefs(body: PrefsUpdate):
             status_code=400,
             detail=f"launcher.env could not be written: {exc}",
         )
+
+
+class HardwareProfileResponse(BaseModel):
+    system: str
+    machine: str
+    chip_name: str
+    is_apple_silicon: bool
+    total_ram_bytes: int
+    total_ram_gb: float
+    tier_name: str
+    guidance: str
+    recommended_context: int
+    recommended_quant: str
+    recommended_flash_attn: bool
+    recommended_kv_quant: str
+
+
+@router.get("/api/launcher-prefs/hardware-profile", response_model=HardwareProfileResponse)
+async def get_hardware_profile_endpoint():
+    """Profile host machine hardware and return unified-memory-aware recommendations."""
+    try:
+        from desktop.hardware_profiler import get_hardware_profile
+
+        return get_hardware_profile()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to profile hardware: {exc}",
+        )
+

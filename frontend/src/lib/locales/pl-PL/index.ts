@@ -338,6 +338,8 @@ export const plPL = {
         html_zip: "Pojedyncze archiwum .zip stron HTML",
         combined_md: "Pojedynczy złączony plik .md",
         combined_html: "Pojedynczy złączony plik .html",
+        obsidian_folder: "Skarbiec Obsidian (Folder)",
+        obsidian_zip: "Skarbiec Obsidian (.zip)",
       },
       includeSources: "Dołącz dokumenty źródłowe",
       compressionLabel: "Kompresja",

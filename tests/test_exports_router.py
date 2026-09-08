@@ -1634,3 +1634,77 @@ def test_html_export_adds_rel_noopener_to_external_links() -> None:
         assert "rel=" not in html, (
             f"Internal/relative link {href!r} should not have rel: {html!r}"
         )
+
+
+def test_export_notebook_obsidian_folder(
+    client: TestClient,
+    patched_domain,
+    tmp_path: Path,
+) -> None:
+    notes = [
+        _FakeNote("note:ov", "Overview", "Overview referencing [source:src1]."),
+        _FakeNote("note:p1", "Architecture", "Arch details."),
+    ]
+    sources = [_FakeSource("src1", "Primary Source", "Full raw text content.")]
+    nb = _FakeNotebook("notebook:obsidian1", "Research Vault", notes, sources)
+    patched_domain["notebooks"]["notebook:obsidian1"] = nb
+
+    target = tmp_path / "obsidian-vault"
+    r = client.post(
+        "/api/notebooks/notebook:obsidian1/export",
+        json={
+            "destination": str(target),
+            "format": "obsidian_folder",
+            "include_sources": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert (target / ".obsidian" / "app.json").exists()
+    assert (target / "Index.md").exists()
+    assert (target / "00-overview.md").exists()
+    assert (target / "sources" / "src1.md").exists()
+
+    # Verify Index.md Map of Content
+    index_content = (target / "Index.md").read_text()
+    assert "[[00-overview|Overview]]" in index_content
+    assert "[[sources/src1|Primary Source]]" in index_content
+
+    # Verify note frontmatter and wikilinks
+    note_content = (target / "00-overview.md").read_text()
+    assert "tags:" in note_content
+    assert "- deeper-notebook" in note_content
+    assert "[[sources/src1|src1]]" in note_content
+
+    # Verify source frontmatter
+    source_content = (target / "sources" / "src1.md").read_text()
+    assert "source_id: \"src1\"" in source_content
+
+
+def test_export_notebook_obsidian_zip(
+    client: TestClient,
+    patched_domain,
+    tmp_path: Path,
+) -> None:
+    notes = [_FakeNote("note:1", "Quick Note", "Content.")]
+    nb = _FakeNotebook("notebook:obsidian2", "Zip Vault", notes)
+    patched_domain["notebooks"]["notebook:obsidian2"] = nb
+
+    target_zip = tmp_path / "vault.zip"
+    r = client.post(
+        "/api/notebooks/notebook:obsidian2/export",
+        json={
+            "destination": str(target_zip),
+            "format": "obsidian_zip",
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert target_zip.exists()
+
+    with zipfile.ZipFile(target_zip, "r") as zf:
+        namelist = zf.namelist()
+        assert ".obsidian/app.json" in namelist
+        assert "Index.md" in namelist
+        assert "manifest.json" in namelist
+        index_data = zf.read("Index.md").decode("utf-8")
+        assert "# 📚 Zip Vault" in index_data
+

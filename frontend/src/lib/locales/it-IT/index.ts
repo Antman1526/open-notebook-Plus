@@ -336,6 +336,8 @@ export const itIT = {
         html_zip: "Singolo .zip di pagine HTML",
         combined_md: "File .md unico combinato",
         combined_html: "File .html unico combinato",
+        obsidian_folder: "Vault Obsidian (Cartella)",
+        obsidian_zip: "Vault Obsidian (.zip)",
       },
       includeSources: "Includi documenti sorgente",
       compressionLabel: "Compressione",

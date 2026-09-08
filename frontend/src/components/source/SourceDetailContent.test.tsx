@@ -26,6 +26,7 @@ vi.mock('@/lib/api/sources', () => ({
     delete: vi.fn(),
     downloadFile: vi.fn(),
     retry: vi.fn(),
+    locatePassage: vi.fn(),
   },
 }))
 
@@ -123,6 +124,48 @@ describe('SourceDetailContent', () => {
     })
     await waitFor(() => {
       expect(sourcesApi.get).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('locates and highlights cited passage inline in the document text', async () => {
+    vi.mocked(sourcesApi.locatePassage).mockResolvedValue({
+      start: 10,
+      end: 28,
+      score: 0.95,
+      snippet: 'Key research finding',
+    })
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    vi.mocked(sourcesApi.get).mockResolvedValue({
+      ...baseSource,
+      full_text: 'Introductory text. Key research finding was observed here. Conclusion.',
+    })
+    vi.mocked(insightsApi.listForSource).mockResolvedValue([])
+    vi.mocked(transformationsApi.list).mockResolvedValue([])
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SourceDetailContent
+          sourceId="source:detail"
+          highlightQuery="What was the key research finding?"
+        />
+      </QueryClientProvider>
+    )
+
+    await waitFor(() => {
+      expect(sourcesApi.locatePassage).toHaveBeenCalledWith(
+        'source:detail',
+        'What was the key research finding?'
+      )
+    })
+
+    // Callout banner and jump button
+    await waitFor(() => {
+      expect(screen.getByText('Jump to in-text passage')).toBeInTheDocument()
+      expect(screen.getByTestId('inline-cited-passage')).toHaveTextContent('Key research finding')
     })
   })
 })

@@ -92,6 +92,8 @@ class NotebookExportRequest(BaseModel):
         "html_zip",
         "combined_md",
         "combined_html",
+        "obsidian_folder",
+        "obsidian_zip",
     ] = "folder"
     include_sources: bool = Field(
         False,
@@ -250,6 +252,106 @@ def _render_source_content(source: Source) -> str:
     header_lines.append("")
     body = source.full_text or "(no extracted text)"
     return "\n".join(header_lines) + "\n" + body
+
+
+def _render_obsidian_note_content(note: Note) -> str:
+    """Build markdown for a single note formatted with Obsidian YAML frontmatter and wikilinks."""
+    title = (note.title or "Untitled").strip()
+    header_lines = [
+        "---",
+        f'title: "{title}"',
+        f"type: {note.note_type or 'human'}",
+        "tags:",
+        "  - deeper-notebook",
+        "  - note",
+        "aliases:",
+        f'  - "{title}"',
+    ]
+    if getattr(note, "created", None):
+        header_lines.append(f"created: {note.created}")
+    if getattr(note, "updated", None):
+        header_lines.append(f"updated: {note.updated}")
+    if getattr(note, "id", None):
+        header_lines.append(f'id: "{note.id}"')
+    header_lines.append("---")
+    header_lines.append("")
+
+    raw_body = note.content or "(no content)"
+    body = re.sub(
+        r"\[source:([a-zA-Z0-9_\-:]+)\]",
+        r"[[sources/\1|\1]]",
+        raw_body,
+    )
+    return "\n".join(header_lines) + "\n" + body
+
+
+def _render_obsidian_source_content(source: Source) -> str:
+    """Build markdown for a Source formatted with Obsidian YAML frontmatter."""
+    title = (source.title or "Untitled Source").strip()
+    sid = _notebook_record_id_part(str(source.id))
+    header_lines = [
+        "---",
+        f'title: "{title}"',
+        f'source_id: "{sid}"',
+        "tags:",
+        "  - deeper-notebook",
+        "  - source",
+        "aliases:",
+        f'  - "{title}"',
+    ]
+    asset_path = (
+        source.asset.file_path if source.asset and source.asset.file_path else None
+    )
+    asset_url = source.asset.url if source.asset and source.asset.url else None
+    if asset_path:
+        header_lines.append(f'original_file: "{asset_path}"')
+    if asset_url:
+        header_lines.append(f'original_url: "{asset_url}"')
+    header_lines.append("---")
+    header_lines.append("")
+    body = source.full_text or "(no extracted text)"
+    return "\n".join(header_lines) + "\n" + body
+
+
+def _render_obsidian_index(
+    notebook: Notebook,
+    plan: list[tuple[str, Note]],
+    sources: list[Source],
+) -> str:
+    """Build the Obsidian Map of Content (MOC) index note."""
+    nb_title = (notebook.name or "Untitled Notebook").strip()
+    desc = notebook.description or ""
+    lines = [
+        "---",
+        f'title: "{nb_title}"',
+        "tags:",
+        "  - deeper-notebook",
+        "  - moc",
+        "  - index",
+        "aliases:",
+        f'  - "{nb_title}"',
+        "---",
+        "",
+        f"# 📚 {nb_title}",
+        "",
+    ]
+    if desc:
+        lines.extend([f"> {desc}", ""])
+    lines.append("## 📝 Notes\n")
+    for filename, note in plan:
+        stem = Path(filename).stem
+        title = note.title or stem
+        lines.append(f"- [[{stem}|{title}]]")
+    lines.append("")
+    if sources:
+        lines.append("## 📁 Sources\n")
+        for s in sources:
+            sid = _notebook_record_id_part(str(s.id))
+            stitle = s.title or sid
+            lines.append(f"- [[sources/{sid}|{stitle}]]")
+        lines.append("")
+    return "\n".join(lines)
+
 
 
 # v0.7.97 — Markdown → HTML conversion via markdown-it-py (already a
@@ -822,6 +924,7 @@ async def export_notebook(
     # use the existing _render_*_content; HTML formats use the v0.7.97
     # _render_*_as_html. file_ext determines the suffix on every emitted
     # file (manifest.json stays .json regardless).
+    is_obsidian = req.format.startswith("obsidian_")
     is_html = req.format.startswith("html_") or req.format == "combined_html"
     is_folder = req.format.endswith("folder")
     is_combined = req.format.startswith("combined_")
@@ -829,6 +932,10 @@ async def export_notebook(
         note_renderer = _render_note_as_html
         source_renderer = _render_source_as_html
         file_ext = ".html"
+    elif is_obsidian:
+        note_renderer = _render_obsidian_note_content
+        source_renderer = _render_obsidian_source_content
+        file_ext = ".md"
     else:
         note_renderer = _render_note_content
         source_renderer = _render_source_content
@@ -925,6 +1032,22 @@ async def export_notebook(
                 )
                 total_bytes += len(payload)
 
+        if is_obsidian:
+            try:
+                obsidian_dir = target_dir / ".obsidian"
+                obsidian_dir.mkdir(exist_ok=True)
+                app_json_bytes = json.dumps({"legacyEditor": False, "livePreview": True}, indent=2).encode("utf-8")
+                (obsidian_dir / "app.json").write_bytes(app_json_bytes)
+                files_written.append(ExportFileEntry(relative_path=".obsidian/app.json", bytes=len(app_json_bytes)))
+                total_bytes += len(app_json_bytes)
+
+                index_bytes = _render_obsidian_index(notebook, plan, sources).encode("utf-8")
+                (target_dir / "Index.md").write_bytes(index_bytes)
+                files_written.append(ExportFileEntry(relative_path="Index.md", bytes=len(index_bytes)))
+                total_bytes += len(index_bytes)
+            except OSError as exc:
+                warnings.append(f"Could not write Obsidian metadata: {exc}")
+
         # Always write manifest last so partial exports are still readable.
         manifest_payload = json.dumps(manifest, indent=2).encode("utf-8")
         try:
@@ -1004,6 +1127,17 @@ async def export_notebook(
                         ExportFileEntry(relative_path=rel, bytes=len(payload))
                     )
                     total_bytes += len(payload)
+            if is_obsidian:
+                app_json_bytes = json.dumps({"legacyEditor": False, "livePreview": True}, indent=2).encode("utf-8")
+                zf.writestr(".obsidian/app.json", app_json_bytes)
+                files_written.append(ExportFileEntry(relative_path=".obsidian/app.json", bytes=len(app_json_bytes)))
+                total_bytes += len(app_json_bytes)
+
+                index_bytes = _render_obsidian_index(notebook, plan, sources).encode("utf-8")
+                zf.writestr("Index.md", index_bytes)
+                files_written.append(ExportFileEntry(relative_path="Index.md", bytes=len(index_bytes)))
+                total_bytes += len(index_bytes)
+
             manifest_payload = json.dumps(manifest, indent=2).encode("utf-8")
             zf.writestr("manifest.json", manifest_payload)
             files_written.append(

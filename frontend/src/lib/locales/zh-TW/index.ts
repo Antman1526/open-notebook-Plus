@@ -334,6 +334,8 @@ export const zhTW = {
         html_zip: "HTML 頁面 .zip 壓縮檔",
         combined_md: "合併為單一 .md 檔案",
         combined_html: "合併為單一 .html 檔案",
+        obsidian_folder: "Obsidian 保險庫 (資料夾)",
+        obsidian_zip: "Obsidian 保險庫 (.zip)",
       },
       includeSources: "包含來源文件",
       compressionLabel: "壓縮",

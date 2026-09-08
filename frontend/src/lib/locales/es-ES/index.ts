@@ -336,6 +336,8 @@ export const esES = {
         html_zip: ".zip único de páginas HTML",
         combined_md: "Archivo .md único combinado",
         combined_html: "Archivo .html único combinado",
+        obsidian_folder: "Bóveda Obsidian (Carpeta)",
+        obsidian_zip: "Bóveda Obsidian (.zip)",
       },
       includeSources: "Incluir documentos fuente",
       compressionLabel: "Compresión",

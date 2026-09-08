@@ -79,3 +79,34 @@ export function useUpdateLauncherPrefs() {
     },
   })
 }
+
+export interface HardwareProfile {
+  system: string
+  machine: string
+  chip_name: string
+  is_apple_silicon: boolean
+  total_ram_bytes: number
+  total_ram_gb: number
+  tier_name: string
+  guidance: string
+  recommended_context: number
+  recommended_quant: string
+  recommended_flash_attn: boolean
+  recommended_kv_quant: string
+}
+
+export const HARDWARE_PROFILE_QUERY_KEY = ['hardware-profile'] as const
+
+export function useHardwareProfile() {
+  return useQuery<HardwareProfile>({
+    queryKey: HARDWARE_PROFILE_QUERY_KEY,
+    queryFn: async () => {
+      const res = await apiClient.get<HardwareProfile>(
+        '/launcher-prefs/hardware-profile',
+      )
+      return res.data
+    },
+    staleTime: 60_000,
+  })
+}
+

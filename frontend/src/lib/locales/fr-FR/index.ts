@@ -336,6 +336,8 @@ export const frFR = {
         html_zip: ".zip unique de pages HTML",
         combined_md: "Fichier .md unique combiné",
         combined_html: "Fichier .html unique combiné",
+        obsidian_folder: "Coffre Obsidian (Dossier)",
+        obsidian_zip: "Coffre Obsidian (.zip)",
       },
       includeSources: "Inclure les documents source",
       compressionLabel: "Compression",

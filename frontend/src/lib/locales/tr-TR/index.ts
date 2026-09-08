@@ -337,6 +337,8 @@ export const trTR = {
         html_zip: "Tek bir HTML sayfaları .zip dosyası",
         combined_md: "Tek bir birleştirilmiş .md dosyası",
         combined_html: "Tek bir birleştirilmiş .html dosyası",
+        obsidian_folder: "Obsidian Kasası (Klasör)",
+        obsidian_zip: "Obsidian Kasası (.zip)",
       },
       includeSources: "Kaynak belgeleri dahil et",
       compressionLabel: "Sıkıştırma",

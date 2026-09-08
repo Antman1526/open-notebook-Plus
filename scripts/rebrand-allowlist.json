@@ -567,7 +567,7 @@
           "content"
         ]
       },
-      "coverage_sha256": "38270e847687ec079b866c7660bd12e80b3c9b354cec393a6c68251b388b87b2"
+      "coverage_sha256": "634e22dc77643815ef9970c50c23de87b93f1f29a0e51802e4c5dac8cdfbf31c"
     },
     "frontend-canonical-help-regression-v1": {
       "kind": "regression_fixture",
@@ -3992,7 +3992,7 @@
       "path": "api/routers/exports.py",
       "pattern": "open_notebook",
       "source": "content",
-      "line": 711,
+      "line": 813,
       "column": 10,
       "context_sha256": "e79123fb531e21350d3fafa80709277e931ba74de0882d8126392b51e30c5203",
       "category": "compatibility_alias",
@@ -4000,7 +4000,7 @@
         "path": "api/routers/exports.py",
         "pattern": "open_notebook",
         "source": "content",
-        "line": 711,
+        "line": 813,
         "column": 10,
         "context_sha256": "e79123fb531e21350d3fafa80709277e931ba74de0882d8126392b51e30c5203",
         "category": "compatibility_alias",

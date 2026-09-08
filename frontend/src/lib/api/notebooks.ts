@@ -154,4 +154,19 @@ export const notebooksApi = {
     )
     return response.data
   },
+
+  getExecutiveSynthesis: async (notebookId: string) => {
+    const response = await apiClient.post<ExecutiveSynthesisResponse>(
+      `/notebooks/${notebookId}/synthesis`,
+    )
+    return response.data
+  },
+}
+
+export interface ExecutiveSynthesisResponse {
+  notebook_id: string
+  notebook_name: string
+  synthesis: string
+  source_count: number
+  sources: string[]
 }

@@ -339,6 +339,8 @@ export const caES = {
         html_zip: "Un sol .zip de pàgines HTML",
         combined_md: "Un sol fitxer .md combinat",
         combined_html: "Un sol fitxer .html combinat",
+        obsidian_folder: "Caixa forta Obsidian (Carpeta)",
+        obsidian_zip: "Caixa forta Obsidian (.zip)",
       },
       includeSources: "Inclou els documents de les fonts",
       compressionLabel: "Compressió",

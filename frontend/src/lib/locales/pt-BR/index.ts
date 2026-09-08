@@ -335,6 +335,8 @@ export const ptBR = {
         html_zip: ".zip único de páginas HTML",
         combined_md: "Arquivo .md único combinado",
         combined_html: "Arquivo .html único combinado",
+        obsidian_folder: "Cofre Obsidian (Pasta)",
+        obsidian_zip: "Cofre Obsidian (.zip)",
       },
       includeSources: "Incluir documentos de origem",
       compressionLabel: "Compressão",

@@ -344,6 +344,8 @@ export const enUS = {
         html_zip: "Single .zip of HTML pages",
         combined_md: "Single combined .md file",
         combined_html: "Single combined .html file",
+        obsidian_folder: "Obsidian Vault (Folder)",
+        obsidian_zip: "Obsidian Vault (.zip)",
       },
       includeSources: "Include source documents",
       compressionLabel: "Compression",

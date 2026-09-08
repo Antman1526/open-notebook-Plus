@@ -19,14 +19,16 @@
 //   - All strings i18n'd via settings.launcherPrefs.* keys.
 
 import { useState, useEffect } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Cpu, Sparkles, Zap, Check } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   useLauncherPrefs,
   useUpdateLauncherPrefs,
+  useHardwareProfile,
 } from '@/lib/hooks/use-launcher-prefs'
 import { SystemRouteFrame } from '@/components/deeper-notebook/route-frames/SystemRouteFrames'
 
@@ -41,6 +43,9 @@ const ALLOWED_KEYS = new Set([
   'DEEPER_NOTEBOOK_LOCAL_N_CTX',
   'DEEPER_NOTEBOOK_CHAT_LLM_CTX',
   'DEEPER_NOTEBOOK_CHAT_LLM_CTX_MAX',
+  'DEEPER_NOTEBOOK_SOURCE_VISUALS_ENABLED',
+  'DEEPER_NOTEBOOK_LLAMACPP_FLASH_ATTN',
+  'DEEPER_NOTEBOOK_LLAMACPP_KV_QUANT',
 ])
 
 const PREF_KEYS = {
@@ -48,6 +53,8 @@ const PREF_KEYS = {
   draftNPredict: 'DEEPER_NOTEBOOK_LOCAL_DRAFT_N_PREDICT',
   nCtx: 'DEEPER_NOTEBOOK_CHAT_LLM_CTX',
   nCtxMax: 'DEEPER_NOTEBOOK_CHAT_LLM_CTX_MAX',
+  flashAttn: 'DEEPER_NOTEBOOK_LLAMACPP_FLASH_ATTN',
+  kvQuant: 'DEEPER_NOTEBOOK_LLAMACPP_KV_QUANT',
 } as const
 
 const readPref = (
@@ -58,6 +65,7 @@ const readPref = (
 export default function LauncherPrefsPage() {
   const { t } = useTranslation()
   const { data, isLoading } = useLauncherPrefs()
+  const { data: hardware } = useHardwareProfile()
   const update = useUpdateLauncherPrefs()
 
   // Form state — we keep separate string fields for each control.
@@ -65,6 +73,8 @@ export default function LauncherPrefsPage() {
   const [draftNPredict, setDraftNPredict] = useState('')
   const [nCtx, setNCtx] = useState('')
   const [nCtxMax, setNCtxMax] = useState('')
+  const [flashAttn, setFlashAttn] = useState('')
+  const [kvQuant, setKvQuant] = useState('')
 
   // Show "restart required" banner only after a successful save.
   const [showRestartBanner, setShowRestartBanner] = useState(false)
@@ -77,6 +87,8 @@ export default function LauncherPrefsPage() {
     setDraftNPredict(readPref(p, PREF_KEYS.draftNPredict))
     setNCtx(readPref(p, PREF_KEYS.nCtx))
     setNCtxMax(readPref(p, PREF_KEYS.nCtxMax))
+    setFlashAttn(readPref(p, PREF_KEYS.flashAttn))
+    setKvQuant(readPref(p, PREF_KEYS.kvQuant))
   }, [data])
 
   // ---------------------------------------------------------------------------
@@ -102,8 +114,24 @@ export default function LauncherPrefsPage() {
     check(PREF_KEYS.draftNPredict, draftNPredict)
     check(PREF_KEYS.nCtx, nCtx)
     check(PREF_KEYS.nCtxMax, nCtxMax)
+    check(PREF_KEYS.flashAttn, flashAttn)
+    check(PREF_KEYS.kvQuant, kvQuant)
 
     return diff
+  }
+
+  const handleApplyHardwareRecommendations = () => {
+    if (!hardware) return
+    if (hardware.recommended_context) {
+      setNCtx(String(hardware.recommended_context))
+      setNCtxMax(String(hardware.recommended_context))
+    }
+    if (hardware.recommended_flash_attn) {
+      setFlashAttn('true')
+    }
+    if (hardware.recommended_kv_quant) {
+      setKvQuant(hardware.recommended_kv_quant)
+    }
   }
 
   const handleSave = () => {
@@ -133,6 +161,72 @@ export default function LauncherPrefsPage() {
               >
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{t('settings.launcherPrefs.restartRequired')}</span>
+              </div>
+            )}
+
+            {/* Apple Silicon & Hardware Advisor Card */}
+            {hardware && (
+              <div
+                className="rounded-xl border border-primary/20 bg-card/60 p-5 shadow-sm space-y-4"
+                data-testid="hardware-advisor-card"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Cpu className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground">
+                          {hardware.chip_name || 'System Hardware'}
+                        </h3>
+                        {hardware.is_apple_silicon && (
+                          <Badge variant="secondary" className="text-xs bg-primary/15 text-primary border-0 font-medium">
+                            Apple Silicon Unified Memory
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {hardware.tier_name} • {hardware.total_ram_gb} GB RAM
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                    onClick={handleApplyHardwareRecommendations}
+                    data-testid="apply-hardware-recommendations"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Apply Recommended Settings
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-lg bg-muted/40 p-2.5 space-y-1">
+                    <span className="text-muted-foreground font-medium">Context Window</span>
+                    <p className="text-sm font-semibold text-foreground">
+                      {hardware.recommended_context.toLocaleString()} tokens
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2.5 space-y-1">
+                    <span className="text-muted-foreground font-medium">Recommended Model</span>
+                    <p className="text-sm font-semibold text-foreground">
+                      {hardware.recommended_quant}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2.5 space-y-1">
+                    <span className="text-muted-foreground font-medium">Engine Acceleration</span>
+                    <p className="text-sm font-semibold text-foreground">
+                      {hardware.recommended_flash_attn ? 'Metal FlashAttn + ' + hardware.recommended_kv_quant : 'Standard CPU/GPU'}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground italic">
+                  {hardware.guidance}
+                </p>
               </div>
             )}
 
@@ -275,6 +369,65 @@ export default function LauncherPrefsPage() {
                       className="text-xs text-muted-foreground"
                     >
                       {t('settings.launcherPrefs.nCtxMaxDesc')}
+                    </p>
+                  </div>
+                </section>
+
+                {/* ── Engine Hardware Optimizations (Metal / FlashAttention / KV Cache) ── */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                    <h2 className="text-lg font-medium">
+                      Engine Hardware Optimizations
+                    </h2>
+                  </div>
+
+                  {/* FlashAttention */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="flash-attn"
+                      className="text-sm font-medium"
+                    >
+                      Metal FlashAttention
+                    </label>
+                    <select
+                      id="flash-attn"
+                      data-testid="flash-attn"
+                      value={flashAttn}
+                      onChange={(e) => setFlashAttn(e.target.value)}
+                      className="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">Auto-Detect (Default on Metal)</option>
+                      <option value="true">Force Enabled</option>
+                      <option value="false">Force Disabled</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Significantly accelerates attention computation on Apple Silicon and modern GPUs with lower memory bandwidth overhead.
+                    </p>
+                  </div>
+
+                  {/* KV Cache Quantization */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="kv-quant"
+                      className="text-sm font-medium"
+                    >
+                      Key-Value Cache Quantization
+                    </label>
+                    <select
+                      id="kv-quant"
+                      data-testid="kv-quant"
+                      value={kvQuant}
+                      onChange={(e) => setKvQuant(e.target.value)}
+                      className="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">Auto-Detect (q8_0 on Apple Silicon)</option>
+                      <option value="q8_0">q8_0 (8-bit — 50% RAM savings, high precision)</option>
+                      <option value="q4_0">q4_0 (4-bit — 75% RAM savings, massive context)</option>
+                      <option value="f16">f16 (Full Precision — maximum memory usage)</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Quantizing the KV cache allows long contexts (32k/64k) to fit easily into unified RAM without degrading generation quality.
                     </p>
                   </div>
                 </section>

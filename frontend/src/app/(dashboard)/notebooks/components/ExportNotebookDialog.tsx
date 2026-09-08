@@ -66,6 +66,7 @@ function leafFor(format: ExportFormat, slug: string): string {
   switch (format) {
     case 'zip':
     case 'html_zip':
+    case 'obsidian_zip':
       return `${slug}.zip`
     case 'combined_md':
       return `${slug}.md`
@@ -73,6 +74,7 @@ function leafFor(format: ExportFormat, slug: string): string {
       return `${slug}.html`
     case 'folder':
     case 'html_folder':
+    case 'obsidian_folder':
     default:
       return slug
   }
@@ -81,6 +83,8 @@ function leafFor(format: ExportFormat, slug: string): string {
 const ALL_FORMATS: ExportFormat[] = [
   'folder',
   'zip',
+  'obsidian_folder',
+  'obsidian_zip',
   'html_folder',
   'html_zip',
   'combined_md',
@@ -101,6 +105,8 @@ const ALL_COMPRESSIONS: ExportCompression[] = [
 const FORMAT_LABEL_KEYS: Record<ExportFormat, string> = {
   folder: 'notebooks.exportFormat.folder',
   zip: 'notebooks.exportFormat.zip',
+  obsidian_folder: 'notebooks.export.format.obsidian_folder',
+  obsidian_zip: 'notebooks.export.format.obsidian_zip',
   html_folder: 'notebooks.export.format.html_folder',
   html_zip: 'notebooks.export.format.html_zip',
   combined_md: 'notebooks.export.format.combined_md',
@@ -122,7 +128,7 @@ function supportsIncludeSources(format: ExportFormat): boolean {
 }
 
 function isZipFormat(format: ExportFormat): boolean {
-  return format === 'zip' || format === 'html_zip'
+  return format === 'zip' || format === 'html_zip' || format === 'obsidian_zip'
 }
 
 export function ExportNotebookDialog({

@@ -334,6 +334,8 @@ export const jaJP = {
         html_zip: "HTMLページの単一 .zip",
         combined_md: "結合された単一 .md ファイル",
         combined_html: "結合された単一 .html ファイル",
+        obsidian_folder: "Obsidian ボールト (フォルダー)",
+        obsidian_zip: "Obsidian ボールト (.zip)",
       },
       includeSources: "ソースドキュメントを含める",
       compressionLabel: "圧縮",

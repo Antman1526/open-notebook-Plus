@@ -334,6 +334,8 @@ export const bnIN = {
         html_zip: "HTML পৃষ্ঠার একটি .zip",
         combined_md: "একটি সংযুক্ত .md ফাইল",
         combined_html: "একটি সংযুক্ত .html ফাইল",
+        obsidian_folder: "অবসিডিয়ান ভল্ট (ফোল্ডার)",
+        obsidian_zip: "অবসিডিয়ান ভল্ট (.zip)",
       },
       includeSources: "সোর্স নথি অন্তর্ভুক্ত করুন",
       compressionLabel: "কম্প্রেশন",

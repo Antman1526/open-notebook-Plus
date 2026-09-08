@@ -334,6 +334,8 @@ export const ruRU = {
         html_zip: "Один .zip с HTML-страницами",
         combined_md: "Один объединённый .md файл",
         combined_html: "Один объединённый .html файл",
+        obsidian_folder: "Хранилище Obsidian (Папка)",
+        obsidian_zip: "Хранилище Obsidian (.zip)",
       },
       includeSources: "Включить исходные документы",
       compressionLabel: "Сжатие",

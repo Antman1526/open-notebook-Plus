@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { NotebookResponse } from '@/lib/types/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Archive, ArchiveRestore, Download, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Download, Sparkles, Trash2 } from 'lucide-react'
 import { useUpdateNotebook } from '@/lib/hooks/use-notebooks'
 import { NotebookDeleteDialog } from './NotebookDeleteDialog'
 import { ExportNotebookDialog } from './ExportNotebookDialog'
+import { ExecutiveSynthesisDialog } from '@/components/notebooks/ExecutiveSynthesisDialog'
 import { formatDistanceToNow } from 'date-fns'
 import { getDateLocale } from '@/lib/utils/date-locale'
 import { InlineEdit } from '@/components/common/InlineEdit'
@@ -23,6 +24,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
   const dfLocale = getDateLocale(language)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+  const [showSynthesisDialog, setShowSynthesisDialog] = useState(false)
   
   const updateNotebook = useUpdateNotebook()
 
@@ -74,6 +76,16 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
               )}
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSynthesisDialog(true)}
+                className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                data-testid="executive-synthesis-button"
+              >
+                <Sparkles className="h-4 w-4" />
+                Synthesis
+              </Button>
               <MindMapButton notebookId={notebook.id} />
               <Button
                 variant="outline"
@@ -142,6 +154,13 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
       <ExportNotebookDialog
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
+        notebookId={notebook.id}
+        notebookName={notebook.name}
+      />
+
+      <ExecutiveSynthesisDialog
+        open={showSynthesisDialog}
+        onOpenChange={setShowSynthesisDialog}
         notebookId={notebook.id}
         notebookName={notebook.name}
       />
