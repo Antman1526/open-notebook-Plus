@@ -14,7 +14,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion, Sparkles, BookOpen, Layers } from 'lucide-react'
+import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion, Sparkles, BookOpen, Layers, Copy, Check } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import { toast } from 'sonner'
 import { useSearch } from '@/lib/hooks/use-search'
 import { useAsk } from '@/lib/hooks/use-ask'
@@ -97,6 +101,8 @@ export default function SearchPage() {
 
   // Save to notebooks dialog
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [savePayload, setSavePayload] = useState<{ question: string; answer: string } | null>(null)
+  const [copiedBrief, setCopiedBrief] = useState(false)
 
   // Deep Research state
   const [isDeepResearching, setIsDeepResearching] = useState(false)
@@ -400,7 +406,10 @@ export default function SearchPage() {
                       {ask.finalAnswer && (
                         <Button
                           variant="outline"
-                          onClick={() => setShowSaveDialog(true)}
+                          onClick={() => {
+                            setSavePayload({ question: askQuestion, answer: ask.finalAnswer! })
+                            setShowSaveDialog(true)
+                          }}
                           className="w-full"
                         >
                           <Save className="h-4 w-4 mr-2" />
@@ -421,35 +430,93 @@ export default function SearchPage() {
 
                 {/* Deep Research Result */}
                 {deepResearchResult && (
-                  <Card className="border-primary/30 bg-primary/[0.02] shadow-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-primary" />
-                          <CardTitle className="text-base font-semibold">Deep Research Synthesis</CardTitle>
+                  <Card className="border-primary/40 bg-gradient-to-b from-primary/[0.04] to-transparent shadow-sm">
+                    <CardHeader className="pb-3 border-b">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold">Deep Research Synthesis</CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {deepResearchResult.objective}
+                            </p>
+                          </div>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {deepResearchResult.evidence_count} evidence items
-                        </Badge>
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            {deepResearchResult.evidence_count} sources
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(deepResearchResult.research_brief)
+                              setCopiedBrief(true)
+                              toast.success('Research brief copied')
+                              setTimeout(() => setCopiedBrief(false), 2000)
+                            }}
+                            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            {copiedBrief ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 mr-1 text-primary" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5 mr-1" />
+                                Copy Brief
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSavePayload({
+                                question: `Deep Research: ${deepResearchResult.objective}`,
+                                answer: deepResearchResult.research_brief,
+                              })
+                              setShowSaveDialog(true)
+                            }}
+                            className="h-8 px-2.5 text-xs"
+                          >
+                            <Save className="h-3.5 w-3.5 mr-1" />
+                            Save Note
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Objective: {deepResearchResult.objective}
-                      </p>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-5 pt-4">
                       {deepResearchResult.plan?.inquiry_paths && deepResearchResult.plan.inquiry_paths.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-medium text-muted-foreground">Inquiry Paths Explored</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inquiry Paths Explored</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                             {deepResearchResult.plan.inquiry_paths.map((p: any, idx: number) => (
-                              <div key={idx} className="p-2.5 rounded-lg border bg-background/80 text-xs space-y-1">
-                                <div className="font-medium text-foreground flex items-center gap-1.5">
-                                  <Layers className="h-3.5 w-3.5 text-primary/70 shrink-0" />
-                                  <span>{p.sub_question}</span>
+                              <div key={idx} className="p-3 rounded-lg border bg-card/60 text-xs space-y-1.5 shadow-xs">
+                                <div className="font-medium text-foreground flex items-center justify-between gap-1.5">
+                                  <span className="flex items-center gap-1.5 min-w-0">
+                                    <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    <span className="truncate">{p.sub_question}</span>
+                                  </span>
+                                  {p.facet && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize shrink-0 font-normal">
+                                      {p.facet}
+                                    </Badge>
+                                  )}
                                 </div>
-                                <div className="text-muted-foreground italic font-mono text-[11px]">
-                                  Query: &quot;{p.search_query}&quot;
+                                <div className="text-muted-foreground font-mono text-[11px] bg-muted/60 px-2 py-1 rounded truncate">
+                                  &ldquo;{p.search_query}&rdquo;
                                 </div>
+                                {p.rationale && (
+                                  <p className="text-[11px] text-muted-foreground leading-normal line-clamp-2">
+                                    {p.rationale}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -457,28 +524,47 @@ export default function SearchPage() {
                       )}
 
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground">Research Brief</Label>
-                        <div className="p-4 rounded-lg border bg-background text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                          {deepResearchResult.research_brief}
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Research Brief</Label>
+                        <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words p-5 rounded-lg border bg-card/40 leading-relaxed shadow-xs prose-headings:font-semibold prose-a:text-primary dark:prose-a:text-blue-400 prose-a:underline prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-table:my-4">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={{
+                              table: ({ children }) => (
+                                <div className="my-4 overflow-x-auto">
+                                  <table className="min-w-full border-collapse border border-border text-xs">
+                                    {children}
+                                  </table>
+                                </div>
+                              ),
+                              thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+                              th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold">{children}</th>,
+                              td: ({ children }) => <td className="border border-border px-3 py-2">{children}</td>,
+                            }}
+                          >
+                            {deepResearchResult.research_brief}
+                          </ReactMarkdown>
                         </div>
                       </div>
 
                       {deepResearchResult.citations && deepResearchResult.citations.length > 0 && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-medium text-muted-foreground">Citations</Label>
+                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grounded Citations</Label>
                           <div className="flex flex-wrap gap-1.5">
                             {deepResearchResult.citations.map((c: any, idx: number) => (
                               <Badge
                                 key={idx}
                                 variant="outline"
-                                className="text-xs cursor-pointer hover:bg-muted"
+                                className="text-xs cursor-pointer hover:bg-muted transition-colors py-1 px-2.5 flex items-center gap-1.5"
                                 onClick={() => {
                                   if (c.id) {
                                     openModal('source', c.id)
                                   }
                                 }}
+                                title="Click to open source preview"
                               >
-                                [{c.ref || idx + 1}] {c.title || c.id}
+                                <span className="font-mono font-semibold text-primary">[{c.ref || idx + 1}]</span>
+                                <span>{c.title || c.id}</span>
                               </Badge>
                             ))}
                           </div>
@@ -501,12 +587,15 @@ export default function SearchPage() {
                 />
 
                 {/* Save to Notebooks Dialog */}
-                {ask.finalAnswer && (
+                {savePayload && (
                   <SaveToNotebooksDialog
                     open={showSaveDialog}
-                    onOpenChange={setShowSaveDialog}
-                    question={askQuestion}
-                    answer={ask.finalAnswer}
+                    onOpenChange={(open) => {
+                      setShowSaveDialog(open)
+                      if (!open) setSavePayload(null)
+                    }}
+                    question={savePayload.question}
+                    answer={savePayload.answer}
                   />
                 )}
               </CardContent>

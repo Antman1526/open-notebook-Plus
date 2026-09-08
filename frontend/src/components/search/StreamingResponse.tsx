@@ -2,9 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { CheckCircle, Sparkles, Lightbulb, ChevronDown } from 'lucide-react'
+import { CheckCircle, Sparkles, Lightbulb, ChevronDown, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -35,6 +36,7 @@ export function StreamingResponse({
 }: StreamingResponseProps) {
   const [strategyOpen, setStrategyOpen] = useState(false)
   const [answersOpen, setAnswersOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const { openModal } = useModalManager()
   const { t } = useTranslation()
 
@@ -133,12 +135,36 @@ export function StreamingResponse({
 
       {/* Final Answer Section - Always Open */}
       {finalAnswer && (
-        <Card className="border-primary">
-          <CardHeader>
+        <Card className="border-primary/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-primary" />
               {t('common.finalAnswer')}
             </CardTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(finalAnswer)
+                setCopied(true)
+                toast.success('Answer copied to clipboard')
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1 text-primary" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1" />
+                  Copy
+                </>
+              )}
+            </Button>
           </CardHeader>
           <CardContent>
             <FinalAnswerContent
@@ -175,7 +201,7 @@ function FinalAnswerContent({
   const LinkComponent = createReferenceLinkComponent(onReferenceClick)
 
   return (
-    <div className="prose prose-sm max-w-none dark:prose-invert break-words prose-a:break-all prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2">
+    <div className="prose prose-sm max-w-none dark:prose-invert break-words prose-a:text-primary dark:prose-a:text-blue-400 prose-a:underline prose-a:break-words prose-p:leading-relaxed prose-headings:mt-4 prose-headings:mb-2 prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}

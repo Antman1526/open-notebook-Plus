@@ -726,6 +726,26 @@ function AIMessageContent({
     tr: ({ children }: { children?: React.ReactNode }) => <tr className="border-b border-border">{children}</tr>,
     th: ({ children }: { children?: React.ReactNode }) => <th className="border border-border px-3 py-2 text-left font-semibold">{children}</th>,
     td: ({ children }: { children?: React.ReactNode }) => <td className="border border-border px-3 py-2">{children}</td>,
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <div className="my-3 overflow-hidden rounded-lg border bg-muted/40 font-mono text-xs shadow-xs">
+        <pre className="overflow-x-auto p-3.5 leading-relaxed">{children}</pre>
+      </div>
+    ),
+    code: ({ className, children, ...props }: any) => {
+      const isInline = !className && typeof children === 'string' && !children.includes('\n')
+      if (isInline) {
+        return (
+          <code className="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs font-medium text-foreground" {...props}>
+            {children}
+          </code>
+        )
+      }
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      )
+    },
   }
 
   // Split the raw content on ALL citation markers ([mcp:N], [source:ID], etc.).
@@ -738,7 +758,7 @@ function AIMessageContent({
   // background in dark themes (~3.2:1), and break-all hyphenates
   // URLs mid-character. Theme-aware token + break-words.
   return (
-    <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words prose-headings:font-semibold prose-a:text-primary dark:prose-a:text-blue-400 prose-a:underline prose-a:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">
+    <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words prose-headings:font-semibold prose-a:text-primary dark:prose-a:text-blue-400 prose-a:underline prose-a:break-words prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">
       {segments.map((seg, idx) => {
         if (seg.kind === 'text') {
           // Pass text segments through the existing compact-reference pipeline.
