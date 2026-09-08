@@ -42,3 +42,24 @@ def test_vault_git_sync_lifecycle(tmp_path: Path):
     history = get_vault_history(vault, limit=5)
     assert len(history) >= 2
     assert history[0]["message"] == "Add Ideas note"
+
+
+def test_auto_snapshot_vault_debouncing(tmp_path: Path):
+    from deeper_notebook.vault.git_sync import auto_snapshot_vault
+
+    vault = tmp_path / "AutoVault"
+    vault.mkdir()
+    init_vault_git(vault)
+
+    # First auto-snapshot
+    note = vault / "Draft.md"
+    note.write_text("First draft", encoding="utf-8")
+    res1 = auto_snapshot_vault(vault, debounce_seconds=60)
+    assert res1["ok"] is True
+    assert res1.get("committed") is True
+
+    # Immediate second auto-snapshot should be debounced
+    note.write_text("Second draft edit", encoding="utf-8")
+    res2 = auto_snapshot_vault(vault, debounce_seconds=60)
+    assert res2["ok"] is True
+    assert res2.get("debounced") is True

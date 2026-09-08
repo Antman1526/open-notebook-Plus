@@ -63,5 +63,37 @@ export const searchApi = {
     }
 
     return response.body
+  },
+
+  // Deep Research agent invocation
+  deepResearch: async (params: {
+    objective: string
+    notebook_id?: string
+    max_queries?: number
+    strategy_model?: string
+    synthesis_model?: string
+  }) => {
+    const response = await apiClient.post<{
+      objective: string
+      plan: {
+        strategy_summary?: string
+        inquiry_paths?: Array<{
+          sub_question: string
+          search_query: string
+          rationale: string
+          facet: string
+        }>
+      }
+      evidence_count: number
+      research_brief: string
+      citations: Array<{
+        ref: string
+        id: string
+        title: string
+        score?: number
+      }>
+      agent_state: string
+    }>('/search/deep-research', params)
+    return response.data
   }
 }

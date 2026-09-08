@@ -550,3 +550,20 @@ async def read_git_history(
     if not mount:
         raise HTTPException(status_code=404, detail="Vault not found")
     return get_vault_history(mount.approved_root, limit=limit)
+
+
+@router.post("/vaults/{vault_id}/git/auto-sync")
+async def auto_sync_vault_git(
+    request: Request,
+    vault_id: str,
+    debounce_seconds: int = Query(300, ge=10, le=3600),
+    message: str | None = None,
+) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import auto_snapshot_vault
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return auto_snapshot_vault(
+        mount.approved_root, debounce_seconds=debounce_seconds, message=message
+    )

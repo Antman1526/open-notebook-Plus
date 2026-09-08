@@ -59,6 +59,7 @@ _ALLOWED_ENV_VARS: frozenset[str] = frozenset(
         "DEEPER_NOTEBOOK_ACTIVE_MLX_MODEL",
         "OPENAI_COMPATIBLE_BASE_URL",
         "OPENAI_COMPATIBLE_API_KEY",
+        "DEEPER_NOTEBOOK_RERANKER_URL",
     }
 )
 

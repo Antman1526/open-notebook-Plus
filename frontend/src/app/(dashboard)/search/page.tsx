@@ -14,12 +14,15 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion } from 'lucide-react'
+import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion, Sparkles, BookOpen, Layers } from 'lucide-react'
+import { toast } from 'sonner'
 import { useSearch } from '@/lib/hooks/use-search'
 import { useAsk } from '@/lib/hooks/use-ask'
 import { useModelDefaults, useModels } from '@/lib/hooks/use-models'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
+import { searchApi } from '@/lib/api/search'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { AudioDictateButton } from '@/components/common/AudioDictateButton'
 import { StreamingResponse } from '@/components/search/StreamingResponse'
 import { AdvancedModelsDialog } from '@/components/search/AdvancedModelsDialog'
 import { SaveToNotebooksDialog } from '@/components/search/SaveToNotebooksDialog'
@@ -95,6 +98,10 @@ export default function SearchPage() {
   // Save to notebooks dialog
   const [showSaveDialog, setShowSaveDialog] = useState(false)
 
+  // Deep Research state
+  const [isDeepResearching, setIsDeepResearching] = useState(false)
+  const [deepResearchResult, setDeepResearchResult] = useState<any | null>(null)
+
   // Hooks
   const searchMutation = useSearch()
   const ask = useAsk()
@@ -166,6 +173,27 @@ export default function SearchPage() {
 
     ask.sendAsk(askQuestion, models)
   }, [askQuestion, modelDefaults, customModels, ask])
+
+  const handleDeepResearch = useCallback(async () => {
+    if (!askQuestion.trim()) return
+    setIsDeepResearching(true)
+    setDeepResearchResult(null)
+    try {
+      const data = await searchApi.deepResearch({
+        objective: askQuestion,
+        max_queries: 4,
+        strategy_model: customModels?.strategy || modelDefaults?.default_chat_model || undefined,
+        synthesis_model: customModels?.finalAnswer || modelDefaults?.default_reasoning_model || modelDefaults?.default_chat_model || undefined,
+      })
+      setDeepResearchResult(data)
+      toast.success('Deep Research brief ready')
+    } catch (err: any) {
+      console.error('Deep research error:', err)
+      toast.error(err.message || 'Deep Research failed')
+    } finally {
+      setIsDeepResearching(false)
+    }
+  }, [askQuestion, customModels, modelDefaults])
 
   // v0.7.204 — stash the latest handlers in refs so the auto-trigger
   // effect doesn't need them in its deps. Previously the effect
@@ -269,7 +297,13 @@ export default function SearchPage() {
               <CardContent className="space-y-4">
                 {/* Question Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="ask-question">{t('searchPage.question')}</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="ask-question">{t('searchPage.question')}</Label>
+                    <AudioDictateButton
+                      onTranscribed={(t) => setAskQuestion((prev) => (prev ? `${prev} ${t}` : t))}
+                      disabled={ask.isStreaming || isDeepResearching}
+                    />
+                  </div>
                   <Textarea
                     id="ask-question"
                     name="ask-question"
@@ -278,12 +312,12 @@ export default function SearchPage() {
                     onChange={(e) => setAskQuestion(e.target.value)}
                     onKeyDown={(e) => {
                       // Submit on Cmd/Ctrl+Enter
-                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !ask.isStreaming && askQuestion.trim()) {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !ask.isStreaming && !isDeepResearching && askQuestion.trim()) {
                         e.preventDefault()
                         handleAsk()
                       }
                     }}
-                    disabled={ask.isStreaming}
+                    disabled={ask.isStreaming || isDeepResearching}
                     rows={3}
                     aria-label={t('common.accessibility.enterQuestion')}
                   />
@@ -330,7 +364,7 @@ export default function SearchPage() {
                     <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         onClick={handleAsk}
-                        disabled={ask.isStreaming || !askQuestion.trim()}
+                        disabled={ask.isStreaming || isDeepResearching || !askQuestion.trim()}
                         className="w-full"
                       >
                         {ask.isStreaming ? (
@@ -340,6 +374,26 @@ export default function SearchPage() {
                           </>
                         ) : (
                           t('searchPage.ask')
+                        )}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleDeepResearch}
+                        disabled={isDeepResearching || ask.isStreaming || !askQuestion.trim()}
+                        className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5"
+                      >
+                        {isDeepResearching ? (
+                          <>
+                            <LoadingSpinner size="sm" className="mr-1.5" />
+                            Deep Researching...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            Deep Research
+                          </>
                         )}
                       </Button>
 
@@ -364,6 +418,75 @@ export default function SearchPage() {
                   answers={ask.answers}
                   finalAnswer={ask.finalAnswer}
                 />
+
+                {/* Deep Research Result */}
+                {deepResearchResult && (
+                  <Card className="border-primary/30 bg-primary/[0.02] shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                          <CardTitle className="text-base font-semibold">Deep Research Synthesis</CardTitle>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {deepResearchResult.evidence_count} evidence items
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Objective: {deepResearchResult.objective}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {deepResearchResult.plan?.inquiry_paths && deepResearchResult.plan.inquiry_paths.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground">Inquiry Paths Explored</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {deepResearchResult.plan.inquiry_paths.map((p: any, idx: number) => (
+                              <div key={idx} className="p-2.5 rounded-lg border bg-background/80 text-xs space-y-1">
+                                <div className="font-medium text-foreground flex items-center gap-1.5">
+                                  <Layers className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                                  <span>{p.sub_question}</span>
+                                </div>
+                                <div className="text-muted-foreground italic font-mono text-[11px]">
+                                  Query: &quot;{p.search_query}&quot;
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Research Brief</Label>
+                        <div className="p-4 rounded-lg border bg-background text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                          {deepResearchResult.research_brief}
+                        </div>
+                      </div>
+
+                      {deepResearchResult.citations && deepResearchResult.citations.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground">Citations</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {deepResearchResult.citations.map((c: any, idx: number) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-muted"
+                                onClick={() => {
+                                  if (c.id) {
+                                    openModal('source', c.id)
+                                  }
+                                }}
+                              >
+                                [{c.ref || idx + 1}] {c.title || c.id}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Advanced Models Dialog */}
                 <AdvancedModelsDialog
@@ -401,9 +524,15 @@ export default function SearchPage() {
               <CardContent className="space-y-4">
                 {/* Search Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="search-query" className="sr-only">
-                    {t('searchPage.search')}
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="search-query" className="text-sm font-medium">
+                      {t('searchPage.search')}
+                    </Label>
+                    <AudioDictateButton
+                      onTranscribed={(t) => setSearchQuery((prev) => (prev ? `${prev} ${t}` : t))}
+                      disabled={searchMutation.isPending}
+                    />
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
                       id="search-query"

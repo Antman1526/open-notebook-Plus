@@ -11,6 +11,7 @@ import { useCreateNote, useUpdateNote, useNote } from '@/lib/hooks/use-notes'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import { MarkdownEditor } from '@/components/ui/markdown-editor'
 import { InlineEdit } from '@/components/common/InlineEdit'
+import { AudioDictateButton } from '@/components/common/AudioDictateButton'
 import { cn } from "@/lib/utils";
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -54,6 +55,7 @@ export function NoteEditorDialog({ open, onOpenChange, notebookId, note }: NoteE
     formState: { errors },
     reset,
     setValue,
+    getValues,
   } = useForm<CreateNoteFormData>({
     resolver: zodResolver(makeCreateNoteSchema(t)),
     defaultValues: {
@@ -168,16 +170,25 @@ export function NoteEditorDialog({ open, onOpenChange, notebookId, note }: NoteE
             </div>
           ) : (
             <>
-              <div className="border-b px-6 py-4">
-                <InlineEdit
-                  id="note-title"
-                  name="title"
-                  value={watchTitle ?? ''}
-                  onSave={(value) => setValue('title', value || '')}
-                  placeholder={t('sources.addTitle')}
-                  emptyText={t('sources.untitledNote')}
-                  className="text-xl font-semibold"
-                  inputClassName="text-xl font-semibold"
+              <div className="border-b px-6 py-4 flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <InlineEdit
+                    id="note-title"
+                    name="title"
+                    value={watchTitle ?? ''}
+                    onSave={(value) => setValue('title', value || '')}
+                    placeholder={t('sources.addTitle')}
+                    emptyText={t('sources.untitledNote')}
+                    className="text-xl font-semibold"
+                    inputClassName="text-xl font-semibold"
+                  />
+                </div>
+                <AudioDictateButton
+                  onTranscribed={(text) => {
+                    const current = getValues('content') || ''
+                    setValue('content', current ? `${current}\n\n${text}` : text, { shouldDirty: true })
+                  }}
+                  disabled={isSaving}
                 />
               </div>
 

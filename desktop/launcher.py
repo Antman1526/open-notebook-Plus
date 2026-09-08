@@ -2067,6 +2067,53 @@ class Supervisor:
             _n_gpu_layers("DEEPER_NOTEBOOK_EMBED_N_GPU_LAYERS"),
         ]
         self._spawn(args, cwd=self.upstream_root, name="llamacpp_embed")
+        self._spawn_llamacpp_rerank()
+
+    def _detect_reranker_model(self) -> Path | None:
+        """Scan configured model directory for cross-encoder reranker GGUF."""
+        raw = os.environ.get("DEEPER_NOTEBOOK_RERANKER_MODEL_PATH", "").strip()
+        if raw and Path(raw).is_file():
+            return Path(raw)
+        model_dir = getattr(self.cfg, "model_dir", None)
+        if model_dir and Path(model_dir).is_dir():
+            for p in sorted(Path(model_dir).glob("*.gguf")):
+                if "rerank" in p.name.lower():
+                    return p
+        if self.nomic_embed_path and self.nomic_embed_path.parent.is_dir():
+            for p in sorted(self.nomic_embed_path.parent.glob("*.gguf")):
+                if "rerank" in p.name.lower():
+                    return p
+        return None
+
+    def _spawn_llamacpp_rerank(self, port: int | None = None) -> None:
+        """Spawn llama_cpp.server in --rerank mode if a reranker model is detected."""
+        reranker_model = self._detect_reranker_model()
+        if reranker_model is None or not reranker_model.exists():
+            return
+        rerank_port = port if (port and port > 0) else find_free_ports(1)[0]
+        args = [
+            str(self.venv_python),
+            "-m",
+            "llama_cpp.server",
+            "--model",
+            str(reranker_model),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(rerank_port),
+            "--rerank",
+            "true",
+            "--n_gpu_layers",
+            _n_gpu_layers("DEEPER_NOTEBOOK_RERANK_N_GPU_LAYERS"),
+        ]
+        self._spawn(args, cwd=self.upstream_root, name="llamacpp_rerank")
+        self.session_env["DEEPER_NOTEBOOK_RERANKER_URL"] = f"http://127.0.0.1:{rerank_port}"
+        try:
+            self._push_env_to_api(
+                {"DEEPER_NOTEBOOK_RERANKER_URL": self.session_env["DEEPER_NOTEBOOK_RERANKER_URL"]}
+            )
+        except Exception as exc:
+            log.warning("Could not push DEEPER_NOTEBOOK_RERANKER_URL to API: %s", exc)
 
     def _spawn_whisper(self, port: int) -> None:
         if self.whisper_model_path is None:

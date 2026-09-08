@@ -140,3 +140,32 @@ def get_vault_history(vault_path: Path | str, limit: int = 15) -> list[dict[str,
     except Exception as exc:
         logger.warning(f"Failed to read git log for vault {p}: {exc}")
         return []
+
+
+_LAST_SNAPSHOT_TIMESTAMPS: dict[str, float] = {}
+
+
+def auto_snapshot_vault(
+    vault_path: Path | str,
+    debounce_seconds: int = 300,
+    message: str | None = None,
+) -> dict[str, Any]:
+    """Take a debounced Git snapshot of a vault if changes exist and debounce window has elapsed."""
+    import time
+
+    p = Path(vault_path).resolve()
+    key = str(p)
+    now = time.time()
+    last_time = _LAST_SNAPSHOT_TIMESTAMPS.get(key, 0.0)
+
+    if (now - last_time) < debounce_seconds:
+        return {
+            "ok": True,
+            "debounced": True,
+            "message": f"Snapshot debounced. Last snapshot was {now - last_time:.0f}s ago (window: {debounce_seconds}s).",
+        }
+
+    result = create_vault_snapshot(p, message=message or "Auto-snapshot")
+    if result.get("ok"):
+        _LAST_SNAPSHOT_TIMESTAMPS[key] = now
+    return result

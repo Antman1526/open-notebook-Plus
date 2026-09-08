@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { GitBranch, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -66,6 +66,7 @@ import { ResearchCoreFolioFrame } from '@/components/deeper-notebook/ResearchCor
 import { KnowledgeBookmarksPanel } from './KnowledgeBookmarksPanel'
 import { KnowledgeWorkspacesPanel } from './KnowledgeWorkspacesPanel'
 import { WorkspaceRestoreDialog } from './WorkspaceRestoreDialog'
+import { VaultGitHistoryDialog } from './VaultGitHistoryDialog'
 import { CreateUniqueNoteDialog } from '../overlay/CreateUniqueNoteDialog'
 import { OverlayUtilityPanel, localDateKey, tabFromOverlay } from '../overlay/OverlayUtilityPanel'
 
@@ -413,6 +414,7 @@ export function KnowledgeExplorer() {
   const mounts = useVaults()
   const [selectedRootState, setSelectedRootState] = useState<SelectedKnowledgeRoot | null>(null)
   const [uniqueDialogOpen, setUniqueDialogOpen] = useState(false)
+  const [gitHistoryOpen, setGitHistoryOpen] = useState(false)
   const [restoreApplying, setRestoreApplying] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [workspaceCommandIntent, setWorkspaceCommandIntent] = useState<{ id: number; kind: 'save' | 'replace' } | null>(null)
@@ -991,17 +993,31 @@ export function KnowledgeExplorer() {
         readiness={localReadiness}
         memoryPressure={{ state: 'normal', detail: 'Memory pressure not reported' }}
         queuedWorkCount={Number(persistence.isPending) + Number(scanPending)}
-        actions={selectedRoot.authority === 'external-vault' ? <Button
-          type="button"
-          variant="outline"
-          onClick={() => { void scanVault().catch(() => undefined) }}
-          disabled={scanPending}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${scanPending ? 'animate-spin' : ''}`}
-          />
-          {t('knowledge.scan')}
-        </Button> : null}
+        actions={selectedRoot.authority === 'external-vault' ? (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setGitHistoryOpen(true)}
+            >
+              <GitBranch className="mr-2 h-4 w-4" />
+              History
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { void scanVault().catch(() => undefined) }}
+              disabled={scanPending}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${scanPending ? 'animate-spin' : ''}`}
+              />
+              {t('knowledge.scan')}
+            </Button>
+          </div>
+        ) : null}
       />
       <div className="research-core-mode-toolbar border-b px-4 py-2 sm:px-6">
         <KnowledgeModeLauncher
@@ -1304,6 +1320,12 @@ export function KnowledgeExplorer() {
           restoreInvokerRef.current = null
           setTimeout(() => invoker?.isConnected && invoker.focus(), 0)
         }}
+      />
+      <VaultGitHistoryDialog
+        open={gitHistoryOpen}
+        onOpenChange={setGitHistoryOpen}
+        vaultId={selectedRoot.authority === 'external-vault' ? selectedRoot.id : ''}
+        vaultName={selectedRoot.authority === 'external-vault' ? (mounts.data?.find(m => m.id === selectedRoot.id)?.name || 'Vault') : 'Vault'}
       />
       </>} />
     </div>

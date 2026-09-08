@@ -147,6 +147,54 @@ class LlamaCppProvider:
             p.relative_to(self.model_dir).as_posix() for p in self._iter_ggufs()
         )
 
+    def build_server_argv(self, model_path: Path, port: int) -> list[str]:
+        """Construct the CLI arguments for spawning llama_cpp.server.
+
+        Includes Metal FlashAttention, quantized KV cache (q8_0), and
+        speculative companion draft models when available.
+        """
+        argv = [
+            str(self._python_executable),
+            "-m",
+            "llama_cpp.server",
+            "--model",
+            str(model_path),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        ]
+
+        # FlashAttention optimization (default enabled)
+        flash_attn_env = os.environ.get("DEEPER_NOTEBOOK_LLAMACPP_FLASH_ATTN", "true").strip().lower()
+        if flash_attn_env in ("true", "1", "yes", "on"):
+            argv.extend(["--flash_attn", "true"])
+
+        # KV cache quantization (default q8_0 to halve KV cache RAM footprint)
+        kv_quant = os.environ.get("DEEPER_NOTEBOOK_LLAMACPP_KV_QUANT", "q8_0").strip()
+        if kv_quant and kv_quant.lower() not in ("none", "false", "f16"):
+            argv.extend(["--type_k", kv_quant, "--type_v", kv_quant])
+
+        draft_candidate = (
+            self._draft_model_path
+            if self._draft_model_path is not None
+            else find_companion_draft_model(model_path)
+        )
+        if draft_candidate is not None:
+            if (
+                draft_candidate.is_file()
+                and draft_candidate.stat().st_size >= MIN_GGUF_BYTES
+            ):
+                argv.extend(["--model_draft", str(draft_candidate)])
+                if self._draft_n_predict is not None and self._draft_n_predict > 0:
+                    argv.extend(
+                        [
+                            "--n_predict_draft",
+                            str(self._draft_n_predict),
+                        ]
+                    )
+        return argv
+
     def start(self, model: str) -> ProviderEnv:
         path = self.model_dir / model
         if not path.exists() or path.stat().st_size < MIN_GGUF_BYTES:
@@ -159,61 +207,15 @@ class LlamaCppProvider:
         # v0.7.151 — Open a per-launch stderr logfile so the inevitable
         # llama_cpp.server crash on an unsupported quant / arch is
         # diagnosable from the launcher.log instead of completely silent.
-        # The file path is included in the RuntimeError message so the
-        # user can `tail -F` it.
         try:
             self._log_dir.mkdir(parents=True, exist_ok=True)
             self._stderr_log = self._log_dir / "llamacpp_chat_stderr.log"
-            # Append (not overwrite) so a crash followed by a manual retry
-            # still has the original failure context. The user can rotate
-            # if it gets large; this is a diagnostic file, not a hot loop.
             self._stderr_fh = self._stderr_log.open("ab", buffering=0)
         except OSError:
-            # If we can't open the logfile (read-only fs, permission denied),
-            # fall back to DEVNULL — the previous behavior. Better than
-            # crashing before even attempting to spawn the model server.
             self._stderr_log = None
             self._stderr_fh = subprocess.DEVNULL
 
-        # Base argv. v0.8.2 Item A — append --model_draft only when
-        # the operator has set DEEPER_NOTEBOOK_LOCAL_DRAFT_MODEL_PATH;
-        # missing draft path or unset env keeps current behavior.
-        argv = [
-            str(self._python_executable),
-            "-m",
-            "llama_cpp.server",
-            "--model",
-            str(path),
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ]
-        draft_candidate = self._draft_model_path if self._draft_model_path is not None else find_companion_draft_model(path)
-        if draft_candidate is not None:
-            # Skip silently if the configured path no longer exists or
-            # is too small to be a real GGUF — spec'd as non-fatal so a
-            # stale env var doesn't take the whole sidecar down. The
-            # main model still loads; user just doesn't get the speedup.
-            if (
-                draft_candidate.is_file()
-                and draft_candidate.stat().st_size >= MIN_GGUF_BYTES
-            ):
-                argv.extend(["--model_draft", str(draft_candidate)])
-                # v0.8.2 Item C — also pass --n_predict_draft if the
-                # operator tuned it; otherwise llama_cpp.server uses
-                # its built-in default (currently 8 tokens / verify).
-                # Only emit when the draft itself was accepted above
-                # so a stray env var without a draft model can't
-                # generate a malformed argv that llama_cpp.server
-                # rejects at parse time.
-                if self._draft_n_predict is not None and self._draft_n_predict > 0:
-                    argv.extend(
-                        [
-                            "--n_predict_draft",
-                            str(self._draft_n_predict),
-                        ]
-                    )
+        argv = self.build_server_argv(path, port)
         self._proc = subprocess.Popen(
             argv,
             stdout=subprocess.DEVNULL,
