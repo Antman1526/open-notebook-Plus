@@ -63,31 +63,31 @@ const getSTATUS_META = (t: TFunction): Record<
 > => ({
   running: {
     label: t('podcasts.processingLabel'),
-    className: 'bg-amber-100 text-amber-800 border-amber-200',
+    className: 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/50',
   },
   processing: {
     label: t('podcasts.processingLabel'),
-    className: 'bg-amber-100 text-amber-800 border-amber-200',
+    className: 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/50',
   },
   completed: {
     label: t('podcasts.completedLabel'),
-    className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    className: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50',
   },
   failed: {
     label: t('podcasts.failedLabel'),
-    className: 'bg-red-100 text-red-800 border-red-200',
+    className: 'bg-destructive/10 text-destructive border-destructive/30',
   },
   error: {
     label: t('podcasts.failedLabel'),
-    className: 'bg-red-100 text-red-800 border-red-200',
+    className: 'bg-destructive/10 text-destructive border-destructive/30',
   },
   pending: {
     label: t('podcasts.pendingLabel'),
-    className: 'bg-sky-100 text-sky-800 border-sky-200',
+    className: 'bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800/50',
   },
   submitted: {
     label: t('podcasts.pendingLabel'),
-    className: 'bg-sky-100 text-sky-800 border-sky-200',
+    className: 'bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800/50',
   },
   unknown: {
     label: t('common.unknown'),
