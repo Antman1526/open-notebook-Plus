@@ -169,3 +169,147 @@ def auto_snapshot_vault(
     if result.get("ok"):
         _LAST_SNAPSHOT_TIMESTAMPS[key] = now
     return result
+
+
+def get_vault_remotes(vault_path: Path | str) -> list[dict[str, str]]:
+    """Return configured Git remotes for a vault."""
+    p = Path(vault_path)
+    if not is_git_repo(p):
+        return []
+    try:
+        res = subprocess.run(
+            ["git", "remote", "-v"],
+            cwd=p,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        remotes: dict[str, dict[str, str]] = {}
+        for line in res.stdout.strip().splitlines():
+            parts = line.split()
+            if len(parts) >= 2:
+                name, url = parts[0], parts[1]
+                remotes[name] = {"name": name, "url": url}
+        return list(remotes.values())
+    except Exception as exc:
+        logger.warning(f"Failed to get git remotes for vault {p}: {exc}")
+        return []
+
+
+def set_vault_remote(
+    vault_path: Path | str,
+    remote_name: str = "origin",
+    url: str = "",
+) -> dict[str, Any]:
+    """Set or update a Git remote URL for a vault."""
+    p = Path(vault_path)
+    if not is_git_repo(p):
+        return {"ok": False, "error": "Vault is not an initialized Git repository"}
+    if not url.strip():
+        return {"ok": False, "error": "Remote URL cannot be empty"}
+
+    existing = [r["name"] for r in get_vault_remotes(p)]
+    try:
+        if remote_name in existing:
+            subprocess.run(
+                ["git", "remote", "set-url", remote_name, url.strip()],
+                cwd=p,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            subprocess.run(
+                ["git", "remote", "add", remote_name, url.strip()],
+                cwd=p,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        return {"ok": True, "message": f"Configured remote '{remote_name}'", "url": url.strip()}
+    except subprocess.CalledProcessError as exc:
+        return {"ok": False, "error": exc.stderr.strip() or str(exc)}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _current_branch(vault_path: Path) -> str:
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=vault_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        branch = res.stdout.strip()
+        return branch if branch and branch != "HEAD" else "main"
+    except Exception:
+        return "main"
+
+
+def push_vault_git(
+    vault_path: Path | str,
+    remote: str = "origin",
+    branch: str | None = None,
+) -> dict[str, Any]:
+    """Push local vault commits to the configured remote repository."""
+    p = Path(vault_path)
+    if not is_git_repo(p):
+        return {"ok": False, "error": "Vault is not an initialized Git repository"}
+
+    target_branch = branch or _current_branch(p)
+    try:
+        res = subprocess.run(
+            ["git", "push", "-u", remote, target_branch],
+            cwd=p,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30.0,
+        )
+        return {
+            "ok": True,
+            "message": f"Successfully pushed to {remote}/{target_branch}",
+            "output": res.stdout.strip() or res.stderr.strip(),
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": f"Push to {remote} timed out after 30s"}
+    except subprocess.CalledProcessError as exc:
+        return {"ok": False, "error": exc.stderr.strip() or exc.stdout.strip() or str(exc)}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def pull_vault_git(
+    vault_path: Path | str,
+    remote: str = "origin",
+    branch: str | None = None,
+) -> dict[str, Any]:
+    """Pull remote commits into the local vault repository."""
+    p = Path(vault_path)
+    if not is_git_repo(p):
+        return {"ok": False, "error": "Vault is not an initialized Git repository"}
+
+    target_branch = branch or _current_branch(p)
+    try:
+        res = subprocess.run(
+            ["git", "pull", "--rebase", remote, target_branch],
+            cwd=p,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30.0,
+        )
+        return {
+            "ok": True,
+            "message": f"Successfully pulled from {remote}/{target_branch}",
+            "output": res.stdout.strip() or res.stderr.strip(),
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": f"Pull from {remote} timed out after 30s"}
+    except subprocess.CalledProcessError as exc:
+        return {"ok": False, "error": exc.stderr.strip() or exc.stdout.strip() or str(exc)}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+

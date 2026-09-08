@@ -121,6 +121,7 @@ class SearchResponse(BaseModel):
     results: list[dict[str, Any]] = Field(..., description="Search results")
     total_count: int = Field(..., description="Total number of results")
     search_type: str = Field(..., description="Type of search performed")
+    reranked: bool = Field(False, description="Whether results were scored by a reranker")
 
 
 class AskRequest(BaseModel):

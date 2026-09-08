@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { GitBranch, GitCommit, RefreshCw, Camera, Clock, User, Copy, Check } from 'lucide-react'
+import { GitBranch, GitCommit, RefreshCw, Camera, Clock, User, Copy, Check, CloudUpload, CloudDownload, Globe, ExternalLink } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,11 @@ interface GitCommitItem {
   author: string
   date: string
   message: string
+}
+
+interface GitRemoteItem {
+  name: string
+  url: string
 }
 
 interface VaultGitHistoryDialogProps {
@@ -55,6 +60,13 @@ export function VaultGitHistoryDialog({
   const [takingSnapshot, setTakingSnapshot] = useState(false)
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
+  // Remote Git Sync state
+  const [remotes, setRemotes] = useState<GitRemoteItem[]>([])
+  const [remoteInput, setRemoteInput] = useState('')
+  const [isEditingRemote, setIsEditingRemote] = useState(false)
+  const [isPushing, setIsPushing] = useState(false)
+  const [isPulling, setIsPulling] = useState(false)
+
   const fetchHistory = async () => {
     if (!vaultId) return
     setLoading(true)
@@ -69,9 +81,23 @@ export function VaultGitHistoryDialog({
     }
   }
 
+  const fetchRemotes = async () => {
+    if (!vaultId) return
+    try {
+      const res = await apiClient.get<GitRemoteItem[]>(`/vaults/${vaultId}/git/remote`)
+      setRemotes(res.data || [])
+      if (res.data?.length > 0) {
+        setRemoteInput(res.data[0].url)
+      }
+    } catch (err: any) {
+      console.error('Failed to load vault remotes:', err)
+    }
+  }
+
   useEffect(() => {
     if (open) {
       fetchHistory()
+      fetchRemotes()
     }
   }, [open, vaultId])
 
@@ -97,12 +123,72 @@ export function VaultGitHistoryDialog({
     }
   }
 
+  const handleSaveRemote = async () => {
+    if (!vaultId || !remoteInput.trim()) return
+    try {
+      const res = await apiClient.post(`/vaults/${vaultId}/git/remote`, {
+        remote_name: 'origin',
+        url: remoteInput.trim(),
+      })
+      if (res.data.ok) {
+        toast.success('Remote origin repository configured')
+        setIsEditingRemote(false)
+        fetchRemotes()
+      } else {
+        toast.error(res.data.error || 'Failed to set remote')
+      }
+    } catch (err: any) {
+      toast.error('Failed to set remote repository')
+    }
+  }
+
+  const handlePush = async () => {
+    if (!vaultId) return
+    setIsPushing(true)
+    try {
+      const res = await apiClient.post(`/vaults/${vaultId}/git/push`, {
+        remote: 'origin',
+      })
+      if (res.data.ok) {
+        toast.success(res.data.message || 'Successfully pushed to remote')
+      } else {
+        toast.error(res.data.error || 'Push failed')
+      }
+    } catch (err: any) {
+      toast.error('Failed to push to remote repository')
+    } finally {
+      setIsPushing(false)
+    }
+  }
+
+  const handlePull = async () => {
+    if (!vaultId) return
+    setIsPulling(true)
+    try {
+      const res = await apiClient.post(`/vaults/${vaultId}/git/pull`, {
+        remote: 'origin',
+      })
+      if (res.data.ok) {
+        toast.success(res.data.message || 'Successfully pulled latest changes')
+        fetchHistory()
+      } else {
+        toast.error(res.data.error || 'Pull failed')
+      }
+    } catch (err: any) {
+      toast.error('Failed to pull from remote repository')
+    } finally {
+      setIsPulling(false)
+    }
+  }
+
   const handleCopyHash = (hash: string) => {
     void navigator.clipboard.writeText(hash)
     setCopiedHash(hash)
     toast.success('Commit hash copied')
     setTimeout(() => setCopiedHash(null), 2000)
   }
+
+  const activeRemote = remotes.find((r) => r.name === 'origin') || remotes[0]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,12 +199,75 @@ export function VaultGitHistoryDialog({
             Vault Version History: {vaultName}
           </DialogTitle>
           <DialogDescription>
-            Git-backed version history and manual snapshot controls for this knowledge vault.
+            Git-backed version history, manual snapshot controls, and cloud remote sync.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Remote Sync Bar */}
+        <div className="rounded-lg border bg-muted/40 p-2.5 text-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Globe className="h-3.5 w-3.5 text-primary" />
+              <span>Remote: {activeRemote ? activeRemote.url : 'No remote configured'}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditingRemote(!isEditingRemote)}
+                className="h-6 px-2 text-[11px]"
+              >
+                {isEditingRemote ? 'Cancel' : activeRemote ? 'Change' : 'Configure'}
+              </Button>
+              {activeRemote && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePush}
+                    disabled={isPushing}
+                    className="h-6 px-2 text-[11px] gap-1"
+                    title="Push commits to remote"
+                  >
+                    {isPushing ? <LoadingSpinner size="sm" /> : <CloudUpload className="h-3 w-3" />}
+                    Push
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePull}
+                    disabled={isPulling}
+                    className="h-6 px-2 text-[11px] gap-1"
+                    title="Pull latest changes from remote"
+                  >
+                    {isPulling ? <LoadingSpinner size="sm" /> : <CloudDownload className="h-3 w-3" />}
+                    Pull
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {isEditingRemote && (
+            <div className="flex gap-1.5 pt-1">
+              <Input
+                placeholder="git@github.com:user/repo.git or https://..."
+                value={remoteInput}
+                onChange={(e) => setRemoteInput(e.target.value)}
+                className="h-7 text-xs"
+              />
+              <Button size="sm" className="h-7 text-xs px-2.5" onClick={handleSaveRemote}>
+                Save
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Snapshot Input */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-1">
           <Input
             placeholder="Snapshot commit message (optional)"
             value={snapshotMsg}

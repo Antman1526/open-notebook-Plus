@@ -750,7 +750,21 @@ export default function SearchPage() {
                       <h3 className="text-sm font-medium">
                         {t('searchPage.resultsFound').replace('{count}', searchMutation.data.total_count.toString())}
                       </h3>
-                      <Badge variant="outline">{searchMutation.data.search_type === 'text' ? t('searchPage.textSearch') : t('searchPage.vectorSearch')}</Badge>
+                      <div className="flex items-center gap-2">
+                        {searchMutation.data.reranked && (
+                          <Badge variant="secondary" className="border-primary/30 text-primary gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Cross-Encoder Reranked
+                          </Badge>
+                        )}
+                        <Badge variant="outline">
+                          {searchMutation.data.search_type === 'text'
+                            ? t('searchPage.textSearch')
+                            : searchMutation.data.search_type === 'hybrid'
+                              ? 'Hybrid Search'
+                              : t('searchPage.vectorSearch')}
+                        </Badge>
+                      </div>
                     </div>
 
                     {searchMutation.data.results.length === 0 ? (
@@ -794,6 +808,11 @@ export default function SearchPage() {
                                         <Badge variant="secondary" className="ml-2">
                                           {result.final_score.toFixed(2)}
                                         </Badge>
+                                        {result.rerank_score !== undefined && (
+                                          <Badge variant="outline" className="ml-2 border-primary/30 text-primary text-xs">
+                                            Rerank: {result.rerank_score.toFixed(3)}
+                                          </Badge>
+                                        )}
                                         {result.vault_provenance && (
                                           <p className="mt-1 text-xs text-muted-foreground">
                                             {result.vault_provenance.relative_path}

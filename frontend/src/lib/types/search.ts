@@ -31,6 +31,7 @@ export interface SearchResult {
   updated: string
   visual?: SourceVisualReceipt | null
   visual_status?: SourceVisualStatus | null
+  rerank_score?: number
   vault_provenance?: {
     canonical_external: true
     vault_id: string
@@ -43,6 +44,7 @@ export interface SearchResponse {
   results: SearchResult[]
   total_count: number
   search_type: string
+  reranked?: boolean
 }
 
 // Ask types

@@ -267,10 +267,15 @@ async def search_knowledge_base(search_request: SearchRequest):
                 {**row, "visual_status": sentinel} if isinstance(row, dict) else row
                 for row in normalized_results
             ]
+        is_reranked = any(
+            isinstance(row, dict) and "rerank_score" in row
+            for row in normalized_results
+        )
         return SearchResponse(
             results=normalized_results,
             total_count=len(normalized_results),
             search_type=effective_type,
+            reranked=is_reranked,
         )
 
     except HTTPException:

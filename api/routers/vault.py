@@ -8,6 +8,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from pydantic import BaseModel
 
 from api.schemas.vault import (
     VaultCanvasEdgeResponse,
@@ -567,3 +568,64 @@ async def auto_sync_vault_git(
     return auto_snapshot_vault(
         mount.approved_root, debounce_seconds=debounce_seconds, message=message
     )
+
+
+class VaultRemoteRequest(BaseModel):
+    remote_name: str = "origin"
+    url: str
+
+
+class VaultSyncRequest(BaseModel):
+    remote: str = "origin"
+    branch: str | None = None
+
+
+@router.get("/vaults/{vault_id}/git/remote")
+async def read_git_remotes(request: Request, vault_id: str) -> list[dict[str, str]]:
+    from deeper_notebook.vault.git_sync import get_vault_remotes
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return get_vault_remotes(mount.approved_root)
+
+
+@router.post("/vaults/{vault_id}/git/remote")
+async def configure_git_remote(
+    request: Request, vault_id: str, payload: VaultRemoteRequest
+) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import set_vault_remote
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    return set_vault_remote(mount.approved_root, remote_name=payload.remote_name, url=payload.url)
+
+
+@router.post("/vaults/{vault_id}/git/push")
+async def push_vault_repo(
+    request: Request, vault_id: str, payload: VaultSyncRequest | None = None
+) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import push_vault_git
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    remote = payload.remote if payload else "origin"
+    branch = payload.branch if payload else None
+    return push_vault_git(mount.approved_root, remote=remote, branch=branch)
+
+
+@router.post("/vaults/{vault_id}/git/pull")
+async def pull_vault_repo(
+    request: Request, vault_id: str, payload: VaultSyncRequest | None = None
+) -> dict[str, Any]:
+    from deeper_notebook.vault.git_sync import pull_vault_git
+
+    mount = await _repository(request).get_mount(vault_id)
+    if not mount:
+        raise HTTPException(status_code=404, detail="Vault not found")
+    remote = payload.remote if payload else "origin"
+    branch = payload.branch if payload else None
+    return pull_vault_git(mount.approved_root, remote=remote, branch=branch)
+
