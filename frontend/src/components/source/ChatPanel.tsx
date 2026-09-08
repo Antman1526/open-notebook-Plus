@@ -27,6 +27,7 @@ import { MessageCopyEditActions } from '@/components/chat/MessageCopyEditActions
 import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent } from '@/lib/utils/source-references'
 import { splitCitations } from '@/lib/utils/citations'
 import { CitationPill } from '@/components/chat/CitationPill'
+import { AudioDictateButton } from '@/components/common/AudioDictateButton'
 // v0.8.35c — small "local"/"cloud" chip next to AI messages, lit when
 // the smart router (v0.8.0) actually ran for this notebook turn.
 // Reads from the TanStack Query cache populated by useNotebookChat on
@@ -615,6 +616,11 @@ export function ChatPanel({
               disabled={isStreaming}
               className="flex-1 min-h-[40px] max-h-[100px] resize-none py-2 px-3 min-w-0"
               rows={1}
+            />
+            <AudioDictateButton
+              onTranscribed={(text) => setInput((prev) => (prev ? `${prev} ${text}` : text))}
+              disabled={isStreaming}
+              className="h-[40px] w-[40px] flex-shrink-0"
             />
             {isStreaming && onCancelStreaming && (
               <Button
