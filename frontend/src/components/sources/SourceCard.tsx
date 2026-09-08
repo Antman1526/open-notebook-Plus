@@ -64,41 +64,41 @@ const SOURCE_TYPE_ICONS = {
 const getStatusConfig = (t: TFunction) => ({
   new: {
     icon: Clock,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/40',
+    borderColor: 'border-blue-200 dark:border-blue-900/50',
     label: t('sources.statusProcessing'),
     description: t('sources.statusPreparingDesc')
   },
   queued: {
     icon: Clock,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/40',
+    borderColor: 'border-blue-200 dark:border-blue-900/50',
     label: t('sources.statusQueued'),
     description: t('sources.statusQueuedDesc')
   },
   running: {
     icon: Loader2,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/40',
+    borderColor: 'border-blue-200 dark:border-blue-900/50',
     label: t('sources.statusProcessing'),
     description: t('sources.statusProcessingDesc')
   },
   completed: {
     icon: CheckCircle,
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
+    color: 'text-emerald-700 dark:text-emerald-300',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/40',
+    borderColor: 'border-emerald-200 dark:border-emerald-900/50',
     label: t('sources.statusCompleted'),
     description: t('sources.statusCompletedDesc')
   },
   failed: {
     icon: AlertTriangle,
     color: 'text-destructive',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    bgColor: 'bg-destructive/10',
+    borderColor: 'border-destructive/30',
     label: t('sources.statusFailed'),
     description: t('sources.statusFailedDesc')
   }
@@ -380,7 +380,7 @@ export function SourceCard({
             {/* Title */}
             <div className={cn('mb-1.5', !isCompleted && 'mb-1')}>
               <h4
-                className="text-sm font-medium leading-tight line-clamp-2 break-all"
+                className="text-sm font-medium leading-tight line-clamp-2 break-words"
                 title={title}
               >
                 {title}

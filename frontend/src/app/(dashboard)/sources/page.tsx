@@ -557,10 +557,18 @@ export default function SourcesPage() {
                     </div>
                   </td>
                   <td className="h-12 px-4 text-muted-foreground text-sm hidden xl:table-cell">
-                    {formatDistanceToNow(new Date(source.created), { 
-                      addSuffix: true,
-                      locale: getDateLocale(language)
-                    })}
+                    {(() => {
+                      try {
+                        const d = new Date(source.created)
+                        if (Number.isNaN(d.getTime())) return source.created || '—'
+                        return formatDistanceToNow(d, { 
+                          addSuffix: true,
+                          locale: getDateLocale(language)
+                        })
+                      } catch {
+                        return source.created || '—'
+                      }
+                    })()}
                   </td>
                   <td className="h-12 px-4 text-center hidden xl:table-cell">
                     <span className="text-sm font-medium">{source.insights_count || 0}</span>

@@ -215,11 +215,11 @@ export function NotesColumn({
                     </div>
 
                     {note.title && (
-                      <h4 className="text-sm font-medium mb-2 break-all">{note.title}</h4>
+                      <h4 className="text-sm font-medium mb-2 break-words">{note.title}</h4>
                     )}
 
                     {note.content && (
-                      <p className="text-sm text-muted-foreground line-clamp-3 break-all">
+                      <p className="text-sm text-muted-foreground line-clamp-3 break-words">
                         {note.content}
                       </p>
                     )}

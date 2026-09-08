@@ -84,12 +84,28 @@ export function NotebookRow({ notebook }: NotebookRowProps) {
             disabledReason={noReadableContent ? 'No readable content is available' : undefined}
             onOpen={openPodcastReview}
           />
-          <Badge variant="outline" className="text-xs flex items-center gap-1 px-1.5 py-0.5 text-primary border-primary/50">
-            <FileText className="h-3 w-3" />
+          <Badge
+            variant="outline"
+            className={`text-xs flex items-center gap-1 px-2 py-0.5 transition-colors ${
+              notebook.source_count > 0
+                ? 'text-foreground bg-muted/40 border-border'
+                : 'text-muted-foreground/70 bg-transparent border-border/50'
+            }`}
+            title={`${notebook.source_count} sources`}
+          >
+            <FileText className={`h-3 w-3 ${notebook.source_count > 0 ? 'text-primary' : 'text-muted-foreground/60'}`} />
             <span>{notebook.source_count}</span>
           </Badge>
-          <Badge variant="outline" className="text-xs flex items-center gap-1 px-1.5 py-0.5 text-primary border-primary/50">
-            <StickyNote className="h-3 w-3" />
+          <Badge
+            variant="outline"
+            className={`text-xs flex items-center gap-1 px-2 py-0.5 transition-colors ${
+              notebook.note_count > 0
+                ? 'text-foreground bg-muted/40 border-border'
+                : 'text-muted-foreground/70 bg-transparent border-border/50'
+            }`}
+            title={`${notebook.note_count} notes`}
+          >
+            <StickyNote className={`h-3 w-3 ${notebook.note_count > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground/60'}`} />
             <span>{notebook.note_count}</span>
           </Badge>
         </div>
@@ -132,7 +148,7 @@ export function NotebookRow({ notebook }: NotebookRowProps) {
                 e.stopPropagation()
                 setShowDeleteDialog(true)
               }}
-              className="text-red-600"
+              className="text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               {t('common.delete')}
