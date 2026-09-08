@@ -2091,6 +2091,9 @@ class Supervisor:
         if reranker_model is None or not reranker_model.exists():
             return
         rerank_port = port if (port and port > 0) else find_free_ports(1)[0]
+        n_gpu = os.environ.get("DEEPER_NOTEBOOK_RERANK_N_GPU_LAYERS", "").strip()
+        if not n_gpu:
+            n_gpu = "-1" if sys.platform == "darwin" else "0"
         args = [
             str(self.venv_python),
             "-m",
@@ -2104,7 +2107,7 @@ class Supervisor:
             "--rerank",
             "true",
             "--n_gpu_layers",
-            _n_gpu_layers("DEEPER_NOTEBOOK_RERANK_N_GPU_LAYERS"),
+            n_gpu,
         ]
         self._spawn(args, cwd=self.upstream_root, name="llamacpp_rerank")
         self.session_env["DEEPER_NOTEBOOK_RERANKER_URL"] = f"http://127.0.0.1:{rerank_port}"
