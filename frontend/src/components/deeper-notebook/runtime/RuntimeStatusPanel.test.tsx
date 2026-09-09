@@ -138,7 +138,8 @@ describe('RuntimeStatusPanel model configuration issues', () => {
   it('parses a pre-v0.8.104 backend that omits the section', () => {
     // The field is optional on purpose: an older backend must still yield a
     // usable snapshot rather than failing validation into UNKNOWN.
-    const { model_config_health: _omitted, ...withoutSection } = issueSnapshot
+    const withoutSection = { ...issueSnapshot }
+    delete (withoutSection as { model_config_health?: unknown }).model_config_health
     render(<RuntimeStatusPanel snapshot={withoutSection} />)
 
     expect(screen.queryByTestId('runtime-model-config-issues')).toBeNull()

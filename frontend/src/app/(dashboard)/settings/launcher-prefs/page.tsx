@@ -19,7 +19,7 @@
 //   - All strings i18n'd via settings.launcherPrefs.* keys.
 
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Cpu, Sparkles, Zap, Check } from 'lucide-react'
+import { AlertTriangle, Cpu, Sparkles, Zap } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

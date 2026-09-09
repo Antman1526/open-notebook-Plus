@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { GitBranch, GitCommit, RefreshCw, Camera, Clock, User, Copy, Check, CloudUpload, CloudDownload, Globe, ExternalLink } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { GitBranch, GitCommit, RefreshCw, Camera, Clock, User, Copy, Check, CloudUpload, CloudDownload, Globe } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -67,21 +67,21 @@ export function VaultGitHistoryDialog({
   const [isPushing, setIsPushing] = useState(false)
   const [isPulling, setIsPulling] = useState(false)
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!vaultId) return
     setLoading(true)
     try {
       const res = await apiClient.get<GitCommitItem[]>(`/vaults/${vaultId}/git/history`)
       setHistory(res.data || [])
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load vault git history:', err)
       toast.error('Failed to load version history')
     } finally {
       setLoading(false)
     }
-  }
+  }, [vaultId])
 
-  const fetchRemotes = async () => {
+  const fetchRemotes = useCallback(async () => {
     if (!vaultId) return
     try {
       const res = await apiClient.get<GitRemoteItem[]>(`/vaults/${vaultId}/git/remote`)
@@ -89,17 +89,17 @@ export function VaultGitHistoryDialog({
       if (res.data?.length > 0) {
         setRemoteInput(res.data[0].url)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load vault remotes:', err)
     }
-  }
+  }, [vaultId])
 
   useEffect(() => {
     if (open) {
-      fetchHistory()
-      fetchRemotes()
+      void fetchHistory()
+      void fetchRemotes()
     }
-  }, [open, vaultId])
+  }, [open, fetchHistory, fetchRemotes])
 
   const handleTakeSnapshot = async () => {
     if (!vaultId) return
@@ -111,11 +111,11 @@ export function VaultGitHistoryDialog({
       if (res.data.committed) {
         toast.success(`Snapshot recorded: ${res.data.commit?.slice(0, 8)}`)
         setSnapshotMsg('')
-        fetchHistory()
+        void fetchHistory()
       } else {
         toast.info(res.data.message || 'No changes to snapshot')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to take snapshot:', err)
       toast.error('Failed to record snapshot')
     } finally {
@@ -133,11 +133,11 @@ export function VaultGitHistoryDialog({
       if (res.data.ok) {
         toast.success('Remote origin repository configured')
         setIsEditingRemote(false)
-        fetchRemotes()
+        void fetchRemotes()
       } else {
         toast.error(res.data.error || 'Failed to set remote')
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to set remote repository')
     }
   }
@@ -154,7 +154,7 @@ export function VaultGitHistoryDialog({
       } else {
         toast.error(res.data.error || 'Push failed')
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to push to remote repository')
     } finally {
       setIsPushing(false)
@@ -170,11 +170,11 @@ export function VaultGitHistoryDialog({
       })
       if (res.data.ok) {
         toast.success(res.data.message || 'Successfully pulled latest changes')
-        fetchHistory()
+        void fetchHistory()
       } else {
         toast.error(res.data.error || 'Pull failed')
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to pull from remote repository')
     } finally {
       setIsPulling(false)

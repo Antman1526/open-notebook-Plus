@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { AxiosResponse } from 'axios'
 import { VaultGitHistoryDialog } from './VaultGitHistoryDialog'
 import apiClient from '@/lib/api/client'
 
@@ -28,9 +29,9 @@ describe('VaultGitHistoryDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
       if (url.includes('/git/history')) {
-        return Promise.resolve({
+        return {
           data: [
             {
               hash: 'abcdef1234567890',
@@ -39,14 +40,14 @@ describe('VaultGitHistoryDialog', () => {
               message: 'Initial research vault snapshot',
             },
           ],
-        }) as any
+        } as unknown as AxiosResponse
       }
       if (url.includes('/git/remote')) {
-        return Promise.resolve({
+        return {
           data: [{ name: 'origin', url: 'https://github.com/user/obsidian-vault.git' }],
-        }) as any
+        } as unknown as AxiosResponse
       }
-      return Promise.resolve({ data: [] }) as any
+      return { data: [] } as unknown as AxiosResponse
     })
   })
 
@@ -65,7 +66,7 @@ describe('VaultGitHistoryDialog', () => {
   it('handles push action', async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: { ok: true, message: 'Successfully pushed to remote' },
-    } as any)
+    } as unknown as AxiosResponse)
 
     render(<VaultGitHistoryDialog {...baseProps} />)
 

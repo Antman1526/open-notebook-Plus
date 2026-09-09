@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { ArrowDownCircle, Download, Copy, Check, Sparkles } from 'lucide-react'
+import { ArrowDownCircle, Download, Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TranscriptSegment } from '@/lib/types/podcasts'
 

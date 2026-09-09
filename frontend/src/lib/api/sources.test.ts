@@ -33,7 +33,8 @@ describe('sourcesApi source creation helpers', () => {
 
   it('strictly decodes list and detail visuals but fails soft only for visual fields', async () => {
     const base = sourceResponse()
-    const { full_text: _fullText, ...listBase } = base
+    const listBase = { ...base }
+    delete (listBase as { full_text?: unknown }).full_text
     const visual = {
       source_id: 'source:1', content_sha256: 'a'.repeat(64), asset_sha256: 'b'.repeat(64),
       origin: 'embedded', source_locator: { page: 1 }, alt_text: 'A useful figure',

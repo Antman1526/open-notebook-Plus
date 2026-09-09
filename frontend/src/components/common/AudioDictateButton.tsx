@@ -103,9 +103,9 @@ export function AudioDictateButton({
           } else {
             toast.info('No speech detected')
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Audio dictation error:', error)
-          toast.error(error.message || 'Failed to transcribe audio')
+          toast.error(error instanceof Error ? error.message : 'Failed to transcribe audio')
         } finally {
           setIsProcessing(false)
         }
@@ -113,7 +113,7 @@ export function AudioDictateButton({
 
       mediaRecorder.start(250) // collect chunks every 250ms
       setIsRecording(true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Microphone access error:', err)
       toast.error('Microphone access denied or audio input unavailable')
     }

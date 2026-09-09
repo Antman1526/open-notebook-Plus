@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,8 @@ export function ExecutiveSynthesisDialog({
 
   const createNote = useCreateNote()
 
-  const fetchSynthesis = async () => {
+  const fetchSynthesis = useCallback(async () => {
+    if (!notebookId) return
     setIsLoading(true)
     setError(null)
     try {
@@ -56,7 +57,12 @@ export function ExecutiveSynthesisDialog({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [notebookId])
+
+  useEffect(() => {
+    setData(null)
+    setError(null)
+  }, [notebookId])
 
   useEffect(() => {
     if (open && !data && !isLoading) {
@@ -65,7 +71,7 @@ export function ExecutiveSynthesisDialog({
     if (!open) {
       setCopied(false)
     }
-  }, [open, notebookId])
+  }, [open, data, isLoading, fetchSynthesis])
 
   const handleCopy = async () => {
     if (!data?.synthesis) return

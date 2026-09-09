@@ -54,7 +54,7 @@ describe('StudyVoiceTutor', () => {
       ondataavailable: ((event: { data: Blob }) => void) | null = null
       onstop: (() => void) | null = null
       onerror: (() => void) | null = null
-      constructor(_stream: MediaStream, _options?: MediaRecorderOptions) {}
+      constructor() {}
       start() { this.state = 'recording' }
       stop() { this.state = 'inactive'; this.onstop?.() }
     }

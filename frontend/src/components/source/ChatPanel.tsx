@@ -811,7 +811,7 @@ function AIMessageContent({
         <pre className="overflow-x-auto p-3.5 leading-relaxed">{children}</pre>
       </div>
     ),
-    code: ({ className, children, ...props }: any) => {
+    code: ({ className, children, ...props }: React.ComponentPropsWithoutRef<'code'>) => {
       const isInline = !className && typeof children === 'string' && !children.includes('\n')
       if (isInline) {
         return (

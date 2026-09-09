@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion, Sparkles, BookOpen, Layers, Copy, Check } from 'lucide-react'
+import { Search, ChevronDown, AlertCircle, Settings, Save, MessageCircleQuestion, Sparkles, Layers, Copy, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -28,6 +28,8 @@ import { searchApi } from '@/lib/api/search'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { AudioDictateButton } from '@/components/common/AudioDictateButton'
 import { StreamingResponse } from '@/components/search/StreamingResponse'
+
+type DeepResearchResult = Awaited<ReturnType<typeof searchApi.deepResearch>>
 import { AdvancedModelsDialog } from '@/components/search/AdvancedModelsDialog'
 import { SaveToNotebooksDialog } from '@/components/search/SaveToNotebooksDialog'
 import { KnowledgeRouteFrame } from '@/components/deeper-notebook/route-frames/KnowledgeRouteFrames'
@@ -106,7 +108,7 @@ export default function SearchPage() {
 
   // Deep Research state
   const [isDeepResearching, setIsDeepResearching] = useState(false)
-  const [deepResearchResult, setDeepResearchResult] = useState<any | null>(null)
+  const [deepResearchResult, setDeepResearchResult] = useState<DeepResearchResult | null>(null)
 
   // Hooks
   const searchMutation = useSearch()
@@ -168,13 +170,13 @@ export default function SearchPage() {
     }
   }
 
-  const handleAsk = useCallback(() => {
-    if (!askQuestion.trim() || !modelDefaults?.default_chat_model) return
+  const handleAsk = useCallback(async () => {
+    if (!askQuestion.trim()) return
 
-    const models = customModels || {
-      strategy: modelDefaults.default_chat_model,
-      answer: modelDefaults.default_chat_model,
-      finalAnswer: modelDefaults.default_chat_model
+    const models = {
+      strategy: customModels?.strategy || modelDefaults?.default_chat_model || '',
+      answer: customModels?.answer || modelDefaults?.default_chat_model || '',
+      finalAnswer: customModels?.finalAnswer || modelDefaults?.default_reasoning_model || modelDefaults?.default_chat_model || '',
     }
 
     ask.sendAsk(askQuestion, models)
@@ -193,9 +195,9 @@ export default function SearchPage() {
       })
       setDeepResearchResult(data)
       toast.success('Deep Research brief ready')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Deep research error:', err)
-      toast.error(err.message || 'Deep Research failed')
+      toast.error(err instanceof Error ? err.message : 'Deep Research failed')
     } finally {
       setIsDeepResearching(false)
     }
@@ -496,7 +498,7 @@ export default function SearchPage() {
                         <div className="space-y-2">
                           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inquiry Paths Explored</Label>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                            {deepResearchResult.plan.inquiry_paths.map((p: any, idx: number) => (
+                            {deepResearchResult.plan.inquiry_paths.map((p, idx) => (
                               <div key={idx} className="p-3 rounded-lg border bg-card/60 text-xs space-y-1.5 shadow-xs">
                                 <div className="font-medium text-foreground flex items-center justify-between gap-1.5">
                                   <span className="flex items-center gap-1.5 min-w-0">
@@ -551,7 +553,7 @@ export default function SearchPage() {
                         <div className="space-y-2">
                           <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grounded Citations</Label>
                           <div className="flex flex-wrap gap-1.5">
-                            {deepResearchResult.citations.map((c: any, idx: number) => (
+                            {deepResearchResult.citations.map((c, idx) => (
                               <Badge
                                 key={idx}
                                 variant="outline"
