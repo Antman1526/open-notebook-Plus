@@ -153,6 +153,74 @@ describe('SearchPage', () => {
     locate.mockRestore()
   })
 
+  // v0.8.116 — above VIRTUALIZE_THRESHOLD (50), results render through
+  // VirtualizedListAuto. jsdom does no layout, so `offsetHeight` reads 0
+  // on every element by default — react-virtual then measures a 0px
+  // viewport and renders NOTHING, not an overscan window (confirmed by
+  // probing VirtualizedListAuto directly: 0 rows with jsdom's default
+  // 0-height container). Stubbing `offsetHeight` gives the virtualizer a
+  // real viewport to compute against, which is what actually makes it
+  // render its overscan window instead of the full 120 — restored after
+  // the test so it doesn't affect other tests' layout assumptions.
+  it('virtualizes large result sets instead of rendering every card', () => {
+    const offsetHeightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 600 })
+
+    try {
+      mockSearchParams.current = 'mode=search'
+      mockSearchData.current = {
+        total_count: 120,
+        search_type: 'text',
+        results: Array.from({ length: 120 }, (_, i) => ({
+          id: `source:${i}`,
+          title: `Result ${i}`,
+          parent_id: '',
+          final_score: 0.5,
+          matches: [],
+          created: '2026-08-10T00:00:00Z',
+          updated: '2026-08-10T00:01:00Z',
+          visual: null,
+        })),
+      }
+
+      render(<SearchPage />)
+
+      const renderedCards = screen.getAllByTestId(/^search-result-card-/)
+      expect(renderedCards.length).toBeGreaterThan(0)
+      expect(renderedCards.length).toBeLessThan(120)
+    } finally {
+      if (offsetHeightDescriptor) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetHeight', offsetHeightDescriptor)
+      }
+    }
+  })
+
+  it('renders every card for a small result set (below the virtualization threshold)', () => {
+    mockSearchParams.current = 'mode=search'
+    mockSearchData.current = {
+      total_count: 3,
+      search_type: 'text',
+      results: [
+        {
+          id: 'source:one', title: 'Result one', parent_id: '', final_score: 0.9,
+          matches: [], created: '2026-08-10T00:00:00Z', updated: '2026-08-10T00:01:00Z', visual: null,
+        },
+        {
+          id: 'source:two', title: 'Result two', parent_id: '', final_score: 0.8,
+          matches: [], created: '2026-08-10T00:00:00Z', updated: '2026-08-10T00:01:00Z', visual: null,
+        },
+        {
+          id: 'source:three', title: 'Result three', parent_id: '', final_score: 0.7,
+          matches: [], created: '2026-08-10T00:00:00Z', updated: '2026-08-10T00:01:00Z', visual: null,
+        },
+      ],
+    }
+
+    render(<SearchPage />)
+
+    expect(screen.getAllByTestId(/^search-result-card-/)).toHaveLength(3)
+  })
+
   it('returns focus to the original evidence invoker after a parent rerender', async () => {
     mockVisualSystemEnabled.mockReturnValue(true)
     mockSourceVisualsEnabled.mockReturnValue(true)
