@@ -17,13 +17,17 @@
  * down and the backend's `is_disconnected()` fires) and reject with a
  * `StreamStallError` the hooks can surface as a specific toast.
  *
- * Default is deliberately generous (120 s) because there is no
- * heartbeat: a cold model load plus a long-context prefill on Apple
- * Silicon can legitimately produce no bytes for a minute or more.
- * Tune with `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS`; `0` disables the guard.
+ * Default is 60 s. Since v0.8.116 the backend emits a heartbeat frame
+ * every DEEPER_NOTEBOOK_STREAM_HEARTBEAT_SEC (10 s) of model silence, so a
+ * healthy connection never goes quiet for more than a few seconds and a
+ * minute of nothing means the socket is dead (or the API process is).
+ * A hung model call behind a live API is caught server-side by
+ * DEEPER_NOTEBOOK_STREAM_IDLE_TIMEOUT_SEC, which ends the stream with an
+ * error frame. Tune with `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS`; `0`
+ * disables the guard.
  */
 
-export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 120_000
+export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 60_000
 
 /**
  * Parse the idle timeout from the environment. Invalid, negative, or

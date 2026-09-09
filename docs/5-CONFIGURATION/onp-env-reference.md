@@ -287,6 +287,8 @@ openai_compatible) → 60s for cold-start model-load latency.
 | Env var | Default | What it bounds |
 |---|---:|---|
 | `DEEPER_NOTEBOOK_SEARCH_TIMEOUT_SEC` | 60 | `/search` text + vector queries |
+| `DEEPER_NOTEBOOK_STREAM_HEARTBEAT_SEC` | 10 | Heartbeat frame interval on the streaming endpoints (`/chat/stream`, `/search/ask`, source chat) while the model is silent; `0` disables heartbeats (v0.8.116) |
+| `DEEPER_NOTEBOOK_STREAM_IDLE_TIMEOUT_SEC` | 300 | Server-side idle limit: if the model produces nothing for this long the stream ends with an error frame and the model call is cancelled; `0` disables (v0.8.116). The client-side guard is `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS` (default 60 s) |
 | `DEEPER_NOTEBOOK_BULK_VECTORIZE_MAX_SOURCES` | 500 | Per-request cap on `POST /notebooks/{id}/vectorize_sources` |
 
 ## Command-queue submission (v0.7.115)
@@ -331,3 +333,4 @@ sync SurrealDB WS handshake. Already wrapped in `asyncio.to_thread`
 | v0.7.114 | `ONP_MEMORY_RECALL_QUERY_TIMEOUT_SEC` |
 | v0.7.115 | `ONP_SUBMIT_COMMAND_TIMEOUT_SEC` |
 | v0.7.116 | Per-provider `ONP_CONNECTION_TEST_TIMEOUT_SEC_<PROVIDER>` |
+| v0.8.116 | `ONP_STREAM_HEARTBEAT_SEC`, `ONP_STREAM_IDLE_TIMEOUT_SEC` |

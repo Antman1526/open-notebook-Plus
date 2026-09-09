@@ -94,6 +94,30 @@ describe('chatApi.streamMessage idle-timeout guard', () => {
     await expect(iterator.next()).resolves.toMatchObject({ done: true })
   })
 
+  it('drops backend heartbeat frames but lets them reset the idle timer', async () => {
+    const encoder = new TextEncoder()
+    let controller!: Controller
+    mockFetchWithBody((c) => {
+      controller = c
+    })
+
+    const iterator = chatApi.streamMessage(REQUEST)
+    const first = iterator.next()
+
+    // Two heartbeats 800ms apart keep the stream alive well past the
+    // 1000ms window, then a real token arrives.
+    await vi.advanceTimersByTimeAsync(800)
+    controller.enqueue(encoder.encode('{"type": "heartbeat"}\n'))
+    await vi.advanceTimersByTimeAsync(800)
+    controller.enqueue(encoder.encode('{"type": "heartbeat"}\n'))
+    await vi.advanceTimersByTimeAsync(800)
+    controller.enqueue(encoder.encode('{"type":"token","content":"z"}\n'))
+
+    // The consumer never sees the heartbeats — only the token.
+    await expect(first).resolves.toEqual({ done: false, value: { type: 'token', content: 'z' } })
+    controller.close()
+  })
+
   it('never arms a timer when the timeout is disabled with 0', async () => {
     vi.stubEnv('NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS', '0')
     let controller!: Controller

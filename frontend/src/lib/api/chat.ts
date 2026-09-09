@@ -44,6 +44,10 @@ export type ChatStreamEvent =
       } | null
     }
   | { type: 'error'; detail: string }
+  // v0.8.116 — keepalive frame emitted by the backend during model
+  // silence (api/utils/stream_keepalive.py). Never surfaced to callers:
+  // streamMessage drops it after it has reset the idle timer.
+  | { type: 'heartbeat' }
 
 export const chatApi = {
   // Session management
@@ -178,7 +182,11 @@ export const chatApi = {
           buffer = buffer.slice(nl + 1)
           if (line) {
             try {
-              yield JSON.parse(line) as ChatStreamEvent
+              const event = JSON.parse(line) as ChatStreamEvent
+              // v0.8.116 — heartbeats exist only to keep bytes flowing;
+              // the bytes already reset readWithIdleTimeout's timer.
+              if (event.type === 'heartbeat') continue
+              yield event
             } catch {
               // Malformed line — skip it, keep going. Errors are
               // surfaced separately as {"type":"error"} events.

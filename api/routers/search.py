@@ -4,6 +4,11 @@ from typing import Any, AsyncGenerator, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from api.utils.stream_keepalive import (
+    SSE_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from loguru import logger
 
 from api.models import (
@@ -549,13 +554,25 @@ async def ask_knowledge_base(ask_request: AskRequest, fastapi_request: Request):
         # For streaming response
         # v0.7.43 — proxy-flush headers so each NDJSON line lands
         # client-side immediately (same hint pair as /chat/stream).
+        # v0.8.116 — heartbeat comment lines (`: heartbeat`) during model
+        # silence + server-side idle limit. The SSE parser in use-ask.ts
+        # only reads `data:` lines, so the comment is invisible to it but
+        # still resets the client's idle timer.
         return StreamingResponse(
-            stream_ask_response(
-                ask_request.question,
-                strategy_model,
-                answer_model,
-                final_answer_model,
-                fastapi_request=fastapi_request,
+            with_keepalive(
+                stream_ask_response(
+                    ask_request.question,
+                    strategy_model,
+                    answer_model,
+                    final_answer_model,
+                    fastapi_request=fastapi_request,
+                ),
+                heartbeat_frame=SSE_HEARTBEAT_FRAME,
+                make_timeout_frame=lambda idle: (
+                    "data: "
+                    + json.dumps({"type": "error", "message": idle_timeout_message(idle)})
+                    + "\n\n"
+                ),
             ),
             media_type="text/plain",
             headers={

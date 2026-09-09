@@ -7,6 +7,11 @@ from typing import Any, AsyncGenerator, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from api.utils.stream_keepalive import (
+    NDJSON_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -1629,8 +1634,20 @@ async def _stream_chat_events(
 async def stream_chat(request: ExecuteChatRequest, fastapi_request: Request):
     """Streaming variant of /chat/execute. NDJSON event stream — see
     _stream_chat_events docstring for wire format."""
+    # v0.8.116 — heartbeat + server-side idle limit (see
+    # api/utils/stream_keepalive.py). Emits {"type":"heartbeat"} lines
+    # during model silence so the client can distinguish "thinking" from
+    # "daemon died", and ends the stream with an error frame if the model
+    # produces nothing for DEEPER_NOTEBOOK_STREAM_IDLE_TIMEOUT_SEC.
     return StreamingResponse(
-        _stream_chat_events(request, fastapi_request),
+        with_keepalive(
+            _stream_chat_events(request, fastapi_request),
+            heartbeat_frame=NDJSON_HEARTBEAT_FRAME,
+            make_timeout_frame=lambda idle: json.dumps(
+                {"type": "error", "detail": idle_timeout_message(idle)}
+            )
+            + "\n",
+        ),
         media_type="application/x-ndjson",
         # Disable HTTP/1.1 keep-alive buffering on the proxy side. Some
         # reverse proxies (and the Next.js dev proxy) hold buffered

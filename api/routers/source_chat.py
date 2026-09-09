@@ -4,6 +4,11 @@ from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, HTTPException, Path, Request
 from fastapi.responses import StreamingResponse
+from api.utils.stream_keepalive import (
+    SSE_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
@@ -917,16 +922,26 @@ async def send_message_to_source_chat(
         await session.save()
 
         # Return streaming response
+        # v0.8.116 — heartbeat comment lines during model silence +
+        # server-side idle limit (see api/utils/stream_keepalive.py).
         return StreamingResponse(
-            stream_source_chat_response(
-                session_id=full_session_id,
-                source_id=full_source_id,
-                message=request.message,
-                model_override=model_override,
-                fastapi_request=fastapi_request,
-                # v0.8.44 / v0.8.44b — forward the EFFECTIVE per-turn
-                # disable list (request body, or session fallback).
-                disabled_mcp_servers=effective_disabled_mcp,
+            with_keepalive(
+                stream_source_chat_response(
+                    session_id=full_session_id,
+                    source_id=full_source_id,
+                    message=request.message,
+                    model_override=model_override,
+                    fastapi_request=fastapi_request,
+                    # v0.8.44 / v0.8.44b — forward the EFFECTIVE per-turn
+                    # disable list (request body, or session fallback).
+                    disabled_mcp_servers=effective_disabled_mcp,
+                ),
+                heartbeat_frame=SSE_HEARTBEAT_FRAME,
+                make_timeout_frame=lambda idle: (
+                    "data: "
+                    + json.dumps({"type": "error", "message": idle_timeout_message(idle)})
+                    + "\n\n"
+                ),
             ),
             media_type="text/plain",
             headers={
