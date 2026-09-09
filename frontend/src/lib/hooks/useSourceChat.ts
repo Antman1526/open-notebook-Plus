@@ -4,6 +4,11 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
+import {
+  isStreamStallError,
+  readWithIdleTimeout,
+  resolveStreamIdleTimeoutMs,
+} from '@/lib/utils/stream-stall'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { sourceChatApi } from '@/lib/api/source-chat'
 import { pruneMessageScopedQueries } from '@/lib/api/query-client'
@@ -319,9 +324,11 @@ export function useSourceChat(sourceId: string) {
       //       a newline can't grow unbounded.
       let buffer = ''
       const BUFFER_MAX = 4 * 1024 * 1024
+      // v0.8.115 — idle-timeout guard (see stream-stall.ts).
+      const idleTimeoutMs = resolveStreamIdleTimeoutMs()
 
       while (true) {
-        const { done, value } = await reader.read()
+        const { done, value } = await readWithIdleTimeout(reader, idleTimeoutMs)
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
@@ -459,7 +466,15 @@ export function useSourceChat(sourceId: string) {
       }
       const error = err as { response?: { data?: { detail?: string } }, message?: string };
       console.error('Error sending message:', error)
-      toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+      if (isStreamStallError(err)) {
+        // v0.8.115 — stalled stream (dead local daemon / sleep-wake socket).
+        // Same cleanup as any other failure, but copy that names the cause.
+        toast.error(t('apiErrors.streamStalled'), {
+          description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
+        })
+      } else {
+        toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+      }
       // v0.7.54 — same fix as the AbortError branch above: filter ONLY
       // THIS send's tempId + streamingAiId. The old `startsWith('temp-')`
       // also wiped a concurrent retry's optimistic message because the

@@ -166,6 +166,8 @@ export const trTR = {
     fileNotFoundOnServer: "Sunucuda dosya bulunamadı",
     searchFailed: "Arama başarısız",
     askFailed: "Sorgu başarısız",
+    streamStalled: "Yanıt durdu",
+    streamStalledHint: "Modelden {{seconds}} saniyedir veri gelmedi. Yerel model sunucunuzun (Ollama, llama.cpp, MLX) hâlâ çalıştığını kontrol edip yeniden deneyin.",
     pleaseEnterQuestion: "Lütfen bir soru girin",
     pleaseConfigureModels: "Lütfen gerekli tüm modelleri yapılandırın",
     failedToCreateSession: "Oturum oluşturulamadı",

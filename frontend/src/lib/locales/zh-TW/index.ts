@@ -163,6 +163,8 @@ export const zhTW = {
     fileNotFoundOnServer: "伺服器上找不到該檔案",
     searchFailed: "搜尋失敗",
     askFailed: "提問失敗",
+    streamStalled: "回應已停滯",
+    streamStalledHint: "模型已 {{seconds}} 秒未回傳任何資料。請確認本機模型服務（Ollama、llama.cpp、MLX）仍在執行，然後再試一次。",
     pleaseEnterQuestion: "請輸入問題",
     pleaseConfigureModels: "請設定所有必選模型",
     failedToCreateSession: "新增對話失敗",

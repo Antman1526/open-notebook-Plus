@@ -163,6 +163,8 @@ export const ptBR = {
     fileNotFoundOnServer: "Arquivo não encontrado no servidor",
     searchFailed: "Busca falhou",
     askFailed: "Consulta falhou",
+    streamStalled: "A resposta travou",
+    streamStalledHint: "Nenhum dado chegou do modelo por {{seconds}} segundos. Verifique se o servidor de modelos local (Ollama, llama.cpp, MLX) ainda está em execução e tente novamente.",
     pleaseEnterQuestion: "Por favor, digite uma pergunta",
     pleaseConfigureModels: "Por favor, configure todos os modelos necessários",
     failedToCreateSession: "Falha ao criar sessão",

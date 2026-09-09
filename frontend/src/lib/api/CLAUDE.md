@@ -42,6 +42,7 @@ Axios-based client and resource-specific API modules for backend communication w
 - **Base URL delay**: First request waits for `getApiUrl()` to resolve; can be slow on startup
 - **FormData fields as JSON strings**: Nested objects (arrays, objects) must be JSON stringified in FormData (e.g., `notebooks`, `transformations`)
 - **Timeout for streaming**: the default 10-minute timeout may not cover very long-running LLM operations; raise it via `NEXT_PUBLIC_API_TIMEOUT_MS` (or set `0` to disable)
+- **Idle-timeout guard for streams** (v0.8.115): every streaming body read (`chat.ts` `streamMessage`, `useSourceChat`, `useAsk`) goes through `readWithIdleTimeout` from `@/lib/utils/stream-stall.ts`. Silence for `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS` (default `120000` = 2 min; `0` disables) rejects with `StreamStallError` and cancels the reader. The timer resets on every chunk, so slow-but-alive local models are never cut off. Never add a bare `await reader.read()` for a streaming body — `stream-stall-guard.test.ts` fails on it.
 - **Auth token management**: Token stored in localStorage `auth-storage` key; uses Zustand persist middleware
 - **Headers mutation in interceptor**: Mutating `config.headers` directly; be careful with middleware order
 - **No automatic retry logic**: Failed requests not automatically retried; must be handled in consuming code. Podcast episodes have explicit retry via `retryEpisode()` in `podcasts.ts` and `useRetryPodcastEpisode()` hook

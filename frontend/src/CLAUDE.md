@@ -41,6 +41,7 @@ User interactions trigger mutations/queries via hooks, which communicate with th
 
 #### `lib/api/` — Backend Communication
 - **`client.ts`**: Central Axios instance with auth interceptor, FormData handling, configurable request timeout (`NEXT_PUBLIC_API_TIMEOUT_MS`, default 10 min; `0` disables)
+- **`utils/stream-stall.ts`**: Idle-timeout guard for streaming reads (`NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS`, default 2 min; `0` disables). A stream that goes silent rejects with `StreamStallError` so the chat, source chat, and Ask hooks can show a "response stalled" toast instead of spinning forever
 - **`query-client.ts`**: TanStack Query configuration
 - **Resource modules** (`sources.ts`, `chat.ts`, `notebooks.ts`, etc.): Endpoint-specific functions returning typed responses
 - **Pattern**: All requests go through `apiClient`; auth token auto-added from localStorage

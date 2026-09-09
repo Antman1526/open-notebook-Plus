@@ -163,6 +163,8 @@ export const zhCN = {
     fileNotFoundOnServer: "服务器上找不到该文件",
     searchFailed: "搜索失败",
     askFailed: "提问失败",
+    streamStalled: "响应已停滞",
+    streamStalledHint: "模型已 {{seconds}} 秒未返回任何数据。请确认本地模型服务（Ollama、llama.cpp、MLX）仍在运行，然后重试。",
     pleaseEnterQuestion: "请输入问题",
     pleaseConfigureModels: "请配置所有必选模型",
     failedToCreateSession: "创建对话失败",

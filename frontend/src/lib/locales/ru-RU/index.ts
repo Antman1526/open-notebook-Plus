@@ -163,6 +163,8 @@ export const ruRU = {
     fileNotFoundOnServer: "Файл не найден на сервере",
     searchFailed: "Поиск не удался",
     askFailed: "Запрос не удался",
+    streamStalled: "Ответ завис",
+    streamStalledHint: "Модель не присылала данные {{seconds}} с. Проверьте, что локальный сервер моделей (Ollama, llama.cpp, MLX) всё ещё работает, и повторите попытку.",
     pleaseEnterQuestion: "Пожалуйста, введите вопрос",
     pleaseConfigureModels: "Пожалуйста, настройте все необходимые модели",
     failedToCreateSession: "Не удалось создать сессию",

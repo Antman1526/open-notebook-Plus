@@ -1,5 +1,6 @@
 import apiClient from './client'
 import { getApiUrl } from '@/lib/config'
+import { readWithIdleTimeout, resolveStreamIdleTimeoutMs } from '@/lib/utils/stream-stall'
 import {
   NotebookChatSession,
   NotebookChatSessionWithMessages,
@@ -157,9 +158,15 @@ export const chatApi = {
     // chat response is <50 KiB) and well under heap pressure.
     const BUFFER_MAX = 4 * 1024 * 1024
 
+    // v0.8.115 — idle-timeout guard. A dead local daemon or a sleep/wake
+    // half-open socket otherwise parks this read forever with the UI
+    // stuck in "streaming". Resolved per call so NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS
+    // can be tuned (0 disables). See stream-stall.ts.
+    const idleTimeoutMs = resolveStreamIdleTimeoutMs()
+
     try {
       while (true) {
-        const { value, done } = await reader.read()
+        const { value, done } = await readWithIdleTimeout(reader, idleTimeoutMs)
         if (done) break
         buffer += decoder.decode(value, { stream: true })
         if (buffer.length > BUFFER_MAX) {

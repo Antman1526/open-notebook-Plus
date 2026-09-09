@@ -163,6 +163,8 @@ export const itIT = {
     fileNotFoundOnServer: "File non trovato sul server",
     searchFailed: "Ricerca fallita",
     askFailed: "Richiesta fallita",
+    streamStalled: "Risposta bloccata",
+    streamStalledHint: "Nessun dato ricevuto dal modello per {{seconds}} secondi. Verifica che il server dei modelli locale (Ollama, llama.cpp, MLX) sia ancora in esecuzione e riprova.",
     pleaseEnterQuestion: "Inserisci una domanda",
     pleaseConfigureModels: "Configura tutti i modelli richiesti",
     failedToCreateSession: "Impossibile creare la sessione",

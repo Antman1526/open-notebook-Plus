@@ -163,6 +163,8 @@ export const jaJP = {
     fileNotFoundOnServer: "サーバー上にファイルが見つかりません",
     searchFailed: "検索に失敗しました",
     askFailed: "質問の処理に失敗しました",
+    streamStalled: "応答が停止しました",
+    streamStalledHint: "{{seconds}}秒間モデルからデータが届きませんでした。ローカルモデルサーバー（Ollama、llama.cpp、MLX）が動作しているか確認して、もう一度お試しください。",
     pleaseEnterQuestion: "質問を入力してください",
     pleaseConfigureModels: "必要なモデルをすべて設定してください",
     failedToCreateSession: "セッションの作成に失敗しました",

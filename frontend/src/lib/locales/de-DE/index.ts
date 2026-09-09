@@ -166,6 +166,8 @@ export const deDE = {
     fileNotFoundOnServer: "Datei auf dem Server nicht gefunden",
     searchFailed: "Suche fehlgeschlagen",
     askFailed: "Frage konnte nicht verarbeitet werden",
+    streamStalled: "Antwort hängt",
+    streamStalledHint: "Seit {{seconds}} Sekunden kamen keine Daten vom Modell. Prüfe, ob dein lokaler Modellserver (Ollama, llama.cpp, MLX) noch läuft, und versuche es erneut.",
     pleaseEnterQuestion: "Bitte gib eine Frage ein",
     pleaseConfigureModels: "Bitte konfiguriere alle erforderlichen Modelle",
     failedToCreateSession: "Sitzung konnte nicht erstellt werden",

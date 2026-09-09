@@ -25,6 +25,41 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.115 — 2026-09-09 — Stalled model streams no longer hang the UI
+
+🐛 **A silent streaming response parked the chat, source chat, and Ask
+panels in "streaming" forever.** All three consumers sat in a bare
+`await reader.read()` with no upper bound. When a local model daemon
+(Ollama, llama.cpp, MLX) died mid-generation, or the Mac slept and woke
+with a half-open socket, no bytes ever arrived and nothing failed: the
+spinner stayed, Stop was the only way out, and the backend never saw a
+disconnect. The server sends no heartbeat frames, so silence is the only
+signal available.
+
+- New `readWithIdleTimeout` (`frontend/src/lib/utils/stream-stall.ts`)
+  races each read against an idle timer. The timer is per read, so a
+  slow-but-alive model that keeps trickling tokens is never cut off; only
+  total silence trips it. On a stall it rejects with `StreamStallError`
+  and cancels the reader so the HTTP body is torn down and FastAPI's
+  `is_disconnected()` fires.
+- Wired into `chatApi.streamMessage` (notebook chat), `useSourceChat`,
+  and `useAsk`. Each hook branches on the stall before the generic error
+  path and shows dedicated copy (`apiErrors.streamStalled` /
+  `streamStalledHint`, all 14 locales) that points at the local daemon.
+- Default 120 s. Deliberately generous: a cold model load plus a
+  long-context prefill on Apple Silicon can legitimately produce no bytes
+  for a minute. Tune with `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS`; `0`
+  disables the guard.
+- Ordering matters: the guard rejects *before* cancelling. `cancel()`
+  settles the pending read as `{ done: true }`, and if that reaction is
+  queued first the race resolves as a clean end-of-stream and the caller
+  never learns it stalled. Caught by a regression test against a real
+  `ReadableStream`.
+- Tests: unit (`stream-stall.test.ts`), behavioural through the real
+  NDJSON generator with a hanging fetch body
+  (`chat.stream-stall.test.ts`), and a source-text contract that fails if
+  a bare `reader.read()` is reintroduced (`stream-stall-guard.test.ts`).
+
 ## v0.8.114 — 2026-08-20 — Semantic search actually returns results
 
 🐛 **`fn::vector_search` returned nothing for every query, and had since

@@ -163,6 +163,8 @@ export const frFR = {
     fileNotFoundOnServer: "Fichier introuvable sur le serveur",
     searchFailed: "La recherche a échoué",
     askFailed: "La demande a échoué",
+    streamStalled: "Réponse bloquée",
+    streamStalledHint: "Aucune donnée reçue du modèle depuis {{seconds}} secondes. Vérifiez que votre serveur de modèles local (Ollama, llama.cpp, MLX) fonctionne toujours, puis réessayez.",
     pleaseEnterQuestion: "Veuillez entrer une question",
     pleaseConfigureModels: "Veuillez configurer tous les modèles requis",
     failedToCreateSession: "Échec de la création de la session",

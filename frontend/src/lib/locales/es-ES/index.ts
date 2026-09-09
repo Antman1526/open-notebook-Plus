@@ -163,6 +163,8 @@ export const esES = {
     fileNotFoundOnServer: "Archivo no encontrado en el servidor",
     searchFailed: "La búsqueda falló",
     askFailed: "La consulta falló",
+    streamStalled: "La respuesta se detuvo",
+    streamStalledHint: "No llegaron datos del modelo durante {{seconds}} segundos. Comprueba que tu servidor de modelos local (Ollama, llama.cpp, MLX) sigue en ejecución y vuelve a intentarlo.",
     pleaseEnterQuestion: "Por favor, escribe una pregunta",
     pleaseConfigureModels: "Por favor, configura todos los modelos requeridos",
     failedToCreateSession: "Error al crear la sesión",

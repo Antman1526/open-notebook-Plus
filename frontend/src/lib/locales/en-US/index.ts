@@ -167,6 +167,8 @@ export const enUS = {
     fileNotFoundOnServer: "File not found on server",
     searchFailed: "Search failed",
     askFailed: "Ask failed",
+    streamStalled: "Response stalled",
+    streamStalledHint: "No data arrived from the model for {{seconds}} seconds. Check that your local model server (Ollama, llama.cpp, MLX) is still running, then try again.",
     pleaseEnterQuestion: "Please enter a question",
     pleaseConfigureModels: "Please configure all required models",
     failedToCreateSession: "Failed to create session",

@@ -163,6 +163,8 @@ export const bnIN = {
     fileNotFoundOnServer: "সার্ভারে ফাইল খুঁজে পাওয়া যায়নি",
     searchFailed: "অনুসন্ধান ব্যর্থ",
     askFailed: "প্রশ্ন করা ব্যর্থ",
+    streamStalled: "প্রতিক্রিয়া থেমে গেছে",
+    streamStalledHint: "{{seconds}} সেকেন্ড ধরে মডেল থেকে কোনো ডেটা আসেনি। আপনার লোকাল মডেল সার্ভার (Ollama, llama.cpp, MLX) চালু আছে কিনা দেখে আবার চেষ্টা করুন।",
     pleaseEnterQuestion: "অনুগ্রহ করে একটি প্রশ্ন লিখুন",
     pleaseConfigureModels: "অনুগ্রহ করে সব প্রয়োজনীয় মডেল কনফিগার করুন",
     failedToCreateSession: "সেশন তৈরি করতে ব্যর্থ",

@@ -6,6 +6,11 @@ import { useTranslation } from '@/lib/hooks/use-translation'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
 import { searchApi } from '@/lib/api/search'
 import { AskStreamEvent } from '@/lib/types/search'
+import {
+  isStreamStallError,
+  readWithIdleTimeout,
+  resolveStreamIdleTimeoutMs,
+} from '@/lib/utils/stream-stall'
 
 interface AskModels {
   strategy: string
@@ -100,6 +105,9 @@ export function useAsk() {
       // generous for SSE event lines (longest realistic event is
       // the final_answer payload, < 100 KB).
       const BUFFER_MAX = 4 * 1024 * 1024
+      // v0.8.115 — idle-timeout guard (see stream-stall.ts). Per-read, so
+      // a slow local model that keeps trickling tokens is never cut off.
+      const idleTimeoutMs = resolveStreamIdleTimeoutMs()
 
       // v0.8.70 — batch the per-token `final_answer_delta` into ≤1 setState per
       // paint frame via rAF (was one setState per token → a re-render storm
@@ -119,7 +127,7 @@ export function useAsk() {
       while (true) {
         // Bail if unmounted between chunks — don't bother reading further.
         if (!mountedRef.current) break
-        const { done, value } = await reader.read()
+        const { done, value } = await readWithIdleTimeout(reader, idleTimeoutMs)
 
         if (done) {
           break
@@ -226,9 +234,18 @@ export function useAsk() {
           error: errorMessage
         }))
 
-        toast.error(t('apiErrors.askFailed'), {
-          description: getApiErrorMessage(errorMessage, (key) => t(key))
-        })
+        if (isStreamStallError(error)) {
+          // v0.8.115 — specific copy: this is almost always a local model
+          // daemon that died or a post-sleep half-open socket, not a
+          // server-side failure. Point the user at the daemon.
+          toast.error(t('apiErrors.streamStalled'), {
+            description: t('apiErrors.streamStalledHint', { seconds: error.idleSeconds })
+          })
+        } else {
+          toast.error(t('apiErrors.askFailed'), {
+            description: getApiErrorMessage(errorMessage, (key) => t(key))
+          })
+        }
       }
     } finally {
       // v0.7.54 — cancel the reader BEFORE releasing the lock so the

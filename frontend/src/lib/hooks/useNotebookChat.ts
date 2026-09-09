@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
+import { isStreamStallError } from '@/lib/utils/stream-stall'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { markEvaluationPersistencePending } from '@/lib/hooks/use-evaluation'
 import { chatApi } from '@/lib/api/chat'
@@ -616,7 +617,15 @@ export function useNotebookChat({
       }
       const error = err as { response?: { data?: { detail?: string } }; message?: string };
       console.error('Error sending message:', error)
-      toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+      if (isStreamStallError(err)) {
+        // v0.8.115 — stalled stream (dead local daemon / sleep-wake socket).
+        // Same cleanup as any other failure, but copy that names the cause.
+        toast.error(t('apiErrors.streamStalled'), {
+          description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
+        })
+      } else {
+        toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+      }
       // Clean up both the user's optimistic message AND the streaming
       // AI placeholder.
       setMessages(prev =>

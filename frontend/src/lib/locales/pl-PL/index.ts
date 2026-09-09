@@ -166,6 +166,8 @@ export const plPL = {
     fileNotFoundOnServer: "Nie znaleziono pliku na serwerze",
     searchFailed: "Wyszukiwanie nie powiodło się",
     askFailed: "Zapytanie nie powiodło się",
+    streamStalled: "Odpowiedź zawiesiła się",
+    streamStalledHint: "Model nie przesłał żadnych danych przez {{seconds}} s. Sprawdź, czy lokalny serwer modeli (Ollama, llama.cpp, MLX) nadal działa, i spróbuj ponownie.",
     pleaseEnterQuestion: "Wpisz pytanie",
     pleaseConfigureModels: "Skonfiguruj wszystkie wymagane modele",
     failedToCreateSession: "Nie udało się utworzyć sesji",

@@ -166,6 +166,8 @@ export const caES = {
     fileNotFoundOnServer: "No s'ha trobat el fitxer al servidor",
     searchFailed: "Ha fallat la cerca",
     askFailed: "Ha fallat la consulta",
+    streamStalled: "La resposta s'ha aturat",
+    streamStalledHint: "No ha arribat cap dada del model durant {{seconds}} segons. Comprova que el servidor de models local (Ollama, llama.cpp, MLX) continua en marxa i torna-ho a provar.",
     pleaseEnterQuestion: "Introdueix una pregunta",
     pleaseConfigureModels: "Configura tots els models necessaris",
     failedToCreateSession: "Ha fallat la creació de la sessió",
