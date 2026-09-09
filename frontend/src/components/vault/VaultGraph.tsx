@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, type MouseEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
 import { Background, Controls, ReactFlow, type Edge, type Node, type Viewport } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -14,6 +14,36 @@ import './vault.css'
 const EMPTY_STRING_ARRAY: string[] = []
 
 type BookmarkContext = { rootDocumentId: string; spaceIds: string[]; relationKinds: string[]; viewport: Viewport }
+
+type ArrowDirection = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'
+
+// Finds the nearest node whose position lies in `direction` from `currentId`:
+// the delta along that axis must have the right sign and be at least as large
+// (in magnitude) as the delta on the cross axis; ties broken by Euclidean distance.
+function findNearestNodeInDirection(
+  currentId: string,
+  direction: ArrowDirection,
+  positions: Map<string, { x: number; y: number }>,
+): string | null {
+  const current = positions.get(currentId)
+  if (!current) return null
+  let bestId: string | null = null
+  let bestDistance = Infinity
+  positions.forEach((position, id) => {
+    if (id === currentId) return
+    const dx = position.x - current.x
+    const dy = position.y - current.y
+    const alongAxis = direction === 'ArrowRight' ? dx : direction === 'ArrowLeft' ? -dx : direction === 'ArrowDown' ? dy : -dy
+    const crossAxis = direction === 'ArrowRight' || direction === 'ArrowLeft' ? dy : dx
+    if (alongAxis <= 0 || alongAxis < Math.abs(crossAxis)) return
+    const distance = Math.hypot(dx, dy)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestId = id
+    }
+  })
+  return bestId
+}
 
 function bookmarkContextsEqual(left: BookmarkContext | null, right: BookmarkContext): boolean {
   if (!left) return false
@@ -63,6 +93,32 @@ export function VaultGraph({ graph, unresolved, onNavigate, viewport, onMoveEnd,
     lastBookmarkContext.current = context
     onBookmarkContext(context)
   }, [liveRelationKinds, onBookmarkContext, rootDocumentId, spaceIds, viewport])
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const keyboardHintId = useId()
+  const nodePositions = useMemo(() => new Map(nodes.map((node) => [node.id, node.position])), [nodes])
+  // v0.8.116 — React Flow's own keydown handler on a focused node only toggles
+  // selection (Enter/Space never fires onNodeClick), and arrow keys drag the
+  // selected node instead of moving focus. We handle Enter/Space/Arrow* here,
+  // at the wrapper level, and preventDefault so React Flow's own handling
+  // doesn't also run for the keys we've claimed.
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    const nodeEl = (event.target as HTMLElement).closest('[data-id]')
+    const id = nodeEl?.getAttribute('data-id')
+    if (!id) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      if (!id.startsWith('unresolved:')) {
+        onNavigate(id)
+        event.preventDefault()
+      }
+      return
+    }
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const nextId = findNearestNodeInDirection(id, event.key, nodePositions)
+      if (!nextId) return
+      event.preventDefault()
+      wrapperRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(nextId)}"]`)?.focus()
+    }
+  }, [nodePositions, onNavigate])
   if (!nodes.length) return <p className="flex h-full items-center justify-center rounded-md border border-dashed p-6 text-sm text-muted-foreground">{t('knowledge.noGraphLinks')}</p>
   const podcastDocumentIds = [...new Set(
     (graph?.nodes ?? [])
@@ -86,7 +142,7 @@ export function VaultGraph({ graph, unresolved, onNavigate, viewport, onMoveEnd,
       <li>{liveRelationKinds.length} relation type{liveRelationKinds.length === 1 ? '' : 's'}</li>
       {unresolved.length ? <li>{unresolved.length} unresolved link{unresolved.length === 1 ? '' : 's'}</li> : null}
     </ul>}
-    canvas={<div className="vault-flow h-[480px] overflow-hidden rounded-md border" aria-label={t('knowledge.localGraph')}><ReactFlow nodes={nodes} edges={edges} viewport={viewport} fitView={!viewport} nodesConnectable={false} nodesDraggable={false} onConnect={() => undefined} onMoveEnd={(_event, nextViewport) => onMoveEnd?.(nextViewport)} onNodeClick={(_event: MouseEvent, node) => { if (!node.id.startsWith('unresolved:')) onNavigate(node.id) }} proOptions={{ hideAttribution: true }}><Background /><Controls showInteractive={false} /></ReactFlow></div>}
+    canvas={<div ref={wrapperRef} className="vault-flow h-[480px] overflow-hidden rounded-md border" aria-label={t('knowledge.localGraph')} aria-describedby={keyboardHintId} onKeyDown={handleKeyDown}><p id={keyboardHintId} className="sr-only">{t('knowledge.graphKeyboardHint')}</p><ReactFlow nodes={nodes} edges={edges} viewport={viewport} fitView={!viewport} nodesConnectable={false} nodesDraggable={false} onConnect={() => undefined} onMoveEnd={(_event, nextViewport) => onMoveEnd?.(nextViewport)} onNodeClick={(_event: MouseEvent, node) => { if (!node.id.startsWith('unresolved:')) onNavigate(node.id) }} proOptions={{ hideAttribution: true }}><Background /><Controls showInteractive={false} /></ReactFlow></div>}
     inspector={<p className="text-sm text-muted-foreground">Open a connected note to inspect it in the existing workspace.</p>}
   />
 }

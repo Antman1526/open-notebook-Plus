@@ -14,11 +14,13 @@ vi.mock('@xyflow/react', () => ({
   Controls: () => null,
   ReactFlow: ({
     children,
+    nodes,
     viewport,
     fitView,
     onMoveEnd,
   }: {
     children: React.ReactNode
+    nodes: { id: string; data: { label: string } }[]
     viewport?: { x: number; y: number; zoom: number }
     fitView: boolean
     onMoveEnd: (
@@ -35,6 +37,17 @@ vi.mock('@xyflow/react', () => ({
         >
           Move graph
         </button>
+        {nodes.map((node) => (
+          <div
+            key={node.id}
+            role="group"
+            tabIndex={0}
+            data-id={node.id}
+            data-testid={`rf__node-${node.id}`}
+          >
+            {node.data.label}
+          </div>
+        ))}
         {children}
       </div>
     )
@@ -136,5 +149,90 @@ describe('VaultGraph controlled viewport', () => {
         kind: 'graph_selection', documentIds: ['knowledge_engine_document:one'],
       }],
     })
+  })
+})
+
+describe('VaultGraph keyboard navigation', () => {
+  it('opens the focused node with Enter', () => {
+    const onNavigate = vi.fn()
+    render(
+      <VaultGraph
+        graph={{
+          nodes: [{ id: 'note:one', title: 'One', source_format: 'markdown' }],
+          edges: [],
+        }}
+        unresolved={[]}
+        onNavigate={onNavigate}
+      />,
+    )
+
+    fireEvent.keyDown(screen.getByTestId('rf__node-note:one'), { key: 'Enter' })
+
+    expect(onNavigate).toHaveBeenCalledWith('note:one')
+  })
+
+  it('does not open an unresolved node on Enter', () => {
+    const onNavigate = vi.fn()
+    render(
+      <VaultGraph
+        graph={{ nodes: [], edges: [] }}
+        unresolved={[{
+          id: 'note_link:one', source_note_id: 'note:source', target_note_id: null,
+          target_text: 'Missing note', link_kind: 'wikilink', resolved: false,
+          source_start: 0, source_end: 12,
+        }]}
+        onNavigate={onNavigate}
+      />,
+    )
+
+    fireEvent.keyDown(screen.getByTestId('rf__node-unresolved:note_link:one'), { key: 'Enter' })
+
+    expect(onNavigate).not.toHaveBeenCalled()
+  })
+
+  it('moves focus to the nearest node to the right with ArrowRight', () => {
+    render(
+      <VaultGraph
+        graph={{
+          nodes: [
+            { id: 'note:a', title: 'A', source_format: 'markdown' },
+            { id: 'note:b', title: 'B', source_format: 'markdown' },
+            { id: 'note:c', title: 'C', source_format: 'markdown' },
+          ],
+          edges: [],
+        }}
+        unresolved={[]}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    const nodeA = screen.getByTestId('rf__node-note:a')
+    nodeA.focus()
+    fireEvent.keyDown(nodeA, { key: 'ArrowRight' })
+
+    expect(document.activeElement).toHaveAttribute('data-id', 'note:b')
+  })
+
+  it('does not move focus with ArrowUp when nothing lies above', () => {
+    render(
+      <VaultGraph
+        graph={{
+          nodes: [
+            { id: 'note:a', title: 'A', source_format: 'markdown' },
+            { id: 'note:b', title: 'B', source_format: 'markdown' },
+            { id: 'note:c', title: 'C', source_format: 'markdown' },
+          ],
+          edges: [],
+        }}
+        unresolved={[]}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    const nodeA = screen.getByTestId('rf__node-note:a')
+    nodeA.focus()
+    fireEvent.keyDown(nodeA, { key: 'ArrowUp' })
+
+    expect(document.activeElement).toHaveAttribute('data-id', 'note:a')
   })
 })
