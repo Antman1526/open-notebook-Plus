@@ -68,6 +68,14 @@ describe('v0.8.115 stream stall guard', () => {
         expect(src).toMatch(/apiErrors\.streamStalled'/)
         expect(src).toMatch(/apiErrors\.streamStalledHint'.*seconds/)
       })
+
+      it('offers a retry action on the stall toast (v0.8.116)', () => {
+        expect(
+          src,
+          `${label}: the stall toast must carry an action that re-sends via ` +
+          `a ref to the latest send function.`,
+        ).toMatch(/label:\s*t\('common\.accessibility\.retry'\)/)
+      })
     })
   }
 })

@@ -349,6 +349,12 @@ export function useNotebookChat({
   // v0.8.63 — `bypassPrivacyGate` is the explicit "Re-ask allowing cloud"
   // consent from the redaction-review sheet; threaded to the request body so
   // the backend skips the fail-closed gate for this one turn. Default false.
+  // v0.8.116 — latest sendMessage, readable from a toast action that
+  // outlives the render it was created in (stall → "Try again").
+  const sendMessageRef = useRef<
+    ((message: string, modelOverride?: string, bypassPrivacyGate?: boolean) => Promise<void>) | null
+  >(null)
+
   const sendMessage = useCallback(async (
     message: string,
     modelOverride?: string,
@@ -619,13 +625,28 @@ export function useNotebookChat({
       console.error('Error sending message:', error)
       if (isStreamStallError(err)) {
         // v0.8.115 — stalled stream (dead local daemon / sleep-wake socket).
-        // Same cleanup as any other failure, but copy that names the cause.
+        // v0.8.116 — recovery: keep whatever the model already produced so
+        // the user can read it, and offer a one-click retry of the same
+        // message. If nothing arrived at all, fall back to the ordinary
+        // cleanup (an empty bubble is worse than no bubble). The partial
+        // text is local-only; the next session refetch replaces it.
         toast.error(t('apiErrors.streamStalled'), {
           description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
+          action: {
+            label: t('common.accessibility.retry'),
+            onClick: () => {
+              void sendMessageRef.current?.(message, modelOverride, bypassPrivacyGate)
+            },
+          },
         })
-      } else {
-        toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+        setMessages(prev => {
+          const partial = prev.find(m => m.id === streamingAiId)
+          if (partial && partial.content.trim().length > 0) return prev
+          return prev.filter(m => m.id !== tempId && m.id !== streamingAiId)
+        })
+        return
       }
+      toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
       // Clean up both the user's optimistic message AND the streaming
       // AI placeholder.
       setMessages(prev =>
@@ -667,6 +688,10 @@ export function useNotebookChat({
     // without this, toggling Debate then sending captured the old mode.
     debateMode,
   ])
+
+  useEffect(() => {
+    sendMessageRef.current = sendMessage
+  }, [sendMessage])
 
   // Switch session
   const switchSession = useCallback((sessionId: string) => {

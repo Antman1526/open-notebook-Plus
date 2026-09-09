@@ -212,6 +212,11 @@ export function useSourceChat(sourceId: string) {
   }, [currentSessionId, updateSessionMutation])
 
   // Send message with streaming
+  // v0.8.116 — latest sendMessage for the stall toast's "Try again" action.
+  const sendMessageRef = useRef<
+    ((message: string, modelOverride?: string) => Promise<void>) | null
+  >(null)
+
   const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
     let sessionId = currentSessionId
 
@@ -468,13 +473,26 @@ export function useSourceChat(sourceId: string) {
       console.error('Error sending message:', error)
       if (isStreamStallError(err)) {
         // v0.8.115 — stalled stream (dead local daemon / sleep-wake socket).
-        // Same cleanup as any other failure, but copy that names the cause.
+        // v0.8.116 — recovery: keep the partial answer if any text arrived
+        // and offer a one-click retry; otherwise fall through to the normal
+        // cleanup below. Mirrors useNotebookChat.
         toast.error(t('apiErrors.streamStalled'), {
           description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
+          action: {
+            label: t('common.accessibility.retry'),
+            onClick: () => {
+              void sendMessageRef.current?.(message, modelOverride)
+            },
+          },
         })
-      } else {
-        toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
+        setMessages(prev => {
+          const partial = prev.find(msg => msg.id === streamingAiId)
+          if (partial && partial.content.trim().length > 0) return prev
+          return prev.filter(msg => msg.id !== tempId && msg.id !== streamingAiId)
+        })
+        return
       }
+      toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
       // v0.7.54 — same fix as the AbortError branch above: filter ONLY
       // THIS send's tempId + streamingAiId. The old `startsWith('temp-')`
       // also wiped a concurrent retry's optimistic message because the
@@ -546,6 +564,10 @@ export function useSourceChat(sourceId: string) {
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
   }, [])
+
+  useEffect(() => {
+    sendMessageRef.current = sendMessage
+  }, [sendMessage])
 
   // Cancel streaming
   const cancelStreaming = useCallback(() => {

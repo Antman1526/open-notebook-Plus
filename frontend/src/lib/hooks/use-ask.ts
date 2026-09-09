@@ -56,6 +56,9 @@ export function useAsk() {
     }
   }, [])
 
+  // v0.8.116 — latest sendAsk for the stall toast's "Try again" action.
+  const sendAskRef = useRef<((question: string, models: AskModels) => Promise<void>) | null>(null)
+
   const sendAsk = useCallback(async (question: string, models: AskModels) => {
     // Validate inputs
     if (!question.trim()) {
@@ -238,8 +241,16 @@ export function useAsk() {
           // v0.8.115 — specific copy: this is almost always a local model
           // daemon that died or a post-sleep half-open socket, not a
           // server-side failure. Point the user at the daemon.
+          // v0.8.116 — partial strategy/answers stay in state (only
+          // isStreaming flips); the action re-runs the same question.
           toast.error(t('apiErrors.streamStalled'), {
-            description: t('apiErrors.streamStalledHint', { seconds: error.idleSeconds })
+            description: t('apiErrors.streamStalledHint', { seconds: error.idleSeconds }),
+            action: {
+              label: t('common.accessibility.retry'),
+              onClick: () => {
+                void sendAskRef.current?.(question, models)
+              },
+            },
           })
         } else {
           toast.error(t('apiErrors.askFailed'), {
@@ -273,6 +284,10 @@ export function useAsk() {
       }
     }
   }, [t])
+
+  useEffect(() => {
+    sendAskRef.current = sendAsk
+  }, [sendAsk])
 
   const reset = useCallback(() => {
     setState({
