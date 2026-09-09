@@ -67,7 +67,7 @@ export function CaptureItemRow({ item, showVisualCover = false }: { item: Captur
   }
 
   return (
-    <article className="border-b py-3 last:border-0">
+    <article className="group relative rounded-xl border border-border/60 bg-card/70 p-3.5 transition-all duration-150 hover:border-primary/40 hover:bg-card/95 hover:shadow-xs">
       {linkedSource ? (
         <div className="mb-3 max-w-xs" data-testid="capture-linked-source-cover">
           <SourceCover source={linkedSource} variant="compact" />
@@ -85,7 +85,7 @@ export function CaptureItemRow({ item, showVisualCover = false }: { item: Captur
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={stateVariant(item.state)} className="w-fit">
+          <Badge variant={stateVariant(item.state)} className="w-fit rounded-full px-2.5 py-0.5 text-[11px] font-mono font-medium">
             {item.state}
           </Badge>
           {canPreview ? (
@@ -95,8 +95,9 @@ export function CaptureItemRow({ item, showVisualCover = false }: { item: Captur
               variant="outline"
               disabled={isRouting}
               onClick={() => void previewRoute()}
+              className="rounded-xl active:scale-95 transition-all duration-150 gap-1.5 text-xs"
             >
-              <AudioLines className="h-4 w-4" />
+              <AudioLines className="h-3.5 w-3.5 text-primary" />
               {isRouting ? 'Preparing' : 'Review route'}
             </Button>
           ) : null}

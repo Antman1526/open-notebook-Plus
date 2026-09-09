@@ -29,8 +29,8 @@ export function CaptureInbox() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <Card className="border">
-        <CardContent className="p-5 space-y-4">
+      <div className="group relative rounded-2xl p-[1.5px] bg-gradient-to-b from-border/80 via-border/40 to-border/20 shadow-sm hover:shadow-md transition-all duration-200">
+        <div className="rounded-[14.5px] bg-card/95 backdrop-blur-sm p-5 space-y-4 border border-white/[0.04] dark:border-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-foreground">Approved folders</h2>
@@ -44,6 +44,7 @@ export function CaptureInbox() {
               size="sm"
               onClick={scan}
               disabled={actions.scan.isPending}
+              className="rounded-xl active:scale-95 transition-all duration-150 shadow-xs"
             >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${actions.scan.isPending ? 'animate-spin' : ''}`}
@@ -53,9 +54,9 @@ export function CaptureInbox() {
           </div>
 
           {roots.data && roots.data.length > 0 ? (
-            <ul className="space-y-1.5 rounded-md bg-muted/40 p-3 text-sm">
+            <ul className="space-y-1.5 rounded-xl border border-border/50 bg-muted/30 p-3 text-sm">
               {roots.data.map((root) => (
-                <li key={root.path} className="flex items-center gap-2 truncate text-muted-foreground font-mono text-xs">
+                <li key={root.path} className="flex items-center gap-2 truncate text-muted-foreground font-mono text-xs hover:text-foreground transition-colors">
                   <Folder className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span className="truncate">{root.path}</span>
                 </li>
@@ -69,21 +70,21 @@ export function CaptureInbox() {
               value={path}
               onChange={(event) => setPath(event.target.value)}
               placeholder="Add a local or Google Drive Desktop folder"
-              className="font-mono text-xs"
+              className="font-mono text-xs rounded-xl"
             />
             <Button
               type="button"
               variant="secondary"
               disabled={!path.trim() || actions.addRoot.isPending}
               onClick={() => void addRoot()}
-              className="shrink-0"
+              className="shrink-0 rounded-xl active:scale-95 transition-all duration-150"
             >
               <FolderPlus className="mr-2 h-4 w-4" />
               Add
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">

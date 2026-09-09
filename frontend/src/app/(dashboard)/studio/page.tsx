@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Upload, FileText, X, Loader2, AlertCircle, BookOpen, Mic, ArrowLeft, Sparkles, Link2, GraduationCap } from 'lucide-react'
 
 import { AppShell } from '@/components/layout/AppShell'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -369,29 +370,28 @@ export default function StudioPage() {
           </header>
         </>} sourceDesk={<>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>{t('studio.step1Title')}</CardTitle>
-          <CardDescription>
-            {t('studio.step1Description').replace('{max}', String(MAX_FILE_MB))}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="mb-6 group relative rounded-2xl p-[1.5px] bg-gradient-to-b from-border/80 via-border/40 to-border/20 shadow-sm hover:shadow-md transition-all duration-200">
+        <div className="rounded-[14.5px] bg-card/95 backdrop-blur-sm p-6 space-y-6 border border-white/[0.04] dark:border-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{t('studio.step1Title')}</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('studio.step1Description').replace('{max}', String(MAX_FILE_MB))}
+            </p>
+          </div>
+
           <div
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
             onClick={() => fileInputRef.current?.click()}
             onKeyDown={onKeyDown}
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-              transition-colors
-              focus-visible:outline-none focus-visible:ring-2
-              focus-visible:ring-ring focus-visible:ring-offset-2
-              ${isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/30 hover:border-muted-foreground/60'}
-            `}
+            className={cn(
+              "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              isDragging
+                ? "border-primary bg-primary/[0.08] shadow-[0_0_24px_rgba(45,212,191,0.15)]"
+                : "border-muted-foreground/25 hover:border-primary/40 hover:bg-muted/20"
+            )}
             role="button"
             tabIndex={0}
             aria-label={t('studio.uploadFilesLabel')}
@@ -414,21 +414,21 @@ export default function StudioPage() {
           </div>
 
           {files.length > 0 && (
-            <ul className="mt-4 space-y-1">
+            <ul className="mt-4 space-y-1.5">
               {files.map((f, i) => (
                 <li
                   key={`${f.name}-${i}`}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-muted/50 text-sm"
+                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-border/50 bg-muted/40 text-sm hover:bg-muted/60 transition-colors"
                 >
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate">{f.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">
+                  <FileText className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="flex-1 truncate font-medium">{f.name}</span>
+                  <span className="text-xs font-mono text-muted-foreground shrink-0">
                     {(f.size / 1024).toFixed(0)} KB
                   </span>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); removeFile(i) }}
-                    className="p-0.5 hover:bg-muted rounded"
+                    className="p-1 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                     aria-label={t('studio.removeFile').replace('{name}', f.name)}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -449,33 +449,23 @@ export default function StudioPage() {
                 value={linkText}
                 onChange={(e) => setLinkText(e.target.value)}
                 placeholder={t('studio.linksPlaceholder')}
-                className="min-h-24 pl-9 text-sm"
+                className="min-h-24 pl-9 text-sm rounded-xl"
               />
             </div>
             <p className="text-xs text-muted-foreground">
               {t('studio.linksHelp').replace('{count}', String(parsedLinks.length))}
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       </>} editorialBrief={<>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>{t('studio.step2Title')}</CardTitle>
-        </CardHeader>
-        {/* v0.7.164 — Studio mode-picker tiles (visual audit item #7).
-            Before: tiles used `gap-2 p-4` with `h-5 w-5` icons and the
-            title in plain `font-medium` — visually they weighed the
-            same as the podcast-profile selects below them. The mode
-            picker is the PRIMARY decision on this screen; it should
-            feel like a primary decision.
-            After: tiles get `gap-4 p-6` (real breathing room), icons
-            bumped to `h-6 w-6 mb-3`, title `text-base font-semibold`,
-            description `text-sm` (not xs — long enough to read at a
-            glance). Inner card spacing bumped to `space-y-6` so the
-            dropdowns below don't crowd the tiles. */}
-        <CardContent className="space-y-6">
+      <div className="mb-6 group relative rounded-2xl p-[1.5px] bg-gradient-to-b from-border/80 via-border/40 to-border/20 shadow-sm hover:shadow-md transition-all duration-200">
+        <div className="rounded-[14.5px] bg-card/95 backdrop-blur-sm p-6 space-y-6 border border-white/[0.04] dark:border-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{t('studio.step2Title')}</h2>
+          </div>
+
           <div
             className="grid gap-4"
             style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12rem), 1fr))' }}
@@ -483,16 +473,18 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => setMode('notebook')}
-              className={`
-                border rounded-lg p-6 text-left transition-colors
-                ${mode === 'notebook'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/20 hover:border-muted-foreground/40'}
-              `}
+              className={cn(
+                "group relative rounded-2xl p-5 text-left transition-all duration-200 active:scale-[0.98]",
+                mode === 'notebook'
+                  ? "border-2 border-primary bg-primary/[0.06] shadow-[0_0_20px_rgba(45,212,191,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-primary/30"
+                  : "border border-border/70 bg-card/60 hover:border-primary/40 hover:bg-card/90"
+              )}
             >
-              <BookOpen className="h-6 w-6 mb-3 text-primary" />
-              <div className="text-base font-semibold">{t('studio.notebookModeTitle')}</div>
-              <div className="text-sm text-muted-foreground mt-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3.5 group-hover:scale-105 transition-transform">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div className="text-base font-semibold text-foreground">{t('studio.notebookModeTitle')}</div>
+              <div className="text-xs leading-relaxed text-muted-foreground mt-1">
                 {t('studio.notebookModeDescription')}
               </div>
             </button>
@@ -500,16 +492,18 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => setMode('podcast')}
-              className={`
-                border rounded-lg p-6 text-left transition-colors
-                ${mode === 'podcast'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/20 hover:border-muted-foreground/40'}
-              `}
+              className={cn(
+                "group relative rounded-2xl p-5 text-left transition-all duration-200 active:scale-[0.98]",
+                mode === 'podcast'
+                  ? "border-2 border-primary bg-primary/[0.06] shadow-[0_0_20px_rgba(45,212,191,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-primary/30"
+                  : "border border-border/70 bg-card/60 hover:border-primary/40 hover:bg-card/90"
+              )}
             >
-              <Mic className="h-6 w-6 mb-3 text-primary" />
-              <div className="text-base font-semibold">{t('studio.podcastModeTitle')}</div>
-              <div className="text-sm text-muted-foreground mt-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3.5 group-hover:scale-105 transition-transform">
+                <Mic className="h-5 w-5" />
+              </div>
+              <div className="text-base font-semibold text-foreground">{t('studio.podcastModeTitle')}</div>
+              <div className="text-xs leading-relaxed text-muted-foreground mt-1">
                 {t('studio.podcastModeDescription')}
               </div>
             </button>
@@ -517,16 +511,18 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => setMode('both')}
-              className={`
-                border rounded-lg p-6 text-left transition-colors
-                ${mode === 'both'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/20 hover:border-muted-foreground/40'}
-              `}
+              className={cn(
+                "group relative rounded-2xl p-5 text-left transition-all duration-200 active:scale-[0.98]",
+                mode === 'both'
+                  ? "border-2 border-primary bg-primary/[0.06] shadow-[0_0_20px_rgba(45,212,191,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-primary/30"
+                  : "border border-border/70 bg-card/60 hover:border-primary/40 hover:bg-card/90"
+              )}
             >
-              <Sparkles className="h-6 w-6 mb-3 text-primary" />
-              <div className="text-base font-semibold">{t('studio.bothModeTitle')}</div>
-              <div className="text-sm text-muted-foreground mt-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3.5 group-hover:scale-105 transition-transform">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="text-base font-semibold text-foreground">{t('studio.bothModeTitle')}</div>
+              <div className="text-xs leading-relaxed text-muted-foreground mt-1">
                 {t('studio.bothModeDescription')}
               </div>
             </button>
@@ -534,16 +530,18 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => setMode('course_pack')}
-              className={`
-                border rounded-lg p-6 text-left transition-colors
-                ${mode === 'course_pack'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/20 hover:border-muted-foreground/40'}
-              `}
+              className={cn(
+                "group relative rounded-2xl p-5 text-left transition-all duration-200 active:scale-[0.98]",
+                mode === 'course_pack'
+                  ? "border-2 border-primary bg-primary/[0.06] shadow-[0_0_20px_rgba(45,212,191,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-primary/30"
+                  : "border border-border/70 bg-card/60 hover:border-primary/40 hover:bg-card/90"
+              )}
             >
-              <GraduationCap className="h-6 w-6 mb-3 text-primary" />
-              <div className="text-base font-semibold">{t('studio.coursePackModeTitle')}</div>
-              <div className="text-sm text-muted-foreground mt-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3.5 group-hover:scale-105 transition-transform">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div className="text-base font-semibold text-foreground">{t('studio.coursePackModeTitle')}</div>
+              <div className="text-xs leading-relaxed text-muted-foreground mt-1">
                 {t('studio.coursePackModeDescription')}
               </div>
             </button>
@@ -554,7 +552,7 @@ export default function StudioPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="ep-profile" className="text-xs">{t('studio.episodeProfileLabel')}</Label>
                 <Select value={episodeProfile} onValueChange={setEpisodeProfile}>
-                  <SelectTrigger id="ep-profile" className="h-9 text-sm">
+                  <SelectTrigger id="ep-profile" className="h-9 text-sm rounded-xl">
                     <SelectValue placeholder={t('studio.episodeProfilePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -564,10 +562,11 @@ export default function StudioPage() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="sp-profile" className="text-xs">{t('studio.speakerProfileLabel')}</Label>
                 <Select value={speakerProfile} onValueChange={setSpeakerProfile}>
-                  <SelectTrigger id="sp-profile" className="h-9 text-sm">
+                  <SelectTrigger id="sp-profile" className="h-9 text-sm rounded-xl">
                     <SelectValue placeholder={t('studio.speakerProfilePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -589,15 +588,15 @@ export default function StudioPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('studio.titlePlaceholder')}
-              className="h-9 text-sm"
+              className="h-9 text-sm rounded-xl"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       </>} artifactPages={<>
 
       {(mutation.isError || coursePackMutation.isError) && (
-        <div className="mb-4 p-3 rounded border border-destructive/50 bg-destructive/10 flex items-start gap-2">
+        <div className="mb-4 p-3 rounded-xl border border-destructive/50 bg-destructive/10 flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
           <div className="text-sm text-destructive">
             {/* v0.7.196 — same helper as the catch-branch toast. Was
@@ -613,7 +612,12 @@ export default function StudioPage() {
       )}
 
           <div className="flex justify-end">
-            <Button onClick={onGenerate} disabled={!canSubmit} size="lg">
+            <Button
+              onClick={onGenerate}
+              disabled={!canSubmit}
+              size="lg"
+              className="h-11 px-7 rounded-full font-medium bg-primary text-primary-foreground shadow-[0_4px_16px_rgba(20,184,166,0.35),inset_0_1px_0_rgba(255,255,255,0.2)] hover:bg-primary/95 active:scale-95 transition-all duration-150"
+            >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

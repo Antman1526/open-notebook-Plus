@@ -363,7 +363,7 @@ function CredentialItem({
 
   return (
     <>
-      <div className="border rounded-lg p-3 space-y-2">
+      <div className="rounded-xl border border-border/70 bg-card/40 p-3.5 space-y-2.5 shadow-sm transition-all hover:border-border/90 hover:bg-card/70">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-medium truncate">{credential.name}</span>
@@ -380,13 +380,13 @@ function CredentialItem({
               ))}
             </div>
             {credential.has_api_key && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] rounded-md border-border/70 bg-background/50">
                 <Key className="h-2.5 w-2.5 mr-0.5" />
                 Key
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {testResult && (
               testResult.success
                 ? <Check className="h-4 w-4 text-emerald-500" />
@@ -397,21 +397,29 @@ function CredentialItem({
               onClick={() => testCredential(credential.id)}
               disabled={isTestPending || !!credential.decryption_error}
               title={t('apiKeys.testConnection')}
+              className="h-8 rounded-lg border border-border/50 bg-background/40 hover:bg-accent hover:border-border transition-all active:scale-95 text-xs px-2.5 gap-1.5"
             >
-              {isTestPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
-              <span className="hidden sm:inline text-xs">Test</span>
+              {isTestPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">Test</span>
             </Button>
             <Button
               variant="ghost" size="sm"
               onClick={() => setDiscoverOpen(true)}
               disabled={!!credential.decryption_error}
               title={t('apiKeys.syncModels')}
+              className="h-8 rounded-lg border border-border/50 bg-background/40 hover:bg-accent hover:border-border transition-all active:scale-95 text-xs px-2.5 gap-1.5"
             >
-              <Bot className="h-4 w-4" />
-              <span className="hidden sm:inline text-xs">Models</span>
+              <Bot className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Models</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)} disabled={!!credential.decryption_error} title={t('common.edit')}>
-              <Edit className="h-4 w-4" />
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => setEditOpen(true)}
+              disabled={!!credential.decryption_error}
+              title={t('common.edit')}
+              className="h-8 w-8 p-0 rounded-lg border border-border/50 bg-background/40 hover:bg-accent hover:border-border transition-all active:scale-95"
+            >
+              <Edit className="h-3.5 w-3.5" />
             </Button>
             {/* v0.7.198 — `title` is shown as a desktop tooltip but
                 ignored by most screen readers; add `aria-label` so SR
@@ -419,11 +427,11 @@ function CredentialItem({
             <Button
               variant="ghost" size="sm"
               onClick={() => setDeleteOpen(true)}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 p-0 rounded-lg border border-destructive/20 text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-all active:scale-95"
               title={t('common.delete')}
               aria-label={t('common.delete')}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -567,17 +575,17 @@ function ProviderSection({
   const activeTypes = new Set(providerModels.map(m => m.type))
 
   return (
-    <Card className={!hasCredentials ? 'opacity-80' : undefined}>
-      <CardHeader className="pb-3">
+    <Card className={`rounded-2xl border border-border/70 bg-card/70 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md ${!hasCredentials ? 'opacity-85' : ''}`}>
+      <CardHeader className="pb-3 border-b border-border/30 bg-muted/20 rounded-t-2xl px-5 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-wrap">
-            <CardTitle className="text-lg capitalize">{displayName}</CardTitle>
+            <CardTitle className="text-lg capitalize font-semibold tracking-tight">{displayName}</CardTitle>
             <div className="flex items-center gap-1">
               {modalities.map((type) => (
                 <Badge
                   key={type}
                   variant="secondary"
-                  className={`text-xs gap-1 ${activeTypes.has(type) ? TYPE_COLORS[type] : TYPE_COLOR_INACTIVE}`}
+                  className={`text-xs gap-1 rounded-md ${activeTypes.has(type) ? TYPE_COLORS[type] : TYPE_COLOR_INACTIVE}`}
                 >
                   {TYPE_ICONS[type]}
                   <span className="hidden sm:inline">{TYPE_LABELS[type]}</span>
@@ -587,12 +595,12 @@ function ProviderSection({
           </div>
           <div className="flex items-center gap-2">
             {hasCredentials ? (
-              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300">
+              <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium">
                 <Check className="mr-1 h-3 w-3" />
                 {t('apiKeys.configured')}
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-muted-foreground border-dashed">
+              <Badge variant="outline" className="text-muted-foreground border-dashed rounded-full px-2.5 py-0.5 text-xs">
                 <X className="mr-1 h-3 w-3" />
                 {t('apiKeys.notConfigured')}
               </Badge>
@@ -600,7 +608,7 @@ function ProviderSection({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3 p-5">
         {credentials.map(cred => (
           <CredentialItem
             key={cred.id}
@@ -615,7 +623,7 @@ function ProviderSection({
           variant="outline"
           size="sm"
           onClick={() => setAddOpen(true)}
-          className="w-full gap-2"
+          className="w-full gap-2 rounded-xl border border-dashed border-border/70 bg-muted/10 hover:bg-muted/30 hover:border-primary/50 text-xs font-medium py-2.5 active:scale-98 transition-all"
           disabled={!encryptionReady}
         >
           <Plus className="h-4 w-4" />
@@ -1025,7 +1033,7 @@ export default function ApiKeysPage() {
   return (
     <AppShell>
       <SystemRouteFrame route="/settings/api-keys" description={t('apiKeys.description')}>
-        <div className="space-y-12 rounded-lg bg-[var(--dn-folio-paper)] p-4 sm:p-6">
+        <div className="space-y-12 rounded-2xl border border-border/60 bg-[var(--dn-folio-paper)] p-6 sm:p-8 shadow-sm backdrop-blur-sm">
           {/* Header */}
           <header className="space-y-2">
             <h2 className="flex items-center gap-3 text-2xl font-semibold">
@@ -1113,7 +1121,7 @@ export default function ApiKeysPage() {
                   value={providerQuery}
                   onChange={(e) => setProviderQuery(e.target.value)}
                   placeholder="Filter providers…"
-                  className="pl-9"
+                  className="pl-9 h-9 rounded-xl border-border/70 bg-background/70 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/50"
                   aria-label="Filter providers"
                 />
               </div>
@@ -1124,7 +1132,11 @@ export default function ApiKeysPage() {
                     size="sm"
                     variant={providerStatusFilter === status ? 'default' : 'outline'}
                     onClick={() => setProviderStatusFilter(status)}
-                    className="h-8"
+                    className={`h-8 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+                      providerStatusFilter === status
+                        ? 'shadow-[0_2px_8px_rgba(20,184,166,0.25)]'
+                        : 'border-border/60 bg-background/50 hover:bg-accent'
+                    }`}
                   >
                     {status === 'all'
                       ? 'All'
