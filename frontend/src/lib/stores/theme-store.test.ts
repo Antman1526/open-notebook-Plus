@@ -88,15 +88,19 @@ describe('legacy theme-store catalog authority', () => {
   })
 
   it('keeps the live palette update when canonical persistence fails', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
       throw new Error('storage quota exceeded')
     })
 
-    expect(() => useThemeStore.getState().setTheme('dark')).not.toThrow()
-    expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(document.documentElement).toHaveClass('dark')
-    expect(useThemeStore.getState().appliedTheme).toBe('dark')
-    expect(useThemeStore.getState().legacyThemeOverride).toBe(true)
+    try {
+      expect(() => useThemeStore.getState().setTheme('dark')).not.toThrow()
+      expect(document.documentElement.dataset.theme).toBe('dark')
+      expect(document.documentElement).toHaveClass('dark')
+      expect(useThemeStore.getState().appliedTheme).toBe('dark')
+      expect(useThemeStore.getState().legacyThemeOverride).toBe(true)
+    } finally {
+      spy.mockRestore()
+    }
   })
 
 })

@@ -1117,6 +1117,8 @@ def main() -> int:
         return 130
     except (HTTPException, OSError, SmokeFailure, ValueError) as error:
         receipt["error"] = str(error)
+        if "launched application exited" in str(error):
+            receipt["checks"]["process_startup"]["passed"] = False
         print(str(error), file=sys.stderr)
         return 1
     finally:

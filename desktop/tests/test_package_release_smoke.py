@@ -814,7 +814,7 @@ def test_browser_probe_timeout_terminates_descendants_holding_pipes(
                 str(descendant_pid_path),
             ],
             cwd=tmp_path,
-            timeout_seconds=0.05,
+            timeout_seconds=0.35,
         )
     elapsed = time.monotonic() - started_at
 

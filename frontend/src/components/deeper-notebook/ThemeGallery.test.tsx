@@ -89,7 +89,7 @@ describe('ThemeGallery', () => {
 
   it('writes canonical theme storage before recording an applied recent theme', () => {
     render(<ThemeGallery />)
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem')
 
     try {
       fireEvent.click(screen.getByRole('button', { name: 'Apply Archive Paper' }))
@@ -110,13 +110,12 @@ describe('ThemeGallery', () => {
     localStorage.setItem('dn-theme-recents', JSON.stringify(['dracula']))
     render(<ThemeGallery />)
 
-    const originalSetItem = Storage.prototype.setItem
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation((key: string) => {
       if (key === 'dn-theme') {
         throw new DOMException('Quota exceeded', 'QuotaExceededError')
       }
-      return originalSetItem.call(this, key, value)
     })
+    setItemSpy.mockClear()
 
     try {
       fireEvent.click(screen.getByRole('button', { name: 'Apply Archive Paper' }))
