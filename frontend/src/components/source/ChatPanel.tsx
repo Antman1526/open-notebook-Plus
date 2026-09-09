@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { SourceDialog } from './SourceDialog'
-import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, Square, Swords, X } from 'lucide-react'
+import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, Square, Swords, X, ChevronDown, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -375,14 +376,10 @@ export function ChatPanel({
                   )}
                   <div className="flex flex-col gap-2 max-w-[80%]">
                     <div
-                      className={`rounded-2xl px-4 py-2.5 shadow-sm ${
-                        // v0.8.70 — softer, deeper bubbles: a subtle gradient on
-                        // the user's messages and a bordered card surface for the
-                        // assistant. No backdrop-blur per bubble (GPU cost in a
-                        // long thread); depth comes from the gradient + shadow.
+                      className={`rounded-2xl px-4 py-3 shadow-xs transition-all duration-200 ${
                         message.type === 'human'
-                          ? 'bg-gradient-to-br from-primary to-primary/85 text-primary-foreground'
-                          : 'border border-border/60 bg-card'
+                          ? 'bg-gradient-to-br from-primary via-primary/95 to-primary/85 text-primary-foreground shadow-sm ring-1 ring-primary/30'
+                          : 'border border-border/60 bg-card/95 ring-1 ring-border/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)]'
                       }`}
                     >
                       {message.type === 'ai' ? (
@@ -685,6 +682,88 @@ function lastSentence(text: string): string {
   return (parts[parts.length - 1] || trimmed).slice(-400)
 }
 
+interface ParsedContent {
+  thinking: string | null
+  isThinkingActive: boolean
+  answer: string
+}
+
+function parseThinking(rawContent: string): ParsedContent {
+  const thinkStart = rawContent.indexOf('<think>')
+  if (thinkStart === -1) {
+    return { thinking: null, isThinkingActive: false, answer: rawContent }
+  }
+
+  const afterStart = rawContent.slice(thinkStart + 7)
+  const thinkEnd = afterStart.indexOf('</think>')
+
+  if (thinkEnd === -1) {
+    // Currently still thinking (streaming inside <think>)
+    const thinking = afterStart.trim()
+    const answer = rawContent.slice(0, thinkStart).trim()
+    return { thinking, isThinkingActive: true, answer }
+  }
+
+  const thinking = afterStart.slice(0, thinkEnd).trim()
+  const answer = (rawContent.slice(0, thinkStart) + afterStart.slice(thinkEnd + 8)).trim()
+  return { thinking, isThinkingActive: false, answer }
+}
+
+function ThoughtAccordion({
+  thinking,
+  isThinkingActive,
+}: {
+  thinking: string
+  isThinkingActive: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(isThinkingActive)
+
+  const wasActiveRef = useRef(isThinkingActive)
+  useEffect(() => {
+    if (wasActiveRef.current && !isThinkingActive) {
+      setIsOpen(false)
+    }
+    wasActiveRef.current = isThinkingActive
+  }, [isThinkingActive])
+
+  if (!thinking) return null
+
+  return (
+    <div className="not-prose mb-3 overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.03] transition-all duration-200">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full cursor-pointer items-center justify-between px-3.5 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className={cn('h-3.5 w-3.5 transition-colors', isThinkingActive ? 'text-primary animate-pulse' : 'text-muted-foreground')} />
+          <span className="font-mono text-[11px] uppercase tracking-wider">
+            {isThinkingActive ? 'Thinking…' : 'Thought process'}
+          </span>
+          {isThinkingActive && (
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 text-muted-foreground transition-transform duration-200',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </button>
+      {isOpen && (
+        <div className="max-h-72 overflow-y-auto border-t border-primary/10 bg-muted/20 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-muted-foreground/90 whitespace-pre-wrap selection:bg-primary/20">
+          {thinking}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AIMessageContent({
   content,
   onReferenceClick,
@@ -699,6 +778,7 @@ function AIMessageContent({
   onViewSource?: (sourceId: string, query: string) => void
 }) {
   const { t } = useTranslation()
+  const { thinking, isThinkingActive, answer } = parseThinking(content)
 
   // Create custom link component for compact references
   const LinkComponent = createCompactReferenceLinkComponent(onReferenceClick)
@@ -748,10 +828,10 @@ function AIMessageContent({
     },
   }
 
-  // Split the raw content on ALL citation markers ([mcp:N], [source:ID], etc.).
+  // Split the answer on ALL citation markers ([mcp:N], [source:ID], etc.).
   // Text segments are rendered via ReactMarkdown (with compact-reference conversion).
   // Citation segments are rendered as CitationPill components inline.
-  const segments = splitCitations(content)
+  const segments = splitCitations(answer)
 
   // v0.7.25 — was `prose-a:text-blue-600 prose-a:break-all`. The
   // hardcoded blue-600 fails WCAG AA against the dark muted
@@ -759,6 +839,9 @@ function AIMessageContent({
   // URLs mid-character. Theme-aware token + break-words.
   return (
     <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words prose-headings:font-semibold prose-a:text-primary dark:prose-a:text-blue-400 prose-a:underline prose-a:break-words prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">
+      {thinking && (
+        <ThoughtAccordion thinking={thinking} isThinkingActive={isThinkingActive} />
+      )}
       {segments.map((seg, idx) => {
         if (seg.kind === 'text') {
           // Pass text segments through the existing compact-reference pipeline.

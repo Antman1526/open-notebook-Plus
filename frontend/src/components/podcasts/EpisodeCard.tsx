@@ -106,7 +106,7 @@ function StatusBadge({ status }: { status?: EpisodeStatus | null }) {
   return (
     <Badge
       variant="outline"
-      className={cn('uppercase tracking-wide text-xs', meta.className)}
+      className={cn('uppercase tracking-wide text-xs rounded-full px-2.5 py-0.5 font-medium shadow-xs', meta.className)}
     >
       {meta.label}
     </Badge>
@@ -502,8 +502,8 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
   const isCompleted = episode.job_status === 'completed' && !isAwaitingReview
 
   return (
-    <Card className="shadow-sm">
-      <CardContent className="space-y-4 p-4">
+    <div className="group relative rounded-2xl p-[1.5px] bg-gradient-to-b from-border/80 via-border/40 to-border/20 shadow-sm hover:shadow-md hover:from-border hover:via-border/60 hover:to-border/30 transition-all duration-200">
+      <div className="rounded-[14.5px] bg-card/95 backdrop-blur-sm p-4 sm:p-5 space-y-4 border border-white/[0.04] dark:border-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -532,13 +532,21 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
                 generation_stage; suppressed while awaiting outline review
                 (the review banner below takes over). */}
             {isProcessing && !isAwaitingReview && (
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                {stageLabel(
-                  stage,
-                  episode.episode_profile?.num_segments,
-                  outlineSegments.length,
-                )}
-              </p>
+              <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
+                <div className="flex items-center gap-0.5 h-3.5" aria-hidden="true">
+                  <span className="w-1 bg-amber-500/80 rounded-full animate-[pulse_1s_ease-in-out_infinite] h-2" />
+                  <span className="w-1 bg-amber-500 rounded-full animate-[pulse_1.2s_ease-in-out_infinite_200ms] h-3.5" />
+                  <span className="w-1 bg-amber-500/90 rounded-full animate-[pulse_0.9s_ease-in-out_infinite_400ms] h-2.5" />
+                  <span className="w-1 bg-amber-500/70 rounded-full animate-[pulse_1.1s_ease-in-out_infinite_100ms] h-1.5" />
+                </div>
+                <span>
+                  {stageLabel(
+                    stage,
+                    episode.episode_profile?.num_segments,
+                    outlineSegments.length,
+                  )}
+                </span>
+              </div>
             )}
             {isAwaitingReview && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -554,6 +562,7 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 rounded-xl px-2.5 gap-2 border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary font-medium active:scale-95 shadow-[0_0_12px_rgba(45,212,191,0.15),inset_0_1px_0_rgba(255,255,255,0.1)] transition-all duration-150"
                 onClick={() =>
                   setPlayingEpisode({
                     id: episode.id,
@@ -563,14 +572,16 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
                   })
                 }
               >
-                <Headphones className="mr-2 h-4 w-4" />
-                Listen
+                <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary/20">
+                  <Headphones className="h-3 w-3 text-primary" />
+                </span>
+                <span>Listen</span>
               </Button>
             ) : null}
             <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <InfoIcon className="mr-2 h-4 w-4" /> {t('podcasts.details')}
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-2.5 active:scale-95 transition-all duration-150">
+                  <InfoIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> {t('podcasts.details')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="w-[min(90vw,720px)] max-h-[85vh] overflow-hidden">
@@ -826,7 +837,7 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
             <p className="mt-1 text-xs whitespace-pre-wrap text-red-700 dark:text-red-400">{episode.error_message}</p>
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

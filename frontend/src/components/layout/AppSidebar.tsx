@@ -229,10 +229,12 @@ export function AppSidebar() {
                         onClick={() => setCreateMenuOpen(true)}
                         variant="default"
                         size="sm"
-                        className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                        className="w-full justify-center px-2 h-10 rounded-xl group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-[0_2px_10px_rgba(20,184,166,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-95 transition-all duration-150"
                         aria-label={t('common.create')}
                       >
-                        <Plus className="h-4 w-4" />
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/10 dark:bg-white/10 group-hover:scale-110 transition-all duration-150">
+                          <Plus className="h-4 w-4" />
+                        </span>
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
@@ -244,10 +246,12 @@ export function AppSidebar() {
                     onClick={() => setCreateMenuOpen(true)}
                     variant="default"
                     size="sm"
-                    className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                    className="w-full justify-start h-10 px-3 rounded-xl group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-[0_2px_10px_rgba(20,184,166,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-[0.98] transition-all duration-150"
                    >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t('common.create')}
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/10 dark:bg-white/10 mr-2 group-hover:scale-110 group-hover:bg-black/15 transition-all duration-150">
+                      <Plus className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="font-medium">{t('common.create')}</span>
                   </Button>
                 </DropdownMenuTrigger>
               )}
@@ -330,15 +334,15 @@ export function AppSidebar() {
                         // No scale (the v0.7.25 overflow lesson) and the pill's
                         // position uses top offset instead of a transform so it
                         // can't conflict with Framer's layout transform.
-                        'relative w-full gap-3 text-sidebar-foreground sidebar-menu-item',
-                        isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium',
+                        'relative w-full gap-3 text-sidebar-foreground sidebar-menu-item rounded-xl transition-all duration-150',
+                        isActive && 'bg-sidebar-accent/90 text-sidebar-accent-foreground font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_12px_rgba(45,212,191,0.04)] border border-primary/20',
                         isCollapsed ? 'justify-center px-2' : 'justify-start'
                       )}
                     >
                       {isActive && (
                         <motion.span
                           layoutId="onp-sidebar-active"
-                          className="absolute left-0 h-6 w-[3px] rounded-r bg-primary"
+                          className="absolute left-0 h-6 w-[3px] rounded-r bg-primary shadow-[0_0_8px_rgba(45,212,191,0.4)]"
                           style={{ top: 'calc(50% - 0.75rem)' }}
                           transition={{ type: 'spring', stiffness: 520, damping: 40 }}
                         />

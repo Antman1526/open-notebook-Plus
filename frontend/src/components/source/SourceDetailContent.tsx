@@ -149,7 +149,7 @@ function renderHighlightedText(
           <mark
             id={isFirst ? 'inline-cited-passage' : undefined}
             data-testid="inline-cited-passage"
-            className="rounded bg-amber-300/40 dark:bg-amber-400/30 px-1 py-0.5 font-medium text-foreground ring-2 ring-primary/50 scroll-mt-32 transition-all shadow-sm"
+            className="rounded-md bg-amber-300/35 dark:bg-amber-400/25 px-1.5 py-0.5 font-medium text-foreground ring-1 ring-amber-400/40 dark:ring-amber-300/30 scroll-mt-32 transition-all shadow-[0_0_14px_rgba(251,191,36,0.25)]"
           >
             {match}
           </mark>
@@ -757,12 +757,12 @@ export function SourceDetailContent({
       {/* Tabs Content */}
       <div className="flex-1 overflow-y-auto px-2">
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sticky top-0 z-10">
-            <TabsTrigger value="content">{t('sources.content')}</TabsTrigger>
-            <TabsTrigger value="insights">
+          <TabsList className="grid w-full grid-cols-3 sticky top-0 z-10 rounded-xl bg-muted/60 p-1 backdrop-blur-md border border-border/40 shadow-xs">
+            <TabsTrigger value="content" className="rounded-lg transition-all">{t('sources.content')}</TabsTrigger>
+            <TabsTrigger value="insights" className="rounded-lg transition-all">
               {t('common.insights')} {insights.length > 0 && `(${insights.length})`}
             </TabsTrigger>
-            <TabsTrigger value="details">{t('sources.details')}</TabsTrigger>
+            <TabsTrigger value="details" className="rounded-lg transition-all">{t('sources.details')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="mt-6">
@@ -833,17 +833,21 @@ export function SourceDetailContent({
                 {citedPassage && (
                   <div
                     ref={citedPassageRef}
-                    className="mb-4 rounded-lg border-l-4 border-primary bg-primary/10 p-3 shadow-xs"
+                    className="mb-5 relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent p-4 shadow-[0_0_24px_rgba(45,212,191,0.08),inset_0_1px_0_rgba(255,255,255,0.1)]"
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                        {t('sources.citedPassage', { defaultValue: 'Cited passage' })}
-                      </p>
+                    <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-primary shadow-[0_0_8px_rgba(45,212,191,0.6)]" />
+                    <div className="flex items-center justify-between gap-2 mb-2 pl-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                          {t('sources.citedPassage', { defaultValue: 'Cited passage' })}
+                        </p>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 text-xs text-primary hover:bg-primary/20 gap-1 px-2"
+                        className="h-7 text-xs text-primary hover:bg-primary/20 gap-1.5 px-2.5 rounded-lg active:scale-95 transition-all duration-150 font-medium"
                         onClick={() => {
                           const el = document.getElementById('inline-cited-passage')
                           if (el) {
@@ -851,12 +855,12 @@ export function SourceDetailContent({
                           }
                         }}
                       >
-                        <Sparkles className="h-3 w-3" />
+                        <Sparkles className="h-3.5 w-3.5" />
                         Jump to in-text passage
                       </Button>
                     </div>
-                    <p className="text-sm leading-6 text-foreground/90">
-                      <mark className="rounded bg-primary/20 px-0.5 text-foreground">
+                    <p className="text-sm leading-6 text-foreground/90 pl-2">
+                      <mark className="rounded-md bg-primary/20 px-1 py-0.5 text-foreground font-medium shadow-xs">
                         {citedPassage.snippet}
                       </mark>
                     </p>

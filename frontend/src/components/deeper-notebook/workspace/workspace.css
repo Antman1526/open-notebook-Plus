@@ -668,14 +668,32 @@
 
 .dn-workspace-hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(1rem, 3cqi, 2rem);
   align-items: stretch;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--dn-radius-hero);
   background: var(--dn-panel);
-  box-shadow: var(--dn-shadow-low);
+  box-shadow: var(--dn-shadow-low), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  isolation: isolate;
+}
+
+.dn-workspace-hero:has(.dn-workspace-hero-media) {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.dn-workspace-hero::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -15%;
+  width: 65%;
+  height: 180%;
+  background: radial-gradient(circle, color-mix(in oklab, var(--primary) 12%, transparent), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .dn-workspace-hero-media {
@@ -697,6 +715,8 @@
   align-content: center;
   gap: 0.75rem;
   padding: clamp(1.25rem, 4cqi, 2.5rem);
+  position: relative;
+  z-index: 1;
 }
 
 .dn-workspace-hero-title {
@@ -732,7 +752,19 @@
   border: 1px solid var(--border);
   border-radius: var(--dn-radius-card);
   background: var(--dn-panel);
-  box-shadow: var(--dn-shadow-low);
+  box-shadow: var(--dn-shadow-low), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dn-visual-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+  box-shadow: var(--dn-shadow-md), 0 0 20px -6px color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.dn-visual-card:active {
+  transform: scale(0.99);
 }
 
 .dn-visual-card-media {
@@ -859,11 +891,24 @@
   outline-offset: 2px;
 }
 
+.dn-visual-card-action,
+.dn-workspace-secondary-link,
+.dn-workspace-notebook-link {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .dn-workspace-secondary-link:hover,
 .dn-workspace-notebook-link:hover,
 .dn-visual-card-action:hover {
   border-color: var(--primary);
   background: var(--dn-selection);
+  transform: translateY(-1px);
+}
+
+.dn-workspace-secondary-link:active,
+.dn-workspace-notebook-link:active,
+.dn-visual-card-action:active {
+  transform: scale(0.98);
 }
 
 @media (max-width: 52rem) {

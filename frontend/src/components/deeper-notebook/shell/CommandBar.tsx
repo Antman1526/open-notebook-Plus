@@ -24,9 +24,12 @@ export function CommandBar() {
 
   return (
     <header className="dn-command-bar" aria-label="Command bar">
-      <div className="dn-command-breadcrumb">
-        <p className="dn-command-kicker">{routeLabel}</p>
-        <p className="dn-command-title">Deeper Notebook</p>
+      <div className="dn-command-breadcrumb flex items-center gap-2.5">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shadow-[0_0_8px_rgba(45,212,191,0.12)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="dn-command-kicker m-0 leading-none">{routeLabel}</span>
+        </span>
+        <p className="dn-command-title font-semibold tracking-tight text-foreground">Deeper Notebook</p>
       </div>
       {/* v0.8.96 — the Focus control lives HERE, in flow, not floated over the
           bar. It used to be a shell-level sibling with position:absolute at the
@@ -38,14 +41,14 @@ export function CommandBar() {
         <Button
           type="button"
           variant="outline"
-          className="dn-command-trigger"
+          className="dn-command-trigger group h-9 px-3 gap-2.5 rounded-xl border-border/80 bg-background/80 hover:bg-background/95 hover:border-primary/40 active:scale-[0.98] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-150"
           aria-label="Open command palette"
           onClick={(event) => requestCommandSurface('global', '', event.currentTarget)}
         >
-          <Search className="h-4 w-4" aria-hidden="true" />
-          <span>{t('common.quickActions')}</span>
-          <span className="dn-command-shortcut" data-testid="command-shortcut">
-            <Command className="h-3 w-3" aria-hidden="true" />
+          <Search className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true" />
+          <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{t('common.quickActions')}</span>
+          <span className="dn-command-shortcut ml-auto inline-flex items-center gap-0.5 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" data-testid="command-shortcut">
+            <Command className="h-2.5 w-2.5" aria-hidden="true" />
             {isMac !== null ? (isMac ? '⌘K' : 'Ctrl+K') : 'K'}
           </span>
         </Button>

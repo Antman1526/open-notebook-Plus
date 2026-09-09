@@ -46,12 +46,14 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
 
   return (
     <>
-      <Card 
-        className="group card-hover"
+      <div 
+        className="group relative rounded-2xl p-1 bg-gradient-to-b from-border/40 via-border/10 to-transparent ring-1 ring-border/30 transition-all duration-300 hover:ring-primary/40 hover:shadow-md active:scale-[0.99] cursor-pointer"
         onClick={handleCardClick}
-        style={{ cursor: 'pointer' }}
       >
-          <CardHeader className="pb-3">
+        <Card 
+          className="border-0 rounded-[calc(1rem-2px)] bg-card/95 py-3 transition-colors group-hover:bg-card shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
+        >
+          <CardHeader className="pb-2">
             <div className="flex min-w-0 items-start justify-between">
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-base truncate group-hover:text-primary transition-colors">
@@ -69,7 +71,7 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
+                    className="h-8 w-8 p-0 rounded-full opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-all duration-200 hover:bg-muted/80"
                     aria-label={`Actions for ${notebook.name}`}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -110,7 +112,7 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
               {notebook.description || t('chat.noDescription')}
             </CardDescription>
 
-            <div className="mt-3 text-xs text-muted-foreground">
+            <div className="mt-2.5 text-xs text-muted-foreground">
               {t('common.updated').replace('{time}', formatDistanceToNow(new Date(notebook.updated), { 
                 addSuffix: true,
                 locale: getDateLocale(language)
@@ -130,10 +132,10 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
             <div className="mt-3 flex items-center gap-1.5 border-t pt-3">
               <Badge
                 variant="outline"
-                className={`text-xs flex items-center gap-1 px-2 py-0.5 transition-colors ${
+                className={`text-xs flex items-center gap-1.5 px-2.5 py-0.5 rounded-full transition-all duration-200 ${
                   notebook.source_count > 0
-                    ? 'text-foreground bg-muted/40 border-border'
-                    : 'text-muted-foreground/70 bg-transparent border-border/50'
+                    ? 'text-foreground bg-muted/40 border-border/80 shadow-xs'
+                    : 'text-muted-foreground/70 bg-transparent border-border/40'
                 }`}
                 title={`${notebook.source_count} sources`}
               >
@@ -142,10 +144,10 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
               </Badge>
               <Badge
                 variant="outline"
-                className={`text-xs flex items-center gap-1 px-2 py-0.5 transition-colors ${
+                className={`text-xs flex items-center gap-1.5 px-2.5 py-0.5 rounded-full transition-all duration-200 ${
                   notebook.note_count > 0
-                    ? 'text-foreground bg-muted/40 border-border'
-                    : 'text-muted-foreground/70 bg-transparent border-border/50'
+                    ? 'text-foreground bg-muted/40 border-border/80 shadow-xs'
+                    : 'text-muted-foreground/70 bg-transparent border-border/40'
                 }`}
                 title={`${notebook.note_count} notes`}
               >
@@ -154,7 +156,8 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
               </Badge>
             </div>
           </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       <NotebookDeleteDialog
         open={showDeleteDialog}

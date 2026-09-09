@@ -75,12 +75,12 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
                 <Badge variant="secondary">{t('notebooks.archived')}</Badge>
               )}
             </div>
-            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowSynthesisDialog(true)}
-                className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                className="gap-1.5 rounded-full border-primary/40 bg-primary/[0.06] text-primary shadow-xs transition-all duration-200 hover:bg-primary/15 hover:border-primary/60 active:scale-95"
                 data-testid="executive-synthesis-button"
               >
                 <Sparkles className="h-4 w-4" />
@@ -91,6 +91,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleArchiveToggle}
+                className="rounded-full shadow-xs transition-all duration-200 active:scale-95"
               >
                 {notebook.archived ? (
                   <>
@@ -108,6 +109,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowExportDialog(true)}
+                className="rounded-full shadow-xs transition-all duration-200 active:scale-95"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {t('notebooks.export.button')}
@@ -116,7 +118,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive hover:text-destructive/90"
+                className="rounded-full border-destructive/30 text-destructive shadow-xs transition-all duration-200 hover:bg-destructive/10 hover:border-destructive/60 active:scale-95"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {t('common.delete')}

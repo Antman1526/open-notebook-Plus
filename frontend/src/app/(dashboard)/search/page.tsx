@@ -788,8 +788,11 @@ export default function SearchPage() {
                           const sourceResult = visualGalleryEnabled && target.recordType === 'source'
 
                           return (
-                            <Card key={index}>
-                              <CardContent className="pt-4">
+                            <Card 
+                              key={index}
+                              className="group rounded-xl border border-border/60 bg-card/95 p-1 transition-all duration-200 hover:border-primary/40 hover:shadow-md active:scale-[0.99] ring-1 ring-border/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)]"
+                            >
+                              <CardContent className="pt-3 pb-3 px-3.5">
                                 <div className={sourceResult ? 'grid min-w-0 gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]' : ''}>
                                   {sourceResult ? (
                                     <div className="min-w-0" data-testid={`search-result-cover-${result.id}`}>
@@ -801,15 +804,15 @@ export default function SearchPage() {
                                       <div className="min-w-0 flex-1">
                                         <button
                                           onClick={() => openModal(target.modalType, target.modalId)}
-                                          className="min-h-11 min-w-11 text-primary hover:underline font-medium"
+                                          className="text-foreground hover:text-primary transition-colors font-medium text-left leading-snug cursor-pointer"
                                         >
                                           {result.title}
                                         </button>
-                                        <Badge variant="secondary" className="ml-2">
+                                        <Badge variant="secondary" className="ml-2 rounded-full text-xs font-mono">
                                           {result.final_score.toFixed(2)}
                                         </Badge>
                                         {result.rerank_score !== undefined && (
-                                          <Badge variant="outline" className="ml-2 border-primary/30 text-primary text-xs">
+                                          <Badge variant="outline" className="ml-2 rounded-full border-primary/30 text-primary text-xs font-mono bg-primary/[0.04]">
                                             Rerank: {result.rerank_score.toFixed(3)}
                                           </Badge>
                                         )}
@@ -819,18 +822,20 @@ export default function SearchPage() {
                                           </p>
                                         )}
                                       </div>
+                                      {sourceResult && result.matches?.[0] ? (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          type="button"
+                                          onClick={() => setEvidenceResult(result)}
+                                          aria-label={`View evidence for ${result.title}`}
+                                          className="gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
+                                        >
+                                          <Layers className="h-3.5 w-3.5" />
+                                          View evidence for {result.title}
+                                        </Button>
+                                      ) : null}
                                     </div>
-                                    {sourceResult && result.matches?.[0] ? (
-                                      <Button
-                                        className="mt-3 min-h-11 min-w-11"
-                                        onClick={() => setEvidenceResult(result)}
-                                        size="sm"
-                                        type="button"
-                                        variant="outline"
-                                      >
-                                        View evidence for {result.title}
-                                      </Button>
-                                    ) : null}
                                   </div>
                                 </div>
 

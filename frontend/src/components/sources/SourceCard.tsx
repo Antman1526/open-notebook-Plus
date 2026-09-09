@@ -335,12 +335,14 @@ export function SourceCard({
   return (
     <Card
       className={cn(
-        'transition-all duration-200 hover:shadow-md group relative cursor-pointer border border-border/60 dark:border-border/40',
+        'group relative cursor-pointer rounded-xl border border-border/50 bg-card/95 transition-all duration-200 ease-out',
+        'ring-1 ring-border/30 hover:ring-primary/40 hover:border-border/80 hover:shadow-md active:scale-[0.99]',
+        'shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)]',
         className
       )}
       onClick={handleCardClick}
     >
-      <CardContent className="px-3 py-1">
+      <CardContent className="px-3.5 py-2.5">
         {/* Header with status indicator */}
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex-1 min-w-0">
@@ -353,7 +355,7 @@ export function SourceCard({
             {!isCompleted && (
               <div className="flex items-center gap-2 mb-2">
                 <div className={cn(
-                  'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+                  'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium',
                   statusConfig.bgColor,
                   statusConfig.color
                 )}>
@@ -365,11 +367,6 @@ export function SourceCard({
                 </div>
 
                 {/* Source type indicator */}
-                {/* v0.7.180 — text-gray-500 → text-muted-foreground so this
-                    secondary metadata absorbs the active theme's muted hue
-                    instead of pinning a literal gray that's wrong in the
-                    Solarized/Nord/Dracula themes. Same pattern v0.7.165 used
-                    for ErrorBoundary's red palette. */}
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <SourceTypeIcon className="h-3 w-3" />
                   <span className="text-xs capitalize">{t('common.source')}</span>
@@ -380,7 +377,7 @@ export function SourceCard({
             {/* Title */}
             <div className={cn('mb-1.5', !isCompleted && 'mb-1')}>
               <h4
-                className="text-sm font-medium leading-tight line-clamp-2 break-words"
+                className="text-sm font-medium leading-snug line-clamp-2 break-words transition-colors group-hover:text-primary"
                 title={title}
               >
                 {title}
@@ -395,22 +392,22 @@ export function SourceCard({
             )}
 
             {/* Metadata badges */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {/* Source type badge */}
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+              <Badge variant="secondary" className="text-[11px] rounded-full px-2 py-0.5 flex items-center gap-1">
                 <SourceTypeIcon className="h-3 w-3" />
                 {getSourceTypeLabel(sourceType, t)}
               </Badge>
 
               {isShared && (
-                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                <Badge variant="outline" className="text-[11px] rounded-full px-2 py-0.5 flex items-center gap-1 border-border/60 bg-muted/20">
                   <Share2 className="h-3 w-3" />
                   {notebookCount > 1 ? `Shared with ${notebookCount}` : 'Shared'}
                 </Badge>
               )}
 
               {provenanceLabel && (
-                <Badge variant="outline" className="text-xs max-w-[180px] truncate">
+                <Badge variant="outline" className="text-[11px] rounded-full px-2 py-0.5 max-w-[180px] truncate border-border/60 bg-muted/20">
                   {provenanceLabel}
                 </Badge>
               )}
@@ -418,7 +415,7 @@ export function SourceCard({
               {isFileUnavailable && (
                 <Badge
                   variant="outline"
-                  className="text-xs flex items-center gap-1 border-destructive/50 text-destructive"
+                  className="text-[11px] rounded-full px-2 py-0.5 flex items-center gap-1 border-destructive/50 text-destructive bg-destructive/10"
                 >
                   <AlertTriangle className="h-3 w-3" />
                   {t('sources.fileUnavailable')}
@@ -428,7 +425,7 @@ export function SourceCard({
               {hasNoExtractedText && (
                 <Badge
                   variant="outline"
-                  className="text-xs flex items-center gap-1 border-destructive/50 text-destructive"
+                  className="text-[11px] rounded-full px-2 py-0.5 flex items-center gap-1 border-destructive/50 text-destructive bg-destructive/10"
                 >
                   <AlertTriangle className="h-3 w-3" />
                   {t('sources.noExtractedText')}
@@ -438,7 +435,7 @@ export function SourceCard({
               {hasLowExtractedText && (
                 <Badge
                   variant="outline"
-                  className="text-xs flex items-center gap-1 border-amber-500/60 text-amber-700 dark:text-amber-300"
+                  className="text-[11px] rounded-full px-2 py-0.5 flex items-center gap-1 border-amber-500/60 text-amber-700 dark:text-amber-300 bg-amber-500/10"
                 >
                   <AlertTriangle className="h-3 w-3" />
                   {t('sources.lowExtractedText')}
@@ -446,19 +443,19 @@ export function SourceCard({
               )}
 
               {isCompleted && source.insights_count > 0 && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[11px] rounded-full px-2 py-0.5 border-border/60 bg-muted/20">
                   {t('sources.insightsCount').replace('{count}', source.insights_count.toString())}
                 </Badge>
               )}
               {source.topics && source.topics.length > 0 && isCompleted && (
                 <>
                   {source.topics.slice(0, 2).map((topic, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
+                    <Badge key={index} variant="outline" className="text-[11px] rounded-full px-2 py-0.5 border-border/60 bg-muted/20">
                       {topic}
                     </Badge>
                   ))}
                   {source.topics.length > 2 && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[11px] rounded-full px-2 py-0.5 border-border/60 bg-muted/20">
                       +{source.topics.length - 2}
                     </Badge>
                   )}

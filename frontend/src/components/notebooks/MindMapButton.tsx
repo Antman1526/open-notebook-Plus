@@ -30,7 +30,12 @@ export function MindMapButton({ notebookId }: { notebookId: string }) {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="rounded-full transition-all duration-200 active:scale-95 shadow-xs"
+      >
         <Network className="mr-2 h-4 w-4" />
         {t('mindMap.button', { defaultValue: 'Mind map' })}
       </Button>

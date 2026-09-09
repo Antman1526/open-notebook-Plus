@@ -160,7 +160,7 @@ export function SyncedTranscript({
               className={cn(
                 'rounded-md border p-3 text-sm transition-all duration-200',
                 active
-                  ? 'border-primary/60 bg-primary/8 shadow-xs ring-1 ring-primary/20'
+                  ? 'border-primary bg-primary/8 shadow-xs ring-1 ring-primary/20'
                   : 'bg-background hover:bg-muted/30',
               )}
             >
