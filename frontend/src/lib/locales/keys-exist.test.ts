@@ -36,14 +36,15 @@ function resolveKey(key: string): boolean {
   return typeof node === 'string'
 }
 
-// Matches t('a.b.c') and t("a.b.c"). Only dotted literals are checked:
-// single-segment keys and dynamic keys (template strings, variables) are out
-// of scope for a static check. Calls that supply a fallback — a string
+// Matches t('a.b.c'), t("a.b.c") and t('a'). Dynamic keys (template
+// strings, variables) are out of scope for a static check. Calls that supply a fallback — a string
 // second argument or an options object with `defaultValue` — are accepted:
 // a missing key there renders the fallback (English only, but never the raw
 // key), which is a translation gap for locale parity to worry about, not a
 // runtime bug.
-const LITERAL_CALL = /\bt\(\s*(['"])([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)\1\s*([,)])/g
+// v0.8.119 — single-segment keys are checked too (en-US has top-level
+// string keys, so `t('source')` is a legitimate call that can still miss).
+const LITERAL_CALL = /\bt\(\s*(['"])([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\1\s*([,)])/g
 
 function hasFallback(text: string, afterIndex: number): boolean {
   const tail = text.slice(afterIndex, afterIndex + 400)
@@ -72,15 +73,28 @@ describe('translation keys referenced in source exist in en-US', () => {
 
   it('finds no literal t() key missing from en-US without a fallback', () => {
     const missing: string[] = []
+    const gaps: string[] = []
     for (const file of files) {
       const text = readFileSync(file, 'utf-8')
       for (const match of text.matchAll(LITERAL_CALL)) {
         const key = match[2]
         if (resolveKey(key)) continue
         const afterKey = (match.index ?? 0) + match[0].length
-        if (match[3] === ',' && hasFallback(text, afterKey)) continue
+        if (match[3] === ',' && hasFallback(text, afterKey)) {
+          gaps.push(`${relative(SRC_ROOT, file)} → ${key}`)
+          continue
+        }
         missing.push(`${relative(SRC_ROOT, file)} → ${key}`)
       }
+    }
+    // v0.8.119 — non-blocking report: keys that only exist as an English
+    // defaultValue are translation gaps (they never localize). Surface the
+    // count so a locale pass can pick them up; do not fail on them.
+    if (gaps.length > 0) {
+      console.info(
+        `[i18n] ${gaps.length} t() call(s) rely on an English defaultValue and never localize; ` +
+        `first few:\n  ${gaps.slice(0, 8).join('\n  ')}`,
+      )
     }
     expect(missing, `Missing translation keys:\n${missing.join('\n')}`).toEqual([])
   })
