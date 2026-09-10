@@ -1,9 +1,13 @@
 # Project Handoff: Deeper Notebook (for Claude)
 
-**Date**: September 9, 2026  
+**Date**: September 10, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits** (v0.8.115 – v0.8.119):
+**Latest Commits** (v0.8.115 – v0.8.120):
+- `db815041`: `feat(studio): surface export staleness and per-item regeneration in Evidence Studio`
+- `948b1ba8`: `fix(i18n): resolve translation gaps behind defaultValue across all 14 locales`
+- `33dc3461`: `feat(studio): support multi-file export regeneration, aliases, and staleness tracking`
+- `44d56e68`: `fix(studio): pair Arial Unicode with Arial Bold on macOS for PDF export`
 - `92981998`: `feat(studio): regenerate a single export format on demand`
 - `72f5edce`: `feat(studio): render non-Latin text in the course-pack PDF`
 - `f63d611a`: `test(i18n): key guard also checks single-segment keys and reports defaultValue-only gaps`
@@ -128,28 +132,20 @@ All gates are currently passing 100%:
 - **Graph keyboard accessibility** — done in `components/vault/VaultGraph.tsx` (React Flow). `/` already opens the knowledge command surface via `KnowledgeCommandBridge.tsx`.
 - **Export format extensions (EPUB / PDF course packs)** — still open; `api/routers/studio.py`, `app/(dashboard)/studio/page.tsx`.
 
-### Open items, in priority order
+### Closed in v0.8.120 (All Items Completed)
 
-The v0.8.118 list was closed in v0.8.119 (`desktop/CHANGELOG.md`). Two i18n
-guards now run in CI: `locales/keys-exist.test.ts` (every literal `t()` key
-resolves) and `locales/placeholders.test.ts` (no placeholder drift between
-locales).
+The previous backlog items from v0.8.119 were all comprehensively resolved in v0.8.120:
 
-1. **Translation gaps behind `defaultValue`.** `keys-exist.test.ts` prints a
-   non-blocking count of `t()` calls that only render because of an English
-   `defaultValue` — those never localize. Inventory them and add real keys.
-2. **Bold Unicode face for the PDF.** On macOS the resolved body font
-   (Arial Unicode) has no bold file, so headings render in the regular
-   weight. Pair a bold candidate per platform, or accept it and say so in
-   the export UI.
-3. **Wider on-demand export coverage.** `persist_single_export` handles the
-   single-file formats (docx, epub, pdf, markdown, json, xlsx, csv, pptx,
-   png). The multi-file bundles (scorm_package, xapi_package,
-   research_bundle, instructor_guide, learner_handout) still regenerate only
-   with the whole artifact.
-4. **Export freshness.** A regenerated export silently overwrites the
-   recorded path. If an artifact is edited after export, nothing marks the
-   on-disk file as stale; consider storing a content hash alongside the path.
+1. **Translation gaps behind `defaultValue` (Closed):** Audited all 141 unlocalized `t()` calls identified by `keys-exist.test.ts`. Added canonical translation keys for `updates`, `localModels`, `mcp.recommendations`, `intro`, `dbRepair`, `mindMap`, `sources.discover*`, `chat.*`, and `models.smartRouting` across all 14 locales without any `as any` casts.
+2. **Bold Unicode face for the PDF (Closed):** On macOS, `Arial Unicode.ttf` is paired with `Arial Bold.ttf` when resolving the body font. Headings properly render bold typography with full Unicode support.
+3. **Wider on-demand export coverage (Closed):** `persist_single_export` now supports all course pack bundles (`scorm_package`, `xapi_package`, `research_bundle`, `instructor_guide`, `learner_handout`, `module_checklist`, `assessment`) alongside single-file formats, with format aliases (`scorm`, `xapi`, `bundle`, `svg`, `checklist`).
+4. **Export freshness & UI stale indicators (Closed):** Added SHA256 content hashing per export in `output_payload["export_hashes"]`. Stale exports are tracked by `is_export_stale` and exposed in `StudioArtifactResponse.stale_export_formats`. In the Studio UI (`ArtifactExportMenu.tsx`), an amber "Outdated" badge appears when content changes, and a per-item 1-click regenerate action allows refreshing any on-disk export immediately.
+
+### Next Recommended Areas to Explore
+
+1. **Batch export regeneration:** Allow 1-click "Regenerate all stale exports" in Evidence Studio when multiple exports are outdated.
+2. **Streaming chunk backpressure:** Tune backpressure handling in low-memory containerized environments.
+3. **Expanded format previews:** Inline preview support for EPUB or SVG directly within the studio inspector drawer.
 
 ## 6. Quick Cheat-Sheet for Common Commands
 
