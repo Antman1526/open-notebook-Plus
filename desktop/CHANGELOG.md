@@ -25,6 +25,62 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.117 — 2026-09-09 — The v0.8.116 open items, closed
+
+Seven commits working through the open-items list left in
+`HANDOFF_CLAUDE.md` by v0.8.116.
+
+🎨 **"Interrupted" badge with inline retry.** A stalled stream that kept
+partial text now marks that message `interrupted` (local-only, cleared by
+the next session refetch) and `ChatPanel` renders
+`ChatMessageInterruptedBadge` in the AI actions row: an outline chip plus
+a ghost retry button that re-sends the preceding question through the
+panel's existing send path, offered only when not streaming. New
+`chat.interrupted` key in all 14 locales.
+
+🐛 **Retry toast label.** The v0.8.116 stall toast used
+`t('common.accessibility.retry')`, which does not exist (the leaf is
+`common.retry`, "Try Again"), so the button would have shown the raw key.
+Fixed in all three hooks and the tests that assert on it.
+
+🛠 **Behavioural test for `useNotebookChat`.** `chatApi.streamMessage` is
+mocked as a clock-paced async generator and the hook is driven for real:
+rAF-batched tokens, canonical `done` replacement, stall keeps partial and
+retries, stall with nothing cleans up, server error uses the generic toast.
+
+🛠 **HTTP-level heartbeat tests** (`tests/test_stream_keepalive_http.py`).
+Each wrapped endpoint is exercised through `TestClient` with the inner
+generator stubbed to go silent past a 50 ms interval: `/chat/stream`
+emits `{"type":"heartbeat"}` lines and, with a 0.2 s idle limit, ends in
+the "produced no output" error frame; `/search/ask` and source chat emit
+`: heartbeat` comment lines between `data:` frames.
+
+✨ **EPUB 3 export for course packs** (`deeper_notebook/studio/exporters/epub.py`).
+Stdlib `zipfile` plus the already-present markdown-it-py, no new
+dependency: mimetype first and stored, container, OPF manifest and spine
+(title page, one XHTML per module, assessment), nav, stylesheet. markdown-it
+runs with `xhtmlOut` and `html=False` so every member is well-formed XML
+even for hostile markdown. `export_paths["epub"]`; the export menu shows it
+in the Bundle group. docx and epub now fail independently.
+
+✨ **Text-flow PDF export for course packs** (`exporters/pdf.py`). New
+dependency `reportlab>=4.2,<6.0` (pure Python, no system libraries; the
+diff to `uv.lock` and `desktop/requirements.lock` is reportlab alone,
+bootstrap lock tests pass). Title page, per-module sections with lesson
+headings, assessment, Sources appendix; a small markdown-it token walker
+maps headings, bold/italic, lists and fenced code and skips anything else.
+`export_paths["pdf"]`; the menu already rendered `pdf`. Documented in
+`docs/recreation/TECHNOLOGY-AUDIT.md`.
+
+🛠 **Search page split.** `app/(dashboard)/search/page.tsx` (945 lines)
+became a 472-line orchestrator plus `components/SearchResultsList.tsx`,
+`AskPanel.tsx`, and `DeepResearchPanel.tsx`. Pure move; the page test is
+untouched and passes.
+
+Path corrections for the next reader: Studio's backend is the package
+`api/routers/studio/` (not `studio.py`), and on-disk exports are written by
+`deeper_notebook/studio/generation/persistence.py`, not the router.
+
 ## v0.8.116 — 2026-09-09 — Streams that tell you they are alive, and recover when they are not
 
 Follow-up to v0.8.115 across five commits. The handoff backlog that

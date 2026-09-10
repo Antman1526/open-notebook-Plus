@@ -3,11 +3,13 @@
 **Date**: September 9, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits** (v0.8.115 / v0.8.116, 2026-09-09):
-- `5ccd162e`: `test(frontend): behavioural streaming tests for useAsk and useSourceChat`
-- `80c8e5b8`: `feat(knowledge): keyboard navigation for the vault graph`
-- `3ee72316`: `perf(search): virtualize result lists of 50+ cards with the shared VirtualizedListAuto`
-- `c3fe0d8e`: `feat(chat): keep partial answers and offer one-click retry when a stream stalls`
+**Latest Commits** (v0.8.115 – v0.8.117, 2026-09-09):
+- `497f49de`: `feat(studio): text-flow PDF export for course packs via reportlab`
+- `06dc8cd3`: `feat(studio): EPUB 3 export for course packs`
+- `49930453`: `refactor(search): split the search page into per-mode components`
+- `dec3e99b`: `feat(chat): "Interrupted" badge with inline retry on stalled partial answers; fix retry i18n key`
+- `badb904e`: `test(frontend): behavioural streaming test for useNotebookChat`
+- `c5943695`: `test(api): HTTP-level heartbeat and idle-timeout coverage for the three stream endpoints`
 - `8e98616e`: `feat(streaming): backend heartbeat frames and server-side idle limit for model streams`
 - `eb5eaf29`: `fix(frontend): detect stalled model streams instead of hanging in "streaming" forever`
 
@@ -58,11 +60,11 @@ All gates are currently passing 100%:
 
 | Gate / Suite | Command | Status |
 | :--- | :--- | :--- |
-| **Frontend Vitest** | `cd frontend && npm test` | **254/254 test files passed (1,893 tests)** |
+| **Frontend Vitest** | `cd frontend && npm test` | **257/257 test files passed (1,903 tests)** |
 | **Frontend ESLint** | `cd frontend && npm run lint` | **0 errors, 0 warnings** |
 | **Frontend TypeScript** | `cd frontend && npx tsc --noEmit` | **0 errors** |
 | **Desktop Smoke Tests**| `.venv/bin/pytest desktop/tests/test_package_release_smoke.py` | **32/32 passed** |
-| **Backend stream routers** | `.venv/bin/pytest tests/test_stream_keepalive.py tests/test_chat_stream.py tests/test_v0_7_200_search_typed_exceptions.py tests/test_v0_8_44_source_chat_mcp_disable.py` | **passing (94 across the touched router suites)** |
+| **Backend stream + studio suites** | `.venv/bin/pytest tests/test_stream_keepalive*.py tests/test_chat_stream.py tests/test_studio_epub_exporter.py tests/test_studio_pdf_exporter.py tests/test_studio_office_exporters.py tests/test_v0_7_141_bootstrap.py` | **107 passed across the touched suites (incl. smoke)** |
 | **Rebrand Audit** | `python3 scripts/rebrand_audit.py --check` | **0 unexpected identities, 0 stale entries** |
 | **Desktop Package** | `hdiutil verify dist/Deeper-Notebook-mac-arm64.dmg` | **Checksum VALID (183MB DMG)** |
 
@@ -127,11 +129,30 @@ All gates are currently passing 100%:
 - **Export format extensions (EPUB / PDF course packs)** — still open; `api/routers/studio.py`, `app/(dashboard)/studio/page.tsx`.
 
 ### Open items, in priority order
-1. **Interrupted-message marker in the chat UI.** The hooks keep partial text on a stall, but nothing in `components/source/ChatPanel.tsx` (or the notebook chat panel) shows that the message was cut off. Add an `interrupted` flag on the local message and a small badge + inline retry; the toast is the only affordance today.
-2. **Behavioural test for `useNotebookChat`.** `use-ask` and `useSourceChat` now have real streaming tests; the notebook hook is still covered only by the source-text contract. Reuse `src/test/stream-harness.ts` (NDJSON framing via `pushRaw`) and mock `chatApi.streamMessage`.
-3. **Backend heartbeat coverage through the HTTP layer.** `tests/test_stream_keepalive.py` tests the wrapper directly; add one `TestClient` test per endpoint that stubs the generator to sleep past the heartbeat interval and asserts a heartbeat frame is on the wire.
-4. **EPUB / PDF course-pack export** (unchanged from the previous backlog).
-5. **Search page size.** `app/(dashboard)/search/page.tsx` is ~940 lines with deep-research, ask, and search modes in one component; the result card is already extracted (`renderSearchResultCard`), which is the natural seam for splitting the modes into files.
+
+All five items from the 2026-09-09 list were closed in v0.8.117 (see
+`desktop/CHANGELOG.md`). Path corrections learned while doing so: Studio's
+backend is the package `api/routers/studio/`, on-disk exports are written by
+`deeper_notebook/studio/generation/persistence.py`, and both chats render
+through `components/source/ChatPanel.tsx`.
+
+1. **Dead duplicate in the studio router.** `api/routers/studio/artifacts.py`
+   still carries a `_persist_artifact_exports` (~line 803) that nothing calls;
+   the live implementation is `persist_artifact_exports` in
+   `deeper_notebook/studio/generation/persistence.py`. Delete the duplicate
+   and its private helpers once `tests/test_studio_router_contract.py` is
+   confirmed not to pin them.
+2. **Localize `ArtifactExportMenu.tsx`.** Its strings ("Saved exports",
+   "Download", "Open", "Copy", "Folder") are hardcoded; every other surface
+   goes through `t()`. Add `studio.export.*` keys to all 14 locales.
+3. **Export menu i18n test for EPUB/PDF labels** once the strings above exist.
+4. **Interrupted state across refetch.** The `interrupted` flag is local-only
+   and disappears when the session refetches. If that proves confusing, persist
+   a `truncated` marker server-side on the canonical message instead.
+5. **`common.retry` naming.** The key holds "Try Again" and lives at the top of
+   `common`; consider moving it under `common.actions` in a locale-wide pass so
+   future callers stop guessing the path (this is exactly how the v0.8.116 bug
+   happened).
 
 ## 6. Quick Cheat-Sheet for Common Commands
 
