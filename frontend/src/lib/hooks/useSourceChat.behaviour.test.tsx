@@ -164,7 +164,7 @@ describe('useSourceChat (behavioural)', () => {
     expect(options.description).toBe(
       `apiErrors.streamStalledHint::${JSON.stringify({ seconds: 1 })}`,
     )
-    expect(options.action.label).toBe('common.accessibility.retry')
+    expect(options.action.label).toBe('common.retry')
 
     const harness2 = createSseStream()
     vi.mocked(sourceChatApi.sendMessage).mockResolvedValue(harness2.stream as any)

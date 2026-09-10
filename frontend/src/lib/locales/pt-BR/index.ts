@@ -609,6 +609,7 @@ export const ptBR = {
     sessionCreated: "Sessão de chat criada",
     sessionUpdated: "Sessão atualizada",
     sessionDeleted: "Sessão excluída",
+    interrupted: "Interrompido",
     citations: {
       toolCallLabel: "Chamada de ferramenta",
       mcpIndexLabel: "Chamada MCP #{index}",

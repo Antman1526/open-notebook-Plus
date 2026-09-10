@@ -608,6 +608,7 @@ export const ruRU = {
     sessionCreated: "Сессия чата создана",
     sessionUpdated: "Сессия обновлена",
     sessionDeleted: "Сессия удалена",
+    interrupted: "Прервано",
     citations: {
       toolCallLabel: "Вызов инструмента",
       mcpIndexLabel: "Вызов MCP #{index}",

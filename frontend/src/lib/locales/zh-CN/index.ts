@@ -608,6 +608,7 @@ export const zhCN = {
     sessionCreated: "聊天会话已创建",
     sessionUpdated: "会话已更新",
     sessionDeleted: "会话已删除",
+    interrupted: "已中断",
     citations: {
       toolCallLabel: "工具调用",
       mcpIndexLabel: "MCP 工具调用 #{index}",

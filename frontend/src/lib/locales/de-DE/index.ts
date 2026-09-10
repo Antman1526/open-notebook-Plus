@@ -612,6 +612,7 @@ export const deDE = {
     sessionCreated: "Chat-Sitzung erstellt",
     sessionUpdated: "Sitzung aktualisiert",
     sessionDeleted: "Sitzung gelöscht",
+    interrupted: "Unterbrochen",
     citations: {
       toolCallLabel: "Tool-Aufruf",
       mcpIndexLabel: "MCP-Tool-Aufruf #{index}",

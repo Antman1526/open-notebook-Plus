@@ -610,6 +610,7 @@ export const frFR = {
     sessionCreated: "Session de chat créée",
     sessionUpdated: "Session mise à jour",
     sessionDeleted: "Session supprimée",
+    interrupted: "Interrompu",
     citations: {
       toolCallLabel: "Appel d'outil",
       mcpIndexLabel: "Appel MCP #{index}",

@@ -620,6 +620,7 @@ export const enUS = {
     sessionCreated: "Chat session created",
     sessionUpdated: "Session updated",
     sessionDeleted: "Session deleted",
+    interrupted: "Interrupted",
     citations: {
       // v0.8.0 Phase 4 Task 14 — pill + popover labels for citation markers.
       // v0.8.1 Item 3 — mcpPlaceholder updated; mcpToolName/mcpArgs/mcpResult added.

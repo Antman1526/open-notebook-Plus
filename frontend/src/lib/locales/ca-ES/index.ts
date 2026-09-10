@@ -613,6 +613,7 @@ export const caES = {
     sessionCreated: "S'ha creat la sessió de xat",
     sessionUpdated: "S'ha actualitzat la sessió",
     sessionDeleted: "S'ha suprimit la sessió",
+    interrupted: "Interromput",
     citations: {
       toolCallLabel: "Crida a l'eina",
       mcpIndexLabel: "Crida a l'eina MCP #{index}",

@@ -195,7 +195,7 @@ describe('useNotebookChat (behavioural)', () => {
     expect(options.description).toBe(
       `apiErrors.streamStalledHint::${JSON.stringify({ seconds: 60 })}`,
     )
-    expect(options.action.label).toBe('common.accessibility.retry')
+    expect(options.action.label).toBe('common.retry')
 
     vi.mocked(chatApi.streamMessage).mockImplementation(makeStream([
       { type: 'done', messages: [{ id: 'm1', type: 'human', content: 'stall with text' }, { id: 'm2', type: 'ai', content: 'second try' }], selected_provider: null, selected_model_id: null },

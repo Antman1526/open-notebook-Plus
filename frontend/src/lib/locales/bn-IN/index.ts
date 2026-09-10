@@ -608,6 +608,7 @@ export const bnIN = {
     sessionCreated: "চ্যাট সেশন তৈরি হয়েছে",
     sessionUpdated: "সেশন আপডেট হয়েছে",
     sessionDeleted: "সেশন মুছে ফেলা হয়েছে",
+    interrupted: "বাধাপ্রাপ্ত",
     citations: {
       toolCallLabel: "টুল কল",
       mcpIndexLabel: "MCP টুল কল #{index}",

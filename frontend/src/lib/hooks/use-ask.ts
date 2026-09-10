@@ -246,7 +246,7 @@ export function useAsk() {
           toast.error(t('apiErrors.streamStalled'), {
             description: t('apiErrors.streamStalledHint', { seconds: error.idleSeconds }),
             action: {
-              label: t('common.accessibility.retry'),
+              label: t('common.retry'),
               onClick: () => {
                 void sendAskRef.current?.(question, models)
               },

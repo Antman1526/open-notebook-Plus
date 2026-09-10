@@ -37,6 +37,10 @@ import { AudioDictateButton } from '@/components/common/AudioDictateButton'
 import { ChatMessageProviderBadge } from '@/components/chat/ChatMessageProviderBadge'
 import { ChatMessagePrivacyBadge } from '@/components/chat/ChatMessagePrivacyBadge'
 import { ChatMessageAgentStateBadge } from '@/components/chat/ChatMessageAgentStateBadge'
+// v0.8.117 — "Interrupted" chip + retry when a stream-stall recovery
+// (v0.8.116) kept a partial AI message. Reads the local-only
+// `message.interrupted` flag set by useNotebookChat / useSourceChat.
+import { ChatMessageInterruptedBadge } from '@/components/chat/ChatMessageInterruptedBadge'
 import { EvidenceReview } from '@/components/evaluation/EvidenceReview'
 import { RunTimeline } from '@/components/deeper-notebook'
 import { useLatestMessageEvaluations } from '@/lib/hooks/use-evaluation'
@@ -456,6 +460,25 @@ export function ChatPanel({
                             null unless DEEPER_NOTEBOOK_AGENT_FSM surfaced a non-complete
                             terminal state on the done event. */}
                         <ChatMessageAgentStateBadge messageId={message.id} />
+                        {/* v0.8.117 — "Interrupted" chip when a stream-stall
+                            recovery kept this partial AI message. Retry only
+                            offered when a preceding human message exists and
+                            no stream is currently in flight. */}
+                        {message.interrupted && (
+                          <ChatMessageInterruptedBadge
+                            onRetry={
+                              !isStreaming &&
+                              idx > 0 &&
+                              messages[idx - 1]?.type === 'human'
+                                ? () =>
+                                    onSendMessage(
+                                      messages[idx - 1].content,
+                                      modelOverride,
+                                    )
+                                : undefined
+                            }
+                          />
+                        )}
                         {contextType === 'notebook' && notebookId && evaluationMessageIdSet.has(message.id) && (
                           <EvidenceReview
                             notebookId={notebookId}

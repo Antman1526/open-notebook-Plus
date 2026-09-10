@@ -479,7 +479,7 @@ export function useSourceChat(sourceId: string) {
         toast.error(t('apiErrors.streamStalled'), {
           description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
           action: {
-            label: t('common.accessibility.retry'),
+            label: t('common.retry'),
             onClick: () => {
               void sendMessageRef.current?.(message, modelOverride)
             },
@@ -487,7 +487,14 @@ export function useSourceChat(sourceId: string) {
         })
         setMessages(prev => {
           const partial = prev.find(msg => msg.id === streamingAiId)
-          if (partial && partial.content.trim().length > 0) return prev
+          if (partial && partial.content.trim().length > 0) {
+            // v0.8.117 — mark the kept partial message so the UI can show
+            // an "Interrupted" badge + retry affordance. Local-only: never
+            // sent by the server, cleared by the next session refetch.
+            return prev.map(msg =>
+              msg.id === streamingAiId ? { ...msg, interrupted: true } : msg,
+            )
+          }
           return prev.filter(msg => msg.id !== tempId && msg.id !== streamingAiId)
         })
         return

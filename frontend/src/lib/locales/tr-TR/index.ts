@@ -611,6 +611,7 @@ export const trTR = {
     sessionCreated: "Sohbet oturumu oluşturuldu",
     sessionUpdated: "Oturum güncellendi",
     sessionDeleted: "Oturum silindi",
+    interrupted: "Kesildi",
     citations: {
       toolCallLabel: "Araç çağrısı",
       mcpIndexLabel: "MCP araç çağrısı #{index}",

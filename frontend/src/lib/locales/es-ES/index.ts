@@ -610,6 +610,7 @@ export const esES = {
     sessionCreated: "Sesión de chat creada",
     sessionUpdated: "Sesión actualizada",
     sessionDeleted: "Sesión eliminada",
+    interrupted: "Interrumpido",
     citations: {
       toolCallLabel: "Llamada de herramienta",
       mcpIndexLabel: "Llamada MCP #{index}",

@@ -633,7 +633,7 @@ export function useNotebookChat({
         toast.error(t('apiErrors.streamStalled'), {
           description: t('apiErrors.streamStalledHint', { seconds: err.idleSeconds }),
           action: {
-            label: t('common.accessibility.retry'),
+            label: t('common.retry'),
             onClick: () => {
               void sendMessageRef.current?.(message, modelOverride, bypassPrivacyGate)
             },
@@ -641,7 +641,14 @@ export function useNotebookChat({
         })
         setMessages(prev => {
           const partial = prev.find(m => m.id === streamingAiId)
-          if (partial && partial.content.trim().length > 0) return prev
+          if (partial && partial.content.trim().length > 0) {
+            // v0.8.117 — mark the kept partial message so the UI can show
+            // an "Interrupted" badge + retry affordance. Local-only: never
+            // sent by the server, cleared by the next session refetch.
+            return prev.map(m =>
+              m.id === streamingAiId ? { ...m, interrupted: true } : m,
+            )
+          }
           return prev.filter(m => m.id !== tempId && m.id !== streamingAiId)
         })
         return

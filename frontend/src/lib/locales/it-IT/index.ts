@@ -610,6 +610,7 @@ export const itIT = {
     sessionCreated: "Sessione chat creata",
     sessionUpdated: "Sessione aggiornata",
     sessionDeleted: "Sessione eliminata",
+    interrupted: "Interrotto",
     citations: {
       toolCallLabel: "Chiamata strumento",
       mcpIndexLabel: "Chiamata MCP #{index}",

@@ -171,7 +171,7 @@ describe('useAsk (behavioural)', () => {
     expect(options.description).toBe(
       `apiErrors.streamStalledHint::${JSON.stringify({ seconds: 1 })}`,
     )
-    expect(options.action.label).toBe('common.accessibility.retry')
+    expect(options.action.label).toBe('common.retry')
 
     // Retry re-invokes askKnowledgeBase with the same question/models.
     const harness2 = createSseStream()

@@ -189,6 +189,10 @@ export interface SourceChatMessage {
   type: 'human' | 'ai'
   content: string
   timestamp?: string
+  // v0.8.117 — local-only UI flag set when a stream-stall recovery (v0.8.116)
+  // kept this partial AI message. The server never sends this field; it is
+  // cleared the next time the session is refetched.
+  interrupted?: boolean
 }
 
 export interface SourceChatContextIndicator {
@@ -246,6 +250,10 @@ export interface NotebookChatMessage {
   type: 'human' | 'ai'
   content: string
   timestamp?: string
+  // v0.8.117 — local-only UI flag set when a stream-stall recovery (v0.8.116)
+  // kept this partial AI message. The server never sends this field; it is
+  // cleared the next time the session is refetched.
+  interrupted?: boolean
 }
 
 export interface NotebookChatSessionWithMessages extends NotebookChatSession {

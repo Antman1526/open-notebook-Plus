@@ -612,6 +612,7 @@ export const plPL = {
     sessionCreated: "Utworzono sesję czatu",
     sessionUpdated: "Zaktualizowano sesję",
     sessionDeleted: "Usunięto sesję",
+    interrupted: "Przerwano",
     citations: {
       toolCallLabel: "Wywołanie narzędzia",
       mcpIndexLabel: "Wywołanie narzędzia MCP nr {index}",

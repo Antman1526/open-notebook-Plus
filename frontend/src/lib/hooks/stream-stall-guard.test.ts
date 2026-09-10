@@ -74,7 +74,7 @@ describe('v0.8.115 stream stall guard', () => {
           src,
           `${label}: the stall toast must carry an action that re-sends via ` +
           `a ref to the latest send function.`,
-        ).toMatch(/label:\s*t\('common\.accessibility\.retry'\)/)
+        ).toMatch(/label:\s*t\('common\.retry'\)/)
       })
     })
   }

@@ -608,6 +608,7 @@ export const jaJP = {
     sessionCreated: "チャットセッションを作成しました",
     sessionUpdated: "セッションを更新しました",
     sessionDeleted: "セッションを削除しました",
+    interrupted: "中断されました",
     citations: {
       toolCallLabel: "ツール呼び出し",
       mcpIndexLabel: "MCPツール呼び出し #{index}",
