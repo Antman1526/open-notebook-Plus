@@ -1,3 +1,8 @@
+// v0.8.118 — localized the export menu. Previously "Saved exports",
+// "Download"/"Open"/"Copy"/"Folder", and the group headings
+// (Editable/Visual/Data/Source/Bundle) were hardcoded English while every
+// other surface went through t(). Format labels (EPUB, PDF, DOCX, JSON,
+// Markdown, ...) remain literal — they are proper nouns, not UI copy.
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -15,9 +20,11 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { useTranslation } from '@/lib/hooks/use-translation'
 import type { StudioArtifact, StudioArtifactExportFormat } from '@/lib/api/studio'
 
 type ExportGroup = 'editable' | 'visual' | 'data' | 'source' | 'bundle'
+type Translate = (key: string) => string
 
 type ExportItem = {
   format: StudioArtifactExportFormat
@@ -29,16 +36,16 @@ type ExportItem = {
   isBrowserDownload?: boolean
 }
 
-const EXPORT_GROUPS: Array<{
+const EXPORT_GROUP_META: Array<{
   id: ExportGroup
-  label: string
+  labelKey: string
   Icon: typeof FilePenLine
 }> = [
-  { id: 'editable', label: 'Editable', Icon: FilePenLine },
-  { id: 'visual', label: 'Visual', Icon: Image },
-  { id: 'data', label: 'Data', Icon: TableProperties },
-  { id: 'source', label: 'Source', Icon: FileCode2 },
-  { id: 'bundle', label: 'Bundle', Icon: Package },
+  { id: 'editable', labelKey: 'studio.export.groupEditable', Icon: FilePenLine },
+  { id: 'visual', labelKey: 'studio.export.groupVisual', Icon: Image },
+  { id: 'data', labelKey: 'studio.export.groupData', Icon: TableProperties },
+  { id: 'source', labelKey: 'studio.export.groupSource', Icon: FileCode2 },
+  { id: 'bundle', labelKey: 'studio.export.groupBundle', Icon: Package },
 ]
 
 function exportGroup(format: string): ExportGroup {
@@ -91,7 +98,8 @@ function artifactFileName(artifact: StudioArtifact): string {
   return `${slug || 'artifact'}.md`
 }
 
-function browserExports(artifact: StudioArtifact, markdown: string): ExportItem[] {
+function browserExports(artifact: StudioArtifact, markdown: string, t: Translate): ExportItem[] {
+  const browserDownloadPrefix = t('studio.export.browserDownloadPrefix')
   const exportPaths = artifact.export_paths ?? {}
   const exports: ExportItem[] = []
   if (!exportPaths.markdown && !exportPaths.md && markdown) {
@@ -99,7 +107,7 @@ function browserExports(artifact: StudioArtifact, markdown: string): ExportItem[
       format: 'markdown',
       href: `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`,
       label: 'Markdown',
-      metadata: `Browser download - ${artifactFileName(artifact)}`,
+      metadata: `${browserDownloadPrefix}${artifactFileName(artifact)}`,
       group: 'source',
       isBrowserDownload: true,
     })
@@ -109,7 +117,7 @@ function browserExports(artifact: StudioArtifact, markdown: string): ExportItem[
       format: 'json',
       href: `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(artifact, null, 2))}`,
       label: 'JSON',
-      metadata: `Browser download - ${artifactFileName(artifact).replace(/\.md$/, '.json')}`,
+      metadata: `${browserDownloadPrefix}${artifactFileName(artifact).replace(/\.md$/, '.json')}`,
       group: 'source',
       isBrowserDownload: true,
     })
@@ -117,7 +125,7 @@ function browserExports(artifact: StudioArtifact, markdown: string): ExportItem[
   return exports
 }
 
-function artifactExports(artifact: StudioArtifact, markdown: string): ExportItem[] {
+function artifactExports(artifact: StudioArtifact, markdown: string, t: Translate): ExportItem[] {
   const saved = Object.entries(artifact.export_paths ?? {})
     .filter((entry): entry is [StudioArtifactExportFormat, string] => {
       return typeof entry[1] === 'string' && entry[1].trim().length > 0
@@ -131,9 +139,9 @@ function artifactExports(artifact: StudioArtifact, markdown: string): ExportItem
       group: exportGroup(format),
     }))
 
-  return [...saved, ...browserExports(artifact, markdown)].sort((left, right) => {
-    const groupOrder = EXPORT_GROUPS.findIndex((group) => group.id === left.group)
-      - EXPORT_GROUPS.findIndex((group) => group.id === right.group)
+  return [...saved, ...browserExports(artifact, markdown, t)].sort((left, right) => {
+    const groupOrder = EXPORT_GROUP_META.findIndex((group) => group.id === left.group)
+      - EXPORT_GROUP_META.findIndex((group) => group.id === right.group)
     if (groupOrder !== 0) return groupOrder
     const formatOrder: Record<string, number> = {
       pptx: 0,
@@ -158,11 +166,9 @@ function artifactExports(artifact: StudioArtifact, markdown: string): ExportItem
   })
 }
 
-function exportDownloadName(item: ExportItem): string | undefined {
+function exportDownloadName(item: ExportItem, browserDownloadPrefix: string): string | undefined {
   if (!item.isBrowserDownload) return undefined
-  return item.format === 'json'
-    ? item.metadata.replace('Browser download - ', '')
-    : item.metadata.replace('Browser download - ', '')
+  return item.metadata.replace(browserDownloadPrefix, '')
 }
 
 function IconAction({
@@ -192,9 +198,11 @@ export function ArtifactExportMenu({
   artifact: StudioArtifact
   markdown: string
 }) {
+  const { t } = useTranslation()
   const [copiedPath, setCopiedPath] = useState<string | null>(null)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const exports = artifactExports(artifact, markdown)
+  const exports = artifactExports(artifact, markdown, t)
+  const browserDownloadPrefix = t('studio.export.browserDownloadPrefix')
 
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
@@ -215,20 +223,22 @@ export function ArtifactExportMenu({
   }
 
   return (
-    <section aria-label="Artifact exports" className="mb-4 border-t pt-3">
+    <section aria-label={t('studio.export.regionLabel')} className="mb-4 border-t pt-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-medium">Saved exports</div>
-          <span className="text-xs text-muted-foreground">{exports.length} available</span>
+          <div className="text-sm font-medium">{t('studio.export.savedExports')}</div>
+          <span className="text-xs text-muted-foreground">
+            {t('studio.export.availableCount').replace('{count}', String(exports.length))}
+          </span>
         </div>
         <div className="mt-2 divide-y">
-          {EXPORT_GROUPS.map(({ id, label, Icon }) => {
+          {EXPORT_GROUP_META.map(({ id, labelKey, Icon }) => {
             const groupExports = exports.filter((item) => item.group === id)
             if (groupExports.length === 0) return null
             return (
               <div key={id} className="py-2 first:pt-0 last:pb-0">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                  {label}
+                  {t(labelKey)}
                 </div>
                 <div className="mt-1.5 space-y-1.5">
                   {groupExports.map((item) => {
@@ -244,13 +254,21 @@ export function ArtifactExportMenu({
                         </div>
                         <div className="flex items-center gap-0.5">
                           {item.isBrowserDownload ? (
-                            <IconAction asChild label={`Download ${item.label}`} tooltip={`Download ${item.label}`}>
-                              <a href={item.href} download={exportDownloadName(item)}>
+                            <IconAction
+                              asChild
+                              label={t('studio.export.download').replace('{label}', item.label)}
+                              tooltip={t('studio.export.download').replace('{label}', item.label)}
+                            >
+                              <a href={item.href} download={exportDownloadName(item, browserDownloadPrefix)}>
                                 <Download className="h-4 w-4" aria-hidden="true" />
                               </a>
                             </IconAction>
                           ) : (
-                            <IconAction asChild label="Open" tooltip={`Open ${item.label}`}>
+                            <IconAction
+                              asChild
+                              label={t('studio.export.open')}
+                              tooltip={t('studio.export.openTooltip').replace('{label}', item.label)}
+                            >
                               <a href={item.href} target="_blank" rel="noreferrer">
                                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
                               </a>
@@ -258,8 +276,12 @@ export function ArtifactExportMenu({
                           )}
                           {item.path && (
                             <IconAction
-                              label={copiedPath === item.path ? 'Copied' : 'Copy'}
-                              tooltip={copiedPath === item.path ? 'Copied path' : `Copy ${item.label} path`}
+                              label={copiedPath === item.path ? t('studio.export.copied') : t('studio.export.copy')}
+                              tooltip={
+                                copiedPath === item.path
+                                  ? t('studio.export.copiedPath')
+                                  : t('studio.export.copyPath').replace('{label}', item.label)
+                              }
                               onClick={() => void copyPath(item.path!)}
                             >
                               {copiedPath === item.path ? (
@@ -270,7 +292,11 @@ export function ArtifactExportMenu({
                             </IconAction>
                           )}
                           {folderPath && (
-                            <IconAction asChild label="Folder" tooltip={`Open ${item.label} folder`}>
+                            <IconAction
+                              asChild
+                              label={t('studio.export.folder')}
+                              tooltip={t('studio.export.openFolder').replace('{label}', item.label)}
+                            >
                               <a href={filePathHref(folderPath)} target="_blank" rel="noreferrer">
                                 <FolderOpen className="h-4 w-4" aria-hidden="true" />
                               </a>

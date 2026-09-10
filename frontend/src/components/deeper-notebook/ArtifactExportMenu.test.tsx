@@ -1,7 +1,36 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { ArtifactExportMenu } from './ArtifactExportMenu'
+
+const exportTranslations: Record<string, string> = {
+  'studio.export.regionLabel': 'Artifact exports',
+  'studio.export.savedExports': 'Saved exports',
+  'studio.export.availableCount': '{count} available',
+  'studio.export.groupEditable': 'Editable',
+  'studio.export.groupVisual': 'Visual',
+  'studio.export.groupData': 'Data',
+  'studio.export.groupSource': 'Source',
+  'studio.export.groupBundle': 'Bundle',
+  'studio.export.download': 'Download {label}',
+  'studio.export.open': 'Open',
+  'studio.export.openTooltip': 'Open {label}',
+  'studio.export.copy': 'Copy',
+  'studio.export.copyPath': 'Copy {label} path',
+  'studio.export.copied': 'Copied',
+  'studio.export.copiedPath': 'Copied path',
+  'studio.export.folder': 'Folder',
+  'studio.export.openFolder': 'Open {label} folder',
+  'studio.export.browserDownloadPrefix': 'Browser download - ',
+}
+
+vi.mock('@/lib/hooks/use-translation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => exportTranslations[key] ?? key,
+    language: 'en-US',
+    setLanguage: vi.fn(),
+  }),
+}))
 
 const artifact = {
   id: 'studio_artifact:exports',
@@ -86,5 +115,29 @@ describe('ArtifactExportMenu', () => {
     expect(
       within(bundleGroup as HTMLElement).getByText('/exports/quarterly-report.epub'),
     ).toBeInTheDocument()
+  })
+
+  it('renders EPUB and PDF entries with their labels under the translated group headings', () => {
+    render(
+      <ArtifactExportMenu
+        artifact={{
+          ...artifact,
+          export_paths: {
+            ...artifact.export_paths,
+            epub: '/exports/quarterly-report.epub',
+            pdf: '/exports/quarterly-report.pdf',
+          },
+        }}
+        markdown="# Quarterly Evidence Report"
+      />,
+    )
+
+    const bundleGroup = screen.getByText('Bundle').closest('div')?.parentElement
+    const visualGroup = screen.getByText('Visual').closest('div')?.parentElement
+    expect(bundleGroup).not.toBeNull()
+    expect(visualGroup).not.toBeNull()
+
+    expect(within(bundleGroup as HTMLElement).getByText('EPUB')).toBeInTheDocument()
+    expect(within(visualGroup as HTMLElement).getByText('PDF')).toBeInTheDocument()
   })
 })

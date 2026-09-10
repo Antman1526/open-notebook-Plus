@@ -1298,6 +1298,28 @@ export const enUS = {
     filesRejectedPlural: "{count} files rejected",
     unsupportedType: "unsupported type {ext}",
     fileTooLarge: "file is {size} MB; cap is {cap} MB",
+    export: {
+      // v0.8.118 — ArtifactExportMenu.tsx localization. These strings were
+      // hardcoded until now.
+      regionLabel: "Artifact exports",
+      savedExports: "Saved exports",
+      availableCount: "{count} available",
+      groupEditable: "Editable",
+      groupVisual: "Visual",
+      groupData: "Data",
+      groupSource: "Source",
+      groupBundle: "Bundle",
+      download: "Download {label}",
+      open: "Open",
+      openTooltip: "Open {label}",
+      copy: "Copy",
+      copyPath: "Copy {label} path",
+      copied: "Copied",
+      copiedPath: "Copied path",
+      folder: "Folder",
+      openFolder: "Open {label} folder",
+      browserDownloadPrefix: "Browser download - ",
+    },
   },
   setupBanner: {
     encryptionRequired: "Encryption key not configured",
