@@ -99,7 +99,9 @@ cffi==2.0.0 ; platform_python_implementation != 'PyPy' or sys_platform == 'win32
 chardet==7.4.3
     # via readability-lxml
 charset-normalizer==3.4.7
-    # via requests
+    # via
+    #   reportlab
+    #   requests
 chevron==0.14.0
     # via genanki
 click==8.3.3
@@ -541,6 +543,7 @@ pillow==11.3.0
     #   imageio
     #   moviepy
     #   python-pptx
+    #   reportlab
 pip==26.2.1
     # via
     #   deeper-notebook (pyproject.toml)
@@ -739,6 +742,8 @@ regex==2026.5.9
     # via
     #   tiktoken
     #   transformers
+reportlab==5.0.1
+    # via deeper-notebook (pyproject.toml)
 requests==2.33.1
     # via
     #   azure-core

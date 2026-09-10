@@ -94,6 +94,8 @@ dependencies = [
     "python-docx>=1.2.0,<2.0",
     "python-pptx>=1.0.2,<2.0",
     "openpyxl>=3.1.5,<4.0",
+    # v0.8.117 — text-flow PDF for course-pack exports (pure Python, no system libs).
+    "reportlab>=4.2,<6.0",
     "watchdog>=6.0.0,<7.0", "pyyaml>=6.0.3,<7",  # direct vault parser dependency
     "fsrs>=6.3.1,<7.0", "markdown-it-py>=4.0.0,<5",  # direct vault parser dependency
     # Deterministic local Video Overview composition uses the package-managed

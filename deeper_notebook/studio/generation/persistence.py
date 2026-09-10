@@ -25,6 +25,7 @@ from deeper_notebook.studio.exporters import (
 )
 from deeper_notebook.studio.exporters.charts import ChartDocument, render_svg_chart
 from deeper_notebook.studio.exporters.epub import write_course_pack_epub
+from deeper_notebook.studio.exporters.pdf import write_course_pack_pdf
 from deeper_notebook.studio.exporters.research_bundle import build_research_bundle
 from deeper_notebook.studio.payloads import parse_payload_document
 from deeper_notebook.studio.schemas import (
@@ -669,6 +670,18 @@ def _persist_office_exports(
                 epub_path.unlink(missing_ok=True)
                 logger.warning(
                     "Evidence Studio EPUB export failed for artifact {} ({})",
+                    artifact.id,
+                    type(exc).__name__,
+                )
+
+            pdf_path = _artifact_export_path(export_dir, stem, ".pdf")
+            try:
+                write_course_pack_pdf(document, pdf_path)
+                results["pdf"] = str(pdf_path)
+            except Exception as exc:
+                pdf_path.unlink(missing_ok=True)
+                logger.warning(
+                    "Evidence Studio PDF export failed for artifact {} ({})",
                     artifact.id,
                     type(exc).__name__,
                 )

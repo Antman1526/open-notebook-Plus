@@ -16,13 +16,14 @@ well-formedness) can parse it back, and `markdown_it` (already a project
 dependency, used elsewhere for markdown -> HTML) renders lesson content.
 No third-party EPUB library is needed for a spec this narrow.
 
-Where PDF stands: course packs do **not** get a PDF export. The only
-image-based PDFs Evidence Studio produces are for slide decks and
-infographics (`exporters/slides.py`, `exporters/infographic.py`), which
-render fixed-layout pages from images. A course pack is reflowable text,
-which is exactly what EPUB is for — a text PDF would be redundant with the
-DOCX (editable) and EPUB (reflowable reader) exports this module and
-`documents.py` already provide.
+Where PDF stands: as of v0.8.117, course packs also get a text-flow PDF —
+`write_course_pack_pdf` in `exporters/pdf.py`, built with `reportlab`
+platypus flowables rather than the image-based rendering used elsewhere.
+The image-based PDFs Evidence Studio produces for slide decks and
+infographics (`exporters/slides.py`, `exporters/infographic.py`) render
+fixed-layout pages from images and remain a separate code path — a course
+pack's PDF is reflowable text, paginated like the DOCX (editable) and EPUB
+(reflowable reader) exports this module and `documents.py` already provide.
 """
 
 from __future__ import annotations

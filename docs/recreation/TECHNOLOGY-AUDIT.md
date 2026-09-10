@@ -109,6 +109,7 @@ counterpart, applied by `deeper_notebook/database/async_migrate.py` at startup.
 | **python-docx** | `>=1.2.0,<2.0` | `.docx` sources |
 | **python-pptx** | `>=1.0.2,<2.0` | `.pptx` sources |
 | **openpyxl** | `>=3.1.5,<4.0` | `.xlsx` sources |
+| **reportlab** | `>=4.2,<6.0` | Text-flow PDF export for Studio course packs (v0.8.117). Pure Python, no system libraries, so the desktop bootstrap installs it from `desktop/requirements.lock` without packaging changes |
 | **pillow** | `>=11.3.0,<12.0` | Source-visual thumbnail generation and WebP encoding. **Held below 12** by `podcast-creator → moviepy>=2.2.1 → Pillow<12`; residual advisories accepted under DN-DEP-PILLOW-2026-08-11 |
 | **markdown-it-py** | `>=4.0.0,<5` | Direct dependency of the vault Markdown parser |
 | **pyyaml** | `>=6.0.3,<7` | Vault frontmatter parsing |
