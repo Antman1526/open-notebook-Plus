@@ -6,6 +6,8 @@ import hashlib
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from deeper_notebook.domain.notebook import StudioArtifact
 from deeper_notebook.studio.generation.persistence import (
     canonical_export_format,
@@ -254,3 +256,43 @@ def test_producible_export_formats_and_aliases() -> None:
     assert canonical_export_format("xapi") == "xapi_package"
     assert canonical_export_format("bundle") == "research_bundle"
     assert canonical_export_format("unknown_format") == "unknown_format"
+
+
+@pytest.mark.asyncio
+async def test_studio_artifact_delete_cleans_up_export_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+    artifact = _sample_course_pack_artifact()
+    artifact.id = "studio_artifact:test_delete"
+    persist_artifact_exports(artifact, artifact.output_payload["content"])
+
+    # Verify export files exist on disk
+    assert len(artifact.export_paths) > 0
+    for path_str in artifact.export_paths.values():
+        assert Path(path_str).is_file()
+
+    # External file outside export dir should not be touched
+    outside_file = tmp_path.parent / "safe_file_outside.txt"
+    outside_file.write_text("should not be deleted")
+    artifact.export_paths["outside"] = str(outside_file)
+
+    # Mock DB delete
+    monkeypatch.setattr(
+        "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
+    )
+
+    deleted = await artifact.delete()
+    assert deleted is True
+
+    # Internal files were unlinked
+    for k, path_str in artifact.export_paths.items():
+        if k == "outside":
+            assert Path(path_str).is_file()
+        else:
+            assert not Path(path_str).exists()
+
+    outside_file.unlink(missing_ok=True)
+

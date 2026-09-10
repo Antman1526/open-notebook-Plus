@@ -89,6 +89,7 @@ def patched_domain(monkeypatch: pytest.MonkeyPatch):
     """Stub the Notebook/Note domain getters so tests don't need a database."""
     notebooks_by_id: dict[str, _FakeNotebook] = {}
     notes_by_id: dict[str, _FakeNote] = {}
+    sources_by_id: dict[str, _FakeSource] = {}
 
     async def _get_notebook(notebook_id: str) -> Optional[_FakeNotebook]:
         return notebooks_by_id.get(notebook_id)
@@ -96,9 +97,18 @@ def patched_domain(monkeypatch: pytest.MonkeyPatch):
     async def _get_note(note_id: str) -> Optional[_FakeNote]:
         return notes_by_id.get(note_id)
 
+    async def _get_source(source_id: str) -> Optional[_FakeSource]:
+        return sources_by_id.get(source_id)
+
     monkeypatch.setattr(exports_mod.Notebook, "get", staticmethod(_get_notebook))
     monkeypatch.setattr(exports_mod.Note, "get", staticmethod(_get_note))
-    return {"notebooks": notebooks_by_id, "notes": notes_by_id}
+    monkeypatch.setattr(exports_mod.Source, "get", staticmethod(_get_source))
+    return {
+        "notebooks": notebooks_by_id,
+        "notes": notes_by_id,
+        "sources": sources_by_id,
+    }
+
 
 
 # ----------------------------------------------------------------------------
@@ -1707,4 +1717,88 @@ def test_export_notebook_obsidian_zip(
         assert "manifest.json" in namelist
         index_data = zf.read("Index.md").decode("utf-8")
         assert "# 📚 Zip Vault" in index_data
+
+
+def test_export_notebook_preserves_content_and_passes_flags(
+    client: TestClient,
+    patched_domain,
+    tmp_path: Path,
+) -> None:
+    flags_recorded = {"include_content": False, "include_full_text": False}
+
+    class _FlagCheckingNotebook(_FakeNotebook):
+        async def get_notes(self, include_content: bool = False) -> list[_FakeNote]:
+            flags_recorded["include_content"] = include_content
+            return self._notes
+
+        async def get_sources(self, include_full_text: bool = False) -> list[_FakeSource]:
+            flags_recorded["include_full_text"] = include_full_text
+            return self._sources
+
+    notes = [_FakeNote("note:1", "Architecture Review", "Detailed architecture review content.")]
+    sources = [_FakeSource("source:1", "RFC 101", "Full specifications text.")]
+    nb = _FlagCheckingNotebook("notebook:flags", "Flags Test", notes, sources)
+    patched_domain["notebooks"]["notebook:flags"] = nb
+
+    target = tmp_path / "flags_export"
+    r = client.post(
+        "/api/notebooks/notebook:flags/export",
+        json={
+            "destination": str(target),
+            "format": "folder",
+            "include_sources": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert flags_recorded["include_content"] is True
+    assert flags_recorded["include_full_text"] is True
+
+    note_file = target / "01-architecture-review.md"
+    assert note_file.exists()
+    assert "Detailed architecture review content." in note_file.read_text()
+
+    source_file = target / "sources" / "1.md"
+    assert source_file.exists()
+    assert "Full specifications text." in source_file.read_text()
+
+
+def test_export_notebook_lazy_hydration_fallback(
+    client: TestClient,
+    patched_domain,
+    tmp_path: Path,
+) -> None:
+    # Simulates get_notes / get_sources returning objects with omitted content/full_text
+    unhydrated_note = _FakeNote("note:unhydrated", "Topic Analysis", None)  # type: ignore[arg-type]
+    unhydrated_source = _FakeSource("source:unhydrated", "Original PDF", None)  # type: ignore[arg-type]
+
+    # Full hydrated records available via Note.get / Source.get
+    hydrated_note = _FakeNote("note:unhydrated", "Topic Analysis", "Hydrated note body from database.")
+    hydrated_source = _FakeSource("source:unhydrated", "Original PDF", "Hydrated source text from database.")
+
+    nb = _FakeNotebook("notebook:unhydrated", "Hydration Test", [unhydrated_note], [unhydrated_source])
+    patched_domain["notebooks"]["notebook:unhydrated"] = nb
+    patched_domain["notes"]["note:unhydrated"] = hydrated_note
+    patched_domain["sources"]["source:unhydrated"] = hydrated_source
+
+    target = tmp_path / "hydrated_export"
+    r = client.post(
+        "/api/notebooks/notebook:unhydrated/export",
+        json={
+            "destination": str(target),
+            "format": "folder",
+            "include_sources": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+
+    note_file = target / "01-topic-analysis.md"
+    assert note_file.exists()
+    assert "Hydrated note body from database." in note_file.read_text()
+
+    source_file = target / "sources" / "unhydrated.md"
+    assert source_file.exists()
+    assert "Hydrated source text from database." in source_file.read_text()
+
+
+
 

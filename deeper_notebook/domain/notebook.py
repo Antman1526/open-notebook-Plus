@@ -595,11 +595,12 @@ class Notebook(ObjectModel):
             raise InvalidInputError("Notebook name cannot be empty")
         return v
 
-    async def get_sources(self) -> list["Source"]:
+    async def get_sources(self, include_full_text: bool = False) -> list["Source"]:
         try:
+            omit_clause = "" if include_full_text else "omit source.full_text"
             srcs = await repo_query(
-                """
-                select * omit source.full_text from (
+                f"""
+                select * {omit_clause} from (
                 select in as source from reference where out=$id
                 fetch source
             ) order by source.updated desc
@@ -612,11 +613,16 @@ class Notebook(ObjectModel):
             logger.exception(e)
             raise DatabaseOperationError(e)
 
-    async def get_notes(self) -> list["Note"]:
+    async def get_notes(self, include_content: bool = False) -> list["Note"]:
         try:
+            omit_clause = (
+                "omit note.embedding"
+                if include_content
+                else "omit note.content, note.embedding"
+            )
             srcs = await repo_query(
-                """
-            select * omit note.content, note.embedding from (
+                f"""
+            select * {omit_clause} from (
                 select in as note from artifact where out=$id
                 fetch note
             ) order by note.updated desc
@@ -1838,6 +1844,40 @@ class StudioArtifact(ObjectModel):
             )
             logger.exception(e)
             raise DatabaseOperationError(e)
+
+    def _cleanup_export_files(self) -> None:
+        """Safely unlink on-disk export files when an artifact is deleted.
+
+        Guards against symlink traversal and directory escapes by requiring
+        resolved paths to stay inside the Studio export root.
+        """
+        from deeper_notebook.studio.generation.persistence import _artifact_export_dir
+
+        try:
+            export_root = _artifact_export_dir().resolve()
+        except Exception as exc:
+            logger.warning(
+                f"Failed to resolve export directory for artifact {self.id} cleanup: {exc}"
+            )
+            return
+
+        for path_str in (self.export_paths or {}).values():
+            if not path_str or not isinstance(path_str, str):
+                continue
+            try:
+                candidate = Path(path_str).resolve()
+                if candidate.is_file() and export_root in candidate.parents:
+                    candidate.unlink(missing_ok=True)
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to clean up export file {path_str} for artifact {self.id}: {exc}"
+                )
+
+    async def delete(self) -> bool:
+        """Unlink persisted export files on disk, then remove the database record."""
+        self._cleanup_export_files()
+        return await super().delete()
+
 
 
 class StudioWorkflowRun(ObjectModel):

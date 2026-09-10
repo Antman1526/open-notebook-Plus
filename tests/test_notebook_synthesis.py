@@ -117,3 +117,72 @@ async def test_synthesis_404_when_notebook_missing(app, monkeypatch):
     ) as client:
         resp = await client.post("/notebooks/notebook:missing/synthesis")
         assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_synthesis_passes_include_full_text_and_hydrates_fallback(app, monkeypatch):
+    from deeper_notebook.domain.notebook import Source
+
+    nb = Notebook(name="AI Systems", description="Deep Learning Architecture")
+    nb.id = "notebook:fulltext"
+
+    flag_passed = {"called": False, "value": False}
+
+    # Initial source has full_text=None (omitted in list query)
+    initial_source = SimpleNamespace(
+        id="source:unhydrated_synth",
+        title="Transformer Decoders",
+        topics=["ai", "nlp"],
+        full_text=None,
+    )
+
+    hydrated_source = SimpleNamespace(
+        id="source:unhydrated_synth",
+        title="Transformer Decoders",
+        topics=["ai", "nlp"],
+        full_text="Autoregressive transformer decoders generate tokens iteratively with causal masking.",
+    )
+
+    async def mock_get(cls, nid):
+        if nid == "notebook:fulltext":
+            return nb
+        raise NotFoundError("Notebook not found")
+
+    async def mock_sources(self, include_full_text: bool = False):
+        flag_passed["called"] = True
+        flag_passed["value"] = include_full_text
+        return [initial_source]
+
+    async def mock_source_get(cls, sid):
+        if sid == "source:unhydrated_synth":
+            return hydrated_source
+        raise NotFoundError("Source not found")
+
+    monkeypatch.setattr(Notebook, "get", classmethod(mock_get))
+    monkeypatch.setattr(Notebook, "get_sources", mock_sources)
+    monkeypatch.setattr(Source, "get", classmethod(mock_source_get))
+
+    captured_prompt = {}
+
+    async def mock_provision(prompt, *args, **kwargs):
+        captured_prompt["text"] = prompt
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.return_value = SimpleNamespace(
+            content="## 🎯 Executive Summary\nAutoregressive models provide state of the art results."
+        )
+        return mock_chain
+
+    import deeper_notebook.ai.provision as provision
+
+    monkeypatch.setattr(provision, "provision_langchain_model", mock_provision)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.post("/notebooks/notebook:fulltext/synthesis")
+        assert resp.status_code == 200
+        assert flag_passed["called"] is True
+        assert flag_passed["value"] is True
+        assert "Autoregressive transformer decoders generate tokens" in captured_prompt["text"]
+        assert "(no full text)" not in captured_prompt["text"]
+

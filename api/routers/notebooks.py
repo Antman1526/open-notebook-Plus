@@ -422,7 +422,10 @@ async def generate_notebook_synthesis(notebook_id: str):
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     try:
-        sources = await notebook.get_sources()
+        try:
+            sources = await notebook.get_sources(include_full_text=True)
+        except TypeError:
+            sources = await notebook.get_sources()
     except Exception as e:
         logger.warning(f"synthesis: get_sources failed for {notebook_id}: {e}")
         sources = []
@@ -441,6 +444,13 @@ async def generate_notebook_synthesis(notebook_id: str):
         source_titles.append(title)
         topics = ", ".join((getattr(s, "topics", None) or [])[:5])
         raw_text = getattr(s, "full_text", None) or ""
+        if not raw_text and getattr(s, "id", None):
+            try:
+                hydrated = await Source.get(s.id)
+                if hydrated and getattr(hydrated, "full_text", None):
+                    raw_text = hydrated.full_text
+            except Exception:
+                pass
         excerpt = raw_text[:1200].replace("\n", " ") if raw_text else "(no full text)"
         source_lines.append(f"### Source {i}: {title}\nTopics: {topics}\nExcerpt: {excerpt}\n")
 

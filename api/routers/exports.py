@@ -900,7 +900,20 @@ async def export_notebook(
             status_code=404, detail=f"Notebook {notebook_id!r} not found"
         )
 
-    notes = await notebook.get_notes()
+    try:
+        notes = await notebook.get_notes(include_content=True)
+    except TypeError:
+        notes = await notebook.get_notes()
+
+    for idx, n in enumerate(notes):
+        if getattr(n, "content", None) is None and getattr(n, "id", None):
+            try:
+                hydrated = await Note.get(n.id)
+                if hydrated and getattr(hydrated, "content", None) is not None:
+                    notes[idx] = hydrated
+            except Exception:
+                pass
+
     if not notes and not req.include_sources:
         raise HTTPException(
             status_code=400,
@@ -913,7 +926,19 @@ async def export_notebook(
 
     sources: list[Source] = []
     if req.include_sources:
-        sources = await notebook.get_sources()
+        try:
+            sources = await notebook.get_sources(include_full_text=True)
+        except TypeError:
+            sources = await notebook.get_sources()
+
+        for idx, s in enumerate(sources):
+            if getattr(s, "full_text", None) is None and getattr(s, "id", None):
+                try:
+                    hydrated = await Source.get(s.id)
+                    if hydrated and getattr(hydrated, "full_text", None) is not None:
+                        sources[idx] = hydrated
+                except Exception:
+                    pass
 
     notes_sorted = sorted(notes, key=lambda n: (n.created or "", n.title or ""))
     plan = _plan_filenames(notes_sorted)
