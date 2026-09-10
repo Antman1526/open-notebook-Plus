@@ -209,11 +209,13 @@ export function ArtifactExportMenu({
 }) {
   const { t } = useTranslation()
   const [copiedPath, setCopiedPath] = useState<string | null>(null)
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const exports = artifactExports(artifact, markdown, t)
   const browserDownloadPrefix = t('studio.export.browserDownloadPrefix')
   const regenerateExport = useRegenerateStudioExport()
   const exportPaths = artifact.export_paths ?? {}
+  const staleFormats = artifact.stale_export_formats ?? []
   const missingCoursePackFormats = COURSE_PACK_ARTIFACT_TYPES.has(artifact.artifact_type)
     ? GENERATABLE_COURSE_PACK_FORMATS.filter((format) => !exportPaths[format])
     : []
@@ -221,6 +223,20 @@ export function ArtifactExportMenu({
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
   }, [])
+
+  async function handleRefreshAll() {
+    if (isRefreshingAll || staleFormats.length === 0) return
+    setIsRefreshingAll(true)
+    try {
+      for (const format of staleFormats) {
+        await regenerateExport.mutateAsync({ artifactId: artifact.id, format })
+      }
+    } catch {
+      // Error handled by mutation's onError toast
+    } finally {
+      setIsRefreshingAll(false)
+    }
+  }
 
   async function copyPath(path: string) {
     try {
@@ -240,9 +256,33 @@ export function ArtifactExportMenu({
     <section aria-label={t('studio.export.regionLabel')} className="mb-4 border-t pt-3">
         <div className="flex items-center justify-between gap-2">
           <div className="text-sm font-medium">{t('studio.export.savedExports')}</div>
-          <span className="text-xs text-muted-foreground">
-            {t('studio.export.availableCount').replace('{count}', String(exports.length))}
-          </span>
+          <div className="flex items-center gap-2">
+            {staleFormats.length > 1 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                disabled={isRefreshingAll || regenerateExport.isPending}
+                onClick={() => void handleRefreshAll()}
+              >
+                {isRefreshingAll ? (
+                  <>
+                    <RotateCw className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                    {t('studio.export.refreshingAll')}
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="mr-1 h-3 w-3" aria-hidden="true" />
+                    {t('studio.export.refreshAllOutdated').replace('{count}', String(staleFormats.length))}
+                  </>
+                )}
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {t('studio.export.availableCount').replace('{count}', String(exports.length))}
+            </span>
+          </div>
         </div>
         {missingCoursePackFormats.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -256,7 +296,7 @@ export function ArtifactExportMenu({
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={isPending}
+                  disabled={isPending || isRefreshingAll}
                   onClick={() => regenerateExport.mutate({ artifactId: artifact.id, format })}
                 >
                   {isPending
@@ -311,7 +351,7 @@ export function ArtifactExportMenu({
                                   ? t('studio.export.regenerateOutdatedTooltip').replace('{label}', item.label)
                                   : t('studio.export.regenerateTooltip').replace('{label}', item.label)
                               }
-                              disabled={isRegeneratingThis}
+                              disabled={isRegeneratingThis || isRefreshingAll}
                               onClick={() => regenerateExport.mutate({ artifactId: artifact.id, format: item.format })}
                             >
                               <RotateCw

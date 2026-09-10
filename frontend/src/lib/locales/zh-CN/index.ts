@@ -1305,6 +1305,8 @@ export const zhCN = {
       regenerate: "重新生成 {label}",
       regenerateTooltip: "重新生成 {label}",
       regenerateOutdatedTooltip: "导出后内容已更改。点击以刷新 {label}。",
+      refreshAllOutdated: "刷新所有已过期的导出 ({count})",
+      refreshingAll: "正在全部刷新…",
     },
   },
   setupBanner: {

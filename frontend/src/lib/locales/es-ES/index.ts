@@ -1308,6 +1308,8 @@ export const esES = {
       regenerate: "Regenerar {label}",
       regenerateTooltip: "Regenerar {label}",
       regenerateOutdatedTooltip: "El contenido cambió tras la exportación. Haz clic para actualizar {label}.",
+      refreshAllOutdated: "Actualizar todos los obsoletos ({count})",
+      refreshingAll: "Actualizando todos…",
     },
   },
   setupBanner: {

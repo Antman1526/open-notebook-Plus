@@ -1327,6 +1327,8 @@ export const enUS = {
       regenerate: "Regenerate {label}",
       regenerateTooltip: "Regenerate {label}",
       regenerateOutdatedTooltip: "Content changed since export. Click to refresh {label}.",
+      refreshAllOutdated: "Refresh all outdated ({count})",
+      refreshingAll: "Refreshing all…",
     },
   },
   setupBanner: {

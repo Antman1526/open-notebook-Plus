@@ -1307,6 +1307,8 @@ export const frFR = {
       regenerate: "Régénérer {label}",
       regenerateTooltip: "Régénérer {label}",
       regenerateOutdatedTooltip: "Le contenu a changé depuis l'export. Cliquez pour actualiser {label}.",
+      refreshAllOutdated: "Actualiser tous les obsolètes ({count})",
+      refreshingAll: "Actualisation de tous…",
     },
   },
   setupBanner: {

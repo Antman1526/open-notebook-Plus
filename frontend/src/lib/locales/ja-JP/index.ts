@@ -1305,6 +1305,8 @@ export const jaJP = {
       regenerate: "{label}を再生成",
       regenerateTooltip: "{label}を再生成",
       regenerateOutdatedTooltip: "エクスポート後に内容が変更されました。クリックして{label}を更新。",
+      refreshAllOutdated: "期限切れをすべて更新 ({count})",
+      refreshingAll: "すべて更新中…",
     },
   },
   setupBanner: {

@@ -1305,6 +1305,8 @@ export const zhTW = {
       regenerate: "重新生成 {label}",
       regenerateTooltip: "重新生成 {label}",
       regenerateOutdatedTooltip: "匯出後內容已變更。點擊以重新整理 {label}。",
+      refreshAllOutdated: "重新整理所有已過期的匯出 ({count})",
+      refreshingAll: "正在全部重新整理…",
     },
   },
   setupBanner: {

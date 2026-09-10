@@ -51,6 +51,8 @@ const exportTranslations: Record<string, string> = {
   'studio.export.regenerate': 'Regenerate {label}',
   'studio.export.regenerateTooltip': 'Regenerate {label}',
   'studio.export.regenerateOutdatedTooltip': 'Content changed since export. Click to refresh {label}.',
+  'studio.export.refreshAllOutdated': 'Refresh all outdated ({count})',
+  'studio.export.refreshingAll': 'Refreshing all…',
 }
 
 vi.mock('@/lib/hooks/use-translation', () => ({
@@ -261,5 +263,47 @@ describe('ArtifactExportMenu', () => {
       expect(studioApi.regenerateExport).toHaveBeenCalledWith('studio_artifact:exports', 'docx')
     })
   })
+
+  it('shows batch refresh button when multiple export formats are stale and regenerates each', async () => {
+    vi.mocked(studioApi.regenerateExport).mockResolvedValue({
+      ...artifact,
+      export_paths: { ...artifact.export_paths },
+    })
+
+    renderWithQueryClient(
+      <ArtifactExportMenu
+        artifact={{
+          ...artifact,
+          stale_export_formats: ['docx', 'pptx'],
+        }}
+        markdown="# Quarterly Evidence Report"
+      />,
+    )
+
+    const batchButton = screen.getByRole('button', { name: 'Refresh all outdated (2)' })
+    expect(batchButton).toBeInTheDocument()
+
+    fireEvent.click(batchButton)
+
+    await waitFor(() => {
+      expect(studioApi.regenerateExport).toHaveBeenCalledWith('studio_artifact:exports', 'docx')
+      expect(studioApi.regenerateExport).toHaveBeenCalledWith('studio_artifact:exports', 'pptx')
+    })
+  })
+
+  it('does not show batch refresh button when only one export format is stale', () => {
+    renderWithQueryClient(
+      <ArtifactExportMenu
+        artifact={{
+          ...artifact,
+          stale_export_formats: ['docx'],
+        }}
+        markdown="# Quarterly Evidence Report"
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: /Refresh all outdated/ })).not.toBeInTheDocument()
+  })
 })
+
 

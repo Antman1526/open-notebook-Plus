@@ -1306,6 +1306,8 @@ export const ptBR = {
       regenerate: "Regenerar {label}",
       regenerateTooltip: "Regenerar {label}",
       regenerateOutdatedTooltip: "O conteúdo mudou após a exportação. Clique para atualizar {label}.",
+      refreshAllOutdated: "Atualizar todos os desatualizados ({count})",
+      refreshingAll: "Atualizando todos…",
     },
   },
   setupBanner: {

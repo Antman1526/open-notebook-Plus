@@ -1305,6 +1305,8 @@ export const ruRU = {
       regenerate: "Перегенерировать {label}",
       regenerateTooltip: "Перегенерировать {label}",
       regenerateOutdatedTooltip: "Содержимое изменилось после экспорта. Нажмите для обновления {label}.",
+      refreshAllOutdated: "Обновить все устаревшие ({count})",
+      refreshingAll: "Обновление всех…",
     },
   },
   setupBanner: {

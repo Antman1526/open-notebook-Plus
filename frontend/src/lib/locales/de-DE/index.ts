@@ -1306,6 +1306,8 @@ export const deDE = {
       regenerate: "{label} neu erzeugen",
       regenerateTooltip: "{label} neu erzeugen",
       regenerateOutdatedTooltip: "Inhalt wurde seit dem Export geändert. Klicken, um {label} zu aktualisieren.",
+      refreshAllOutdated: "Alle veralteten aktualisieren ({count})",
+      refreshingAll: "Alle werden aktualisiert…",
     },
   },
   setupBanner: {

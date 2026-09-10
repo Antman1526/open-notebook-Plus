@@ -1306,6 +1306,8 @@ export const plPL = {
       regenerate: "Wygeneruj ponownie {label}",
       regenerateTooltip: "Wygeneruj ponownie {label}",
       regenerateOutdatedTooltip: "Treść zmieniła się od czasu eksportu. Kliknij, aby odświeżyć {label}.",
+      refreshAllOutdated: "Odśwież wszystkie nieaktualne ({count})",
+      refreshingAll: "Odświeżanie wszystkich…",
     },
   },
   setupBanner: {

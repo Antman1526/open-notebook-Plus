@@ -1305,6 +1305,8 @@ export const itIT = {
       regenerate: "Rigenera {label}",
       regenerateTooltip: "Rigenera {label}",
       regenerateOutdatedTooltip: "Il contenuto è cambiato dopo l'esportazione. Fai clic per aggiornare {label}.",
+      refreshAllOutdated: "Aggiorna tutti gli obsoleti ({count})",
+      refreshingAll: "Aggiornamento di tutti in corso…",
     },
   },
   setupBanner: {

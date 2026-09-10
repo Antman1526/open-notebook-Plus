@@ -1306,6 +1306,8 @@ export const bnIN = {
       regenerate: "{label} পুনরায় তৈরি করুন",
       regenerateTooltip: "{label} পুনরায় তৈরি করুন",
       regenerateOutdatedTooltip: "এক্সপোর্টের পর বিষয়বস্তু পরিবর্তিত হয়েছে। {label} রিফ্রেশ করতে ক্লিক করুন।",
+      refreshAllOutdated: "সমস্ত পুরানো রিফ্রেশ করুন ({count})",
+      refreshingAll: "সমস্ত রিফ্রেশ করা হচ্ছে…",
     },
   },
   setupBanner: {

@@ -1307,6 +1307,8 @@ export const caES = {
       regenerate: "Regenera {label}",
       regenerateTooltip: "Regenera {label}",
       regenerateOutdatedTooltip: "El contingut ha canviat després de l'exportació. Fes clic per actualitzar {label}.",
+      refreshAllOutdated: "Actualitzar tots els obsolets ({count})",
+      refreshingAll: "Actualitzant tots…",
     },
   },
   setupBanner: {

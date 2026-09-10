@@ -1305,6 +1305,8 @@ export const trTR = {
       regenerate: "{label} yeniden oluştur",
       regenerateTooltip: "{label} yeniden oluştur",
       regenerateOutdatedTooltip: "İçerik dışa aktarımdan sonra değişti. {label} yenilemek için tıklayın.",
+      refreshAllOutdated: "Tüm güncel olmayanları yenile ({count})",
+      refreshingAll: "Tümü yenileniyor…",
     },
   },
   setupBanner: {
