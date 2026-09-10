@@ -3,13 +3,13 @@
 **Date**: September 9, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits** (v0.8.115 – v0.8.117, 2026-09-09):
+**Latest Commits** (v0.8.115 – v0.8.118, 2026-09-09):
+- `dc89cf6a`: `feat(i18n): localize the Studio artifact export menu`
+- `2b2075ff`: `test(chat): interrupted partial survives an unchanged refetch, yields to a changed one`
+- `7a4e9ba3`: `test(i18n): fail on any literal t() key missing from en-US`
 - `497f49de`: `feat(studio): text-flow PDF export for course packs via reportlab`
 - `06dc8cd3`: `feat(studio): EPUB 3 export for course packs`
-- `49930453`: `refactor(search): split the search page into per-mode components`
 - `dec3e99b`: `feat(chat): "Interrupted" badge with inline retry on stalled partial answers; fix retry i18n key`
-- `badb904e`: `test(frontend): behavioural streaming test for useNotebookChat`
-- `c5943695`: `test(api): HTTP-level heartbeat and idle-timeout coverage for the three stream endpoints`
 - `8e98616e`: `feat(streaming): backend heartbeat frames and server-side idle limit for model streams`
 - `eb5eaf29`: `fix(frontend): detect stalled model streams instead of hanging in "streaming" forever`
 
@@ -130,29 +130,26 @@ All gates are currently passing 100%:
 
 ### Open items, in priority order
 
-All five items from the 2026-09-09 list were closed in v0.8.117 (see
-`desktop/CHANGELOG.md`). Path corrections learned while doing so: Studio's
-backend is the package `api/routers/studio/`, on-disk exports are written by
-`deeper_notebook/studio/generation/persistence.py`, and both chats render
-through `components/source/ChatPanel.tsx`.
+Items 2–5 of the v0.8.117 list were closed in v0.8.118 (`desktop/CHANGELOG.md`).
+Item 1 (dead `_persist_artifact_exports` duplicate in
+`api/routers/studio/artifacts.py`) is in progress in a separate session; do
+not touch that file until it lands.
 
-1. **Dead duplicate in the studio router.** `api/routers/studio/artifacts.py`
-   still carries a `_persist_artifact_exports` (~line 803) that nothing calls;
-   the live implementation is `persist_artifact_exports` in
-   `deeper_notebook/studio/generation/persistence.py`. Delete the duplicate
-   and its private helpers once `tests/test_studio_router_contract.py` is
-   confirmed not to pin them.
-2. **Localize `ArtifactExportMenu.tsx`.** Its strings ("Saved exports",
-   "Download", "Open", "Copy", "Folder") are hardcoded; every other surface
-   goes through `t()`. Add `studio.export.*` keys to all 14 locales.
-3. **Export menu i18n test for EPUB/PDF labels** once the strings above exist.
-4. **Interrupted state across refetch.** The `interrupted` flag is local-only
-   and disappears when the session refetches. If that proves confusing, persist
-   a `truncated` marker server-side on the canonical message instead.
-5. **`common.retry` naming.** The key holds "Try Again" and lives at the top of
-   `common`; consider moving it under `common.actions` in a locale-wide pass so
-   future callers stop guessing the path (this is exactly how the v0.8.116 bug
-   happened).
+1. **Studio interpolation convention.** `studio.*` strings use single-brace
+   `{param}` with manual `.replace()` while the rest of the app uses i18next
+   `{{param}}`. Pick one (i18next's) and migrate the `studio` namespace so
+   `t(key, { param })` works uniformly.
+2. **`keys-exist.test.ts` scope.** It checks dotted literals only. Extend it to
+   single-segment keys once the few top-level ones are inventoried, and
+   consider flagging `defaultValue` fallbacks as translation gaps in a
+   separate, non-blocking report.
+3. **EPUB/PDF on-demand export endpoint.** Exports are written at persist time
+   only. A `POST /studio/artifacts/{id}/exports/{format}` that (re)generates a
+   single format would let the menu offer formats for older artifacts.
+4. **Course-pack PDF typography.** `exporters/pdf.py` uses reportlab's standard
+   fonts; CJK lesson content will render as boxes. Register a bundled Unicode
+   TTF (and add it to the desktop data files) before advertising the PDF for
+   non-Latin locales.
 
 ## 6. Quick Cheat-Sheet for Common Commands
 

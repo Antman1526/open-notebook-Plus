@@ -25,6 +25,32 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.118 — 2026-09-09 — Open items from v0.8.117
+
+🛠 **Every literal translation key is now checked.**
+`frontend/src/lib/locales/keys-exist.test.ts` scans all non-test source for
+dotted `t('...')` literals and fails if one does not resolve in en-US
+(calls with a string fallback or `defaultValue` are accepted). This is the
+class of bug behind the v0.8.116 retry label; a planted bad key fails the
+test, and the codebase currently has zero unguarded misses. Chosen over
+renaming `common.retry`: a rename does not stop the next wrong guess.
+
+🎨 **Studio export menu localized.** New `studio.export` namespace (18
+keys, 14 locales) replaces the last hardcoded English UI strings; format
+names stay as proper nouns. Test asserts EPUB under Bundle and PDF under
+Visual.
+
+🛠 **Interrupted marker across refetch, settled by test.** react-query's
+structural sharing keeps the session reference stable when a refetch
+returns the same list, so the local `interrupted` message survives; when
+the server list actually changes (a completed turn) the canonical list
+replaces it. Both chat hooks have a behavioural test for each side. No
+server-side marker needed.
+
+Not in this release: removing the dead `_persist_artifact_exports`
+duplicate in `api/routers/studio/artifacts.py` is being handled in a
+separate session.
+
 ## v0.8.117 — 2026-09-09 — The v0.8.116 open items, closed
 
 Seven commits working through the open-items list left in
