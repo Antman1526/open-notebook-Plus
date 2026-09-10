@@ -46,7 +46,9 @@ function exportGroup(format: string): ExportGroup {
   if (['docx', 'xlsx'].includes(normalized)) return 'editable'
   if (['pptx', 'pdf', 'png', 'svg'].includes(normalized)) return 'visual'
   if (['csv'].includes(normalized)) return 'data'
-  if (['zip', 'research_bundle', 'scorm_package', 'xapi_package'].includes(normalized)) {
+  if (
+    ['zip', 'research_bundle', 'scorm_package', 'xapi_package', 'epub'].includes(normalized)
+  ) {
     return 'bundle'
   }
   return 'source'
@@ -54,7 +56,11 @@ function exportGroup(format: string): ExportGroup {
 
 function exportLabel(format: string): string {
   const normalized = format.toLowerCase()
-  if (['json', 'csv', 'docx', 'xlsx', 'pptx', 'pdf', 'png', 'svg', 'zip'].includes(normalized)) {
+  if (
+    ['json', 'csv', 'docx', 'xlsx', 'pptx', 'pdf', 'png', 'svg', 'zip', 'epub'].includes(
+      normalized,
+    )
+  ) {
     return normalized.toUpperCase()
   }
   if (normalized === 'md') return 'Markdown'
@@ -143,6 +149,7 @@ function artifactExports(artifact: StudioArtifact, markdown: string): ExportItem
       research_bundle: 0,
       scorm_package: 1,
       xapi_package: 2,
+      epub: 3,
     }
     const leftOrder = formatOrder[left.format.toLowerCase()] ?? 10
     const rightOrder = formatOrder[right.format.toLowerCase()] ?? 10

@@ -24,6 +24,7 @@ from deeper_notebook.studio.exporters import (
     export_spreadsheet,
 )
 from deeper_notebook.studio.exporters.charts import ChartDocument, render_svg_chart
+from deeper_notebook.studio.exporters.epub import write_course_pack_epub
 from deeper_notebook.studio.exporters.research_bundle import build_research_bundle
 from deeper_notebook.studio.payloads import parse_payload_document
 from deeper_notebook.studio.schemas import (
@@ -644,29 +645,49 @@ def _persist_office_exports(
     if document is None:
         return {}
 
-    paths: list[Path] = []
-    try:
-        if isinstance(
-            document, (GenericDocument, CoursePackDocument, ResearchRunDocument)
-        ):
-            docx_path = _artifact_export_path(export_dir, stem, ".docx")
-            paths = [docx_path]
+    results: dict[str, str] = {}
+
+    if isinstance(document, (GenericDocument, CoursePackDocument, ResearchRunDocument)):
+        docx_path = _artifact_export_path(export_dir, stem, ".docx")
+        try:
             export_document(document, docx_path)
-            return {"docx": str(docx_path)}
-        if isinstance(document, DataTableDocument):
-            xlsx_path = _artifact_export_path(export_dir, stem, ".xlsx")
-            paths = [xlsx_path]
+            results["docx"] = str(docx_path)
+        except Exception as exc:
+            docx_path.unlink(missing_ok=True)
+            logger.warning(
+                "Evidence Studio Office export failed for artifact {} ({})",
+                artifact.id,
+                type(exc).__name__,
+            )
+
+        if isinstance(document, CoursePackDocument):
+            epub_path = _artifact_export_path(export_dir, stem, ".epub")
+            try:
+                write_course_pack_epub(document, epub_path)
+                results["epub"] = str(epub_path)
+            except Exception as exc:
+                epub_path.unlink(missing_ok=True)
+                logger.warning(
+                    "Evidence Studio EPUB export failed for artifact {} ({})",
+                    artifact.id,
+                    type(exc).__name__,
+                )
+        return results
+
+    if isinstance(document, DataTableDocument):
+        xlsx_path = _artifact_export_path(export_dir, stem, ".xlsx")
+        try:
             export_spreadsheet(document, xlsx_path)
-            return {"xlsx": str(xlsx_path)}
-    except Exception as exc:
-        for path in paths:
-            path.unlink(missing_ok=True)
-        logger.warning(
-            "Evidence Studio Office export failed for artifact {} ({})",
-            artifact.id,
-            type(exc).__name__,
-        )
-    return {}
+            results["xlsx"] = str(xlsx_path)
+        except Exception as exc:
+            xlsx_path.unlink(missing_ok=True)
+            logger.warning(
+                "Evidence Studio Office export failed for artifact {} ({})",
+                artifact.id,
+                type(exc).__name__,
+            )
+
+    return results
 
 
 def _persist_trusted_svg_chart(

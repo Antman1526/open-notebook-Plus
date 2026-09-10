@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ArtifactExportMenu } from './ArtifactExportMenu'
@@ -63,5 +63,28 @@ describe('ArtifactExportMenu', () => {
     for (const action of screen.getAllByRole('link')) {
       expect(action).toHaveClass('min-h-11', 'min-w-11')
     }
+  })
+
+  it('renders a persisted EPUB export with the EPUB label in the Bundle group', () => {
+    render(
+      <ArtifactExportMenu
+        artifact={{
+          ...artifact,
+          export_paths: {
+            ...artifact.export_paths,
+            epub: '/exports/quarterly-report.epub',
+          },
+        }}
+        markdown="# Quarterly Evidence Report"
+      />,
+    )
+
+    const bundleHeading = screen.getByText('Bundle').closest('div')
+    const bundleGroup = bundleHeading?.parentElement
+    expect(bundleGroup).not.toBeNull()
+    expect(within(bundleGroup as HTMLElement).getByText('EPUB')).toBeInTheDocument()
+    expect(
+      within(bundleGroup as HTMLElement).getByText('/exports/quarterly-report.epub'),
+    ).toBeInTheDocument()
   })
 })
