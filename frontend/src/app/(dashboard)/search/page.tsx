@@ -408,11 +408,13 @@ export default function SearchPage() {
                           disabled={searchMutation.isPending}
                         />
                         <Label htmlFor="hybrid" className="font-normal cursor-pointer">
-                          {t('searchPage.hybridSearch', {
-                            defaultValue: hasEmbeddingModel
-                              ? 'Hybrid (keyword + meaning)'
-                              : 'Hybrid (keyword only — no embedding model)',
-                          })}
+                          {hasEmbeddingModel
+                            ? t('searchPage.hybridSearch', {
+                                defaultValue: 'Hybrid (keyword + meaning)',
+                              })
+                            : t('searchPage.hybridSearchNoEmbedding', {
+                                defaultValue: 'Hybrid (keyword only — no embedding model)',
+                              })}
                         </Label>
                       </div>
                     </RadioGroup>

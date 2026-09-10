@@ -1352,3 +1352,217 @@ Object.assign(caES.knowledge, {
   readOnlyMode: "{{mode}} és només de lectura",
   headingLevel: "Nivell {{level}} {{title}}",
 })
+
+// v0.8.120 — Translation gaps resolved: missing keys previously rendered only via English defaultValue.
+type LocaleTree = Record<string, unknown>;
+const rootNode = caES as unknown as LocaleTree;
+function ensureSection(parent: LocaleTree, key: string): LocaleTree {
+  if (!parent[key] || typeof parent[key] !== 'object') {
+    parent[key] = {};
+  }
+  return parent[key] as LocaleTree;
+}
+
+Object.assign(ensureSection(rootNode, 'updates'), {
+  upToDate: "You're up to date.",
+  settingsTitle: "Updates",
+  currentVersion: "Current version: {{version}}",
+  autoCheckLabel: "Automatically check for updates",
+  privacyNote: "When on, Deeper Notebook checks GitHub for new releases on launch (about once a day). This sends a request to GitHub; no other data is shared.",
+  checkNow: "Check now",
+  title: "Update available: {{version}}",
+  description: "You're on {{current}}. A verified release is available for manual review.",
+  openRelease: "Open verified release (manual)",
+  skip: "Skip this version",
+  later: "Later",
+});
+
+Object.assign(ensureSection(rootNode, 'localModels'), {
+  colSize: "Size",
+  colContext: "Context",
+  colRepo: "Repo",
+  queued: "Queued…",
+  downloading: "Downloading…",
+  cancel: "Cancel",
+  cancelled: "Cancelled. Click Resume to continue from where it stopped.",
+  completed: "Installed",
+  failed: "Download failed: {{error}}",
+  resume: "Resume",
+  retry: "Retry",
+  installSnapshot: "Install snapshot",
+  download: "Download",
+  downloadHeader: "Download a model",
+  downloadSubheader: "MLX-first manifest picks when available, with GGUF fallback downloads for fresh installs.",
+});
+
+Object.assign(ensureSection(ensureSection(rootNode, 'mcp'), 'recommendations'), {
+  alreadyConnected: "{{label}} is already connected",
+  connectSuccess: "Connected to {{label}}",
+  connectError: "Could not connect: {{detail}}",
+  header: "Recommended MCP servers",
+  subheader: "Curated, locally-runnable servers we have validated work with the chat tool loop. Install via the upstream link, then click Connect.",
+  replaces: "Replaces {{name}}",
+  connecting: "Connecting…",
+  connected: "Connected",
+  connect: "Connect",
+  installLink: "Install instructions",
+});
+
+Object.assign(ensureSection(rootNode, 'intro'), {
+  replayTitle: "Welcome intro",
+  replayDesc: "Play the opening animation again.",
+  replay: "Replay",
+  tagline: "Think further with every source",
+  skip: "Skip",
+  privacy: "Everything runs on your Mac — no cloud required.",
+});
+
+Object.assign(ensureSection(rootNode, 'dbRepair'), {
+  title: "Database needs repair",
+  description: "Source processing is paused — the database’s live-query state was corrupted, usually after an unexpected shutdown. Restart to repair it automatically (a backup is taken first).",
+  repairRestart: "Repair & restart",
+});
+
+Object.assign(ensureSection(rootNode, 'mindMap'), {
+  error: "Could not load the mind map.",
+  empty: "Add sources or notes to this notebook to see its mind map.",
+  button: "Mind map",
+  title: "Mind map",
+});
+
+Object.assign(ensureSection(rootNode, 'sources'), {
+  dropToAdd: "Drop files to add as sources",
+  discover: "Discover sources",
+  citedPassage: "Cited passage",
+  discoverError: "Search failed. Please try again.",
+  discoverAdded: "Added {{count}} source(s). Processing…",
+  discoverDesc: "Search the web for a topic and add results as sources. The query is sent to your configured search provider only when you search.",
+  discoverPlaceholder: "e.g. recent advances in retrieval-augmented generation",
+  discoverProvider: "Searching via {{provider}}.",
+  discoverNotConfigured: "Web search isn’t configured. Set SERPER_API_KEY, TAVILY_API_KEY, or SEARXNG_BASE_URL in your environment to enable Discover. Nothing is sent anywhere until a provider is set.",
+  discoverNoResults: "No results found.",
+  discoverAddSelected: "Add selected",
+  discoverAddSelectedCount: "Add selected ({{count}})",
+});
+
+Object.assign(ensureSection(rootNode, 'notebooks'), {
+  exploreSample: "Explore a sample notebook",
+});
+
+Object.assign(ensureSection(rootNode, 'common'), {
+  clear: "Clear",
+  moreActions: "More actions",
+});
+
+Object.assign(ensureSection(rootNode, 'settings'), {
+  sources: "Sources",
+  sourcesDesc: "Options applied when sources are added.",
+  autoSummarize: "Automatically summarize sources on import",
+  autoSummarizeHelp: "When on, each source you add gets a short AI summary (one extra LLM call per source). It appears on the source card and in the source’s insights.",
+  autoExtractTopics: "Automatically extract key topics on import",
+  autoExtractTopicsHelp: "When on, each source you add gets a few key topics extracted (one extra LLM call per source), shown as tags on the source card.",
+});
+
+Object.assign(ensureSection(rootNode, 'searchPage'), {
+  hybridSearch: "Hybrid (keyword + meaning)",
+  hybridSearchNoEmbedding: "Hybrid (keyword only — no embedding model)",
+});
+
+Object.assign(ensureSection(rootNode, 'podcasts'), {
+  overviewFormat: "Audio overview format",
+  lengthLabel: "Length",
+  lengthProfile: "Profile default",
+  lengthShort: "Short (~4–6 min)",
+  lengthMedium: "Medium (~8–10 min)",
+  lengthLong: "Long (~15–20 min)",
+});
+
+Object.assign(ensureSection(ensureSection(rootNode, 'apiKeys'), 'osaurus'), {
+  connectSuccess: "Connected to Osaurus ({{count}} models registered)",
+  connectError: "Could not connect to Osaurus — see API logs",
+  detectedTitle: "Osaurus detected on port {{port}}",
+  detectedDescription: "Osaurus (MLX-accelerated local AI for Apple Silicon) is running on your machine. Connect it as a local provider — typically 2-4× faster than llama.cpp on M-series chips.",
+  connecting: "Connecting…",
+  connectButton: "Connect Osaurus",
+  learnMore: "Learn more",
+});
+
+const chatSection = ensureSection(rootNode, 'chat');
+Object.assign(ensureSection(chatSection, 'agentState'), {
+  clarifyLabel: "Needs your input",
+  truncatedLabel: "Truncated",
+  clarifyTooltip: "The assistant paused to ask you a question rather than finishing.",
+  truncatedTooltip: "The assistant hit the tool-call limit — the answer may be incomplete.",
+});
+
+Object.assign(ensureSection(chatSection, 'privacyBadge'), {
+  label: "On-device",
+  heading: "Kept on your device",
+  explanationWithCategories: "This turn looked like it contained sensitive data ({{categories}}), ",
+  explanation: "This turn was answered by the local model instead of being sent ",
+  reask: "Re-ask allowing cloud",
+});
+
+Object.assign(ensureSection(chatSection, 'providerBadge'), {
+  local: "local",
+  cloud: "cloud",
+  tooltipWithModel: "Served by the {{provider}} model: {{model}}",
+  tooltip: "Served by the {{provider}} model",
+});
+
+Object.assign(ensureSection(chatSection, 'mcpPicker'), {
+  label: "{{count}}/{{total}} tools",
+  heading: "MCP tools for this turn",
+  helpText: "Untick servers you do NOT want the model to call this turn. Reduces token cost when an unused tool would otherwise hang in context.",
+  webSearch: "Web search",
+  scholarlySearch: "Scholarly search (OpenAlex/arXiv)",
+  webSearchHint: "Web search needs a chat model that supports tool calling — most cloud models do; many small local models do not.",
+});
+
+Object.assign(ensureSection(chatSection, 'message'), {
+  copy: "Copy",
+  copied: "Copied",
+  edit: "Edit",
+});
+
+Object.assign(chatSection, {
+  tryAsking: "Try asking",
+  send: "Send message",
+});
+
+Object.assign(ensureSection(chatSection, 'citations'), {
+  viewSource: "View source →",
+});
+
+const modelsSection = ensureSection(rootNode, 'models');
+Object.assign(ensureSection(modelsSection, 'sidecarLog'), {
+  restartSuccess: "Sidecar restarted: {{detail}}",
+  restartFailedDetail: "Restart failed: {{detail}}",
+  title: "Sidecar log ({{kind}})",
+  fetchError: "Could not load sidecar log",
+  unavailable: "No log captured for this sidecar. Try restarting the app — the launcher writes a per-sidecar tail file as it runs.",
+  empty: "Sidecar started cleanly — no stderr captured.",
+  restartHintInline: "Restart this sidecar without quitting the app.",
+  restarting: "Restarting…",
+  restart: "Restart",
+});
+
+Object.assign(ensureSection(modelsSection, 'smartRouting'), {
+  toastEnabled: "Smart routing enabled",
+  toastDisabled: "Smart routing disabled",
+  toastError: "Could not save smart-routing settings",
+  toastPrefSaved: "Provider preference saved",
+  title: "Smart routing",
+  description: "Automatically pick between a local sidecar (llama.cpp, Osaurus) and your cloud provider based on content size, local-model health, and your preference.",
+  toggleLabel: "Enable smart routing",
+  toggleDescription: "When off, every chat turn uses your default chat model.",
+  prefLabel: "Provider preference",
+  prefAuto: "Auto (recommended)",
+  prefLocal: "Prefer local",
+  prefCloud: "Prefer cloud",
+  prefHintAuto: "Use local when healthy and content fits, otherwise cloud.",
+  prefHintLocal: "Always use local. The router still falls back to cloud if no local model is configured.",
+  prefHintCloud: "Always use cloud, even when local is healthy and would fit.",
+  envOverrideHint: "Tip: DEEPER_NOTEBOOK_AUTO_ROUTE_CHAT and DEEPER_NOTEBOOK_CHAT_PROVIDER env vars (if set) override these UI settings.",
+});
+

@@ -220,10 +220,14 @@ export function DiscoverSourcesDialog({
           </Button>
           <Button onClick={addSelected} disabled={selected.size === 0 || adding}>
             {adding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('sources.discoverAddSelected', {
-              defaultValue: `Add selected${selected.size ? ` (${selected.size})` : ''}`,
-              count: selected.size,
-            })}
+            {selected.size > 0
+              ? t('sources.discoverAddSelectedCount', {
+                  defaultValue: `Add selected (${selected.size})`,
+                  count: selected.size,
+                })
+              : t('sources.discoverAddSelected', {
+                  defaultValue: 'Add selected',
+                })}
           </Button>
         </DialogFooter>
       </DialogContent>
