@@ -1303,6 +1303,10 @@ export const caES = {
       // missing those exports.
       generate: "Genera {label}",
       generating: "Generant…",
+      stale: "Desactualitzat",
+      regenerate: "Regenera {label}",
+      regenerateTooltip: "Regenera {label}",
+      regenerateOutdatedTooltip: "El contingut ha canviat després de l'exportació. Fes clic per actualitzar {label}.",
     },
   },
   setupBanner: {

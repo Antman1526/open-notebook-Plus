@@ -1323,6 +1323,10 @@ export const enUS = {
       // missing those exports.
       generate: "Generate {label}",
       generating: "Generating…",
+      stale: "Outdated",
+      regenerate: "Regenerate {label}",
+      regenerateTooltip: "Regenerate {label}",
+      regenerateOutdatedTooltip: "Content changed since export. Click to refresh {label}.",
     },
   },
   setupBanner: {

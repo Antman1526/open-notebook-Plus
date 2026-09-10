@@ -1301,6 +1301,10 @@ export const zhTW = {
       // missing those exports.
       generate: "產生{label}",
       generating: "產生中…",
+      stale: "已過時",
+      regenerate: "重新生成 {label}",
+      regenerateTooltip: "重新生成 {label}",
+      regenerateOutdatedTooltip: "匯出後內容已變更。點擊以重新整理 {label}。",
     },
   },
   setupBanner: {

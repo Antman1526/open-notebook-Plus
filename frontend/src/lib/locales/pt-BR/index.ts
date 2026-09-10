@@ -1302,6 +1302,10 @@ export const ptBR = {
       // missing those exports.
       generate: "Gerar {label}",
       generating: "Gerando…",
+      stale: "Desatualizado",
+      regenerate: "Regenerar {label}",
+      regenerateTooltip: "Regenerar {label}",
+      regenerateOutdatedTooltip: "O conteúdo mudou após a exportação. Clique para atualizar {label}.",
     },
   },
   setupBanner: {

@@ -1301,6 +1301,10 @@ export const jaJP = {
       // missing those exports.
       generate: "{label}を生成",
       generating: "生成中…",
+      stale: "古いバージョン",
+      regenerate: "{label}を再生成",
+      regenerateTooltip: "{label}を再生成",
+      regenerateOutdatedTooltip: "エクスポート後に内容が変更されました。クリックして{label}を更新。",
     },
   },
   setupBanner: {

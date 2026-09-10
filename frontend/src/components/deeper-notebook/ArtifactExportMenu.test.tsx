@@ -47,6 +47,10 @@ const exportTranslations: Record<string, string> = {
   'studio.export.browserDownloadPrefix': 'Browser download - ',
   'studio.export.generate': 'Generate {label}',
   'studio.export.generating': 'Generating…',
+  'studio.export.stale': 'Outdated',
+  'studio.export.regenerate': 'Regenerate {label}',
+  'studio.export.regenerateTooltip': 'Regenerate {label}',
+  'studio.export.regenerateOutdatedTooltip': 'Content changed since export. Click to refresh {label}.',
 }
 
 vi.mock('@/lib/hooks/use-translation', () => ({
@@ -220,4 +224,42 @@ describe('ArtifactExportMenu', () => {
     expect(screen.queryByRole('button', { name: 'Generate PDF' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Generate EPUB' })).toBeInTheDocument()
   })
+
+  it('renders a stale badge when an export format is marked stale', () => {
+    renderWithQueryClient(
+      <ArtifactExportMenu
+        artifact={{
+          ...artifact,
+          stale_export_formats: ['docx'],
+        }}
+        markdown="# Quarterly Evidence Report"
+      />,
+    )
+
+    const staleBadge = screen.getByTestId('stale-badge-docx')
+    expect(staleBadge).toBeInTheDocument()
+    expect(staleBadge).toHaveTextContent('Outdated')
+    expect(screen.queryByTestId('stale-badge-pptx')).not.toBeInTheDocument()
+  })
+
+  it('allows regenerating an existing persisted export item directly', async () => {
+    vi.mocked(studioApi.regenerateExport).mockResolvedValue({
+      ...artifact,
+      export_paths: { ...artifact.export_paths, docx: '/exports/quarterly-report-refreshed.docx' },
+    })
+
+    renderWithQueryClient(
+      <ArtifactExportMenu artifact={artifact} markdown="# Quarterly Evidence Report" />,
+    )
+
+    const regenDocx = screen.getByRole('button', { name: 'Regenerate DOCX' })
+    expect(regenDocx).toBeInTheDocument()
+
+    fireEvent.click(regenDocx)
+
+    await waitFor(() => {
+      expect(studioApi.regenerateExport).toHaveBeenCalledWith('studio_artifact:exports', 'docx')
+    })
+  })
 })
+

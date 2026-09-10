@@ -98,6 +98,13 @@ def _iso(value) -> str | None:
 
 
 def _artifact_response(artifact: StudioArtifact) -> StudioArtifactResponse:
+    try:
+        from deeper_notebook.studio.generation import persistence
+
+        stale_formats = persistence.get_stale_export_formats(artifact)
+    except Exception:
+        stale_formats = []
+
     return StudioArtifactResponse(
         id=str(artifact.id),
         notebook_id=str(artifact.notebook_id),
@@ -112,6 +119,7 @@ def _artifact_response(artifact: StudioArtifact) -> StudioArtifactResponse:
         output_payload=artifact.output_payload,
         citations=artifact.citations,
         export_paths=artifact.export_paths,
+        stale_export_formats=stale_formats,
         revision_of_id=(
             str(artifact.revision_of_id)
             if artifact.revision_of_id is not None

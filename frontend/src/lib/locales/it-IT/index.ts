@@ -1301,6 +1301,10 @@ export const itIT = {
       // missing those exports.
       generate: "Genera {label}",
       generating: "Generazione in corso…",
+      stale: "Non aggiornato",
+      regenerate: "Rigenera {label}",
+      regenerateTooltip: "Rigenera {label}",
+      regenerateOutdatedTooltip: "Il contenuto è cambiato dopo l'esportazione. Fai clic per aggiornare {label}.",
     },
   },
   setupBanner: {

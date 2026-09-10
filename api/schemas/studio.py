@@ -83,6 +83,7 @@ class StudioArtifactResponse(BaseModel):
     output_payload: dict[str, Any] = Field(default_factory=dict)
     citations: list[dict[str, Any]] = Field(default_factory=list)
     export_paths: dict[str, str] = Field(default_factory=dict)
+    stale_export_formats: list[str] = Field(default_factory=list)
     revision_of_id: str | None = None
     created: str | None = None
     updated: str | None = None

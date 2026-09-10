@@ -1302,6 +1302,10 @@ export const plPL = {
       // missing those exports.
       generate: "Generuj {label}",
       generating: "Generowanie…",
+      stale: "Nieaktualne",
+      regenerate: "Wygeneruj ponownie {label}",
+      regenerateTooltip: "Wygeneruj ponownie {label}",
+      regenerateOutdatedTooltip: "Treść zmieniła się od czasu eksportu. Kliknij, aby odświeżyć {label}.",
     },
   },
   setupBanner: {

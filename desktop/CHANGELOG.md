@@ -25,6 +25,16 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.120 — 2026-09-10 — Evidence Studio Export Regeneration, Freshness Tracking & i18n Gaps
+
+✨ **Multi-file on-demand export regeneration & format aliases.** The single-format export endpoint (`POST /studio/artifacts/{id}/exports/{format}`) now supports course pack multi-file bundles (`scorm_package`, `xapi_package`, `research_bundle`, `instructor_guide`, `learner_handout`, `module_checklist`, `assessment`) alongside single-file formats (`docx`, `pptx`, `pdf`, `xlsx`, `csv`, `markdown`, `json`, `png`, `svg`). Callers can also use friendly format aliases (`scorm`, `xapi`, `bundle`, `svg`, `checklist`).
+
+✨ **Export freshness tracking & UI stale indicators.** Artifact content hashes (SHA-256) are now persisted per export in `output_payload["export_hashes"]`. The backend automatically tracks `stale_export_formats` using `is_export_stale` and exposes them in `StudioArtifactResponse`. In Evidence Studio, the export menu surfaces a subtle amber "Outdated" badge when an export was generated from an older version of the artifact content, and provides a per-item 1-click regenerate action to refresh the file on disk without re-running the full LLM pipeline.
+
+🐛 **PDF bold font pairing on macOS.** On macOS, when `Arial Unicode.ttf` is resolved as the Unicode body font, headings now properly pair with `Arial Bold.ttf` for high-contrast bold titles and subheadings instead of falling back to regular weight or unstyled fonts.
+
+🐛 **Translation gaps resolved across all 14 locales.** Audited and resolved all 141 unlocalized translation keys identified by `keys-exist.test.ts` (e.g. `updates.*`, `localModels.*`, `mcp.recommendations.*`, `intro.*`, `dbRepair.*`, `mindMap.*`, `sources.discover*`, `chat.*`, `models.smartRouting.*`). All 14 locales (`en-US`, `es-ES`, `fr-FR`, `de-DE`, `it-IT`, `pt-BR`, `ja-JP`, `zh-CN`, `zh-TW`, `ru-RU`, `pl-PL`, `tr-TR`, `ca-ES`, `bn-IN`) maintain 100% leaf-key and placeholder parity with zero `@typescript-eslint/no-explicit-any` warnings.
+
 ## v0.8.119 — 2026-09-10 — The v0.8.118 open items, closed
 
 🐛 **Podcast toasts showed a literal `{name}`.** The eight

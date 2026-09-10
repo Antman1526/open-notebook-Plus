@@ -1301,6 +1301,10 @@ export const ruRU = {
       // missing those exports.
       generate: "Создать {label}",
       generating: "Создание…",
+      stale: "Устарело",
+      regenerate: "Перегенерировать {label}",
+      regenerateTooltip: "Перегенерировать {label}",
+      regenerateOutdatedTooltip: "Содержимое изменилось после экспорта. Нажмите для обновления {label}.",
     },
   },
   setupBanner: {

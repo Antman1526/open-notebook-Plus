@@ -1304,6 +1304,10 @@ export const esES = {
       // missing those exports.
       generate: "Generar {label}",
       generating: "Generando…",
+      stale: "Desactualizado",
+      regenerate: "Regenerar {label}",
+      regenerateTooltip: "Regenerar {label}",
+      regenerateOutdatedTooltip: "El contenido cambió tras la exportación. Haz clic para actualizar {label}.",
     },
   },
   setupBanner: {

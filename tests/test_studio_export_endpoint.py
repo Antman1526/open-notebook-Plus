@@ -165,6 +165,33 @@ def test_regenerate_export_with_format_alias(monkeypatch):
     body = response.json()
     assert body["export_paths"]["scorm_package"] == "/exports/onboarding-scorm.zip"
     assert body["export_paths"]["scorm"] == "/exports/onboarding-scorm.zip"
+    assert "stale_export_formats" in body
+    assert isinstance(body["stale_export_formats"], list)
     regenerate.assert_called_once()
     assert regenerate.call_args.args[1] == "scorm"
+
+
+def test_artifact_response_populates_stale_export_formats(monkeypatch):
+    fake_cls = _install_fake_artifacts(monkeypatch)
+    fake_cls.records["studio_artifact:1"] = fake_cls(
+        id="studio_artifact:1",
+        notebook_id="notebook:alpha",
+        artifact_type="course_pack",
+        title="Onboarding Course Pack",
+        status="completed",
+        output_payload={"content": "# Onboarding Course Pack"},
+        export_paths={"pdf": "/exports/onboarding.pdf"},
+    )
+    monkeypatch.setattr(
+        persistence, "get_stale_export_formats", lambda _artifact: ["pdf"]
+    )
+    monkeypatch.setattr(
+        persistence, "persist_single_export", lambda _artifact, _fmt: "/exports/onboarding.pdf"
+    )
+
+    response = _client().post("/api/studio/artifacts/studio_artifact:1/exports/pdf")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stale_export_formats"] == ["pdf"]
+
 

@@ -1301,6 +1301,10 @@ export const trTR = {
       // missing those exports.
       generate: "{label} Oluştur",
       generating: "Oluşturuluyor…",
+      stale: "Güncel değil",
+      regenerate: "{label} yeniden oluştur",
+      regenerateTooltip: "{label} yeniden oluştur",
+      regenerateOutdatedTooltip: "İçerik dışa aktarımdan sonra değişti. {label} yenilemek için tıklayın.",
     },
   },
   setupBanner: {

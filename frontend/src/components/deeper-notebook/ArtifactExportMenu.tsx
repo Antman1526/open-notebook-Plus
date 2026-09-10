@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Image,
   Package,
+  RotateCw,
   TableProperties,
 } from 'lucide-react'
 
@@ -280,15 +281,45 @@ export function ArtifactExportMenu({
                   {groupExports.map((item) => {
                     const folderPath = item.path ? parentFilePath(item.path) : null
                     const key = `${item.format}-${item.path ?? item.href}`
+                    const isItemStale = Boolean(artifact.stale_export_formats?.includes(item.format))
+                    const isRegeneratingThis = regenerateExport.isPending
+                      && regenerateExport.variables?.format === item.format
                     return (
                       <div key={key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
                         <div className="min-w-0">
-                          <div className="text-xs font-medium">{item.label}</div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-xs font-medium">{item.label}</div>
+                            {isItemStale && (
+                              <span
+                                data-testid={`stale-badge-${item.format}`}
+                                className="rounded px-1 py-0.5 text-[0.62rem] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              >
+                                {t('studio.export.stale')}
+                              </span>
+                            )}
+                          </div>
                           <div title={item.path} className="truncate text-[0.68rem] text-muted-foreground">
                             {item.metadata}
                           </div>
                         </div>
                         <div className="flex items-center gap-0.5">
+                          {item.path && !item.isBrowserDownload && (
+                            <IconAction
+                              label={t('studio.export.regenerate').replace('{label}', item.label)}
+                              tooltip={
+                                isItemStale
+                                  ? t('studio.export.regenerateOutdatedTooltip').replace('{label}', item.label)
+                                  : t('studio.export.regenerateTooltip').replace('{label}', item.label)
+                              }
+                              disabled={isRegeneratingThis}
+                              onClick={() => regenerateExport.mutate({ artifactId: artifact.id, format: item.format })}
+                            >
+                              <RotateCw
+                                className={`h-4 w-4 ${isRegeneratingThis ? 'animate-spin' : ''}`}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                          )}
                           {item.isBrowserDownload ? (
                             <IconAction
                               asChild

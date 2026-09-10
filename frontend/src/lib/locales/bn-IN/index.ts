@@ -1302,6 +1302,10 @@ export const bnIN = {
       // missing those exports.
       generate: "{label} তৈরি করুন",
       generating: "তৈরি হচ্ছে…",
+      stale: "পুরোনো",
+      regenerate: "{label} পুনরায় তৈরি করুন",
+      regenerateTooltip: "{label} পুনরায় তৈরি করুন",
+      regenerateOutdatedTooltip: "এক্সপোর্টের পর বিষয়বস্তু পরিবর্তিত হয়েছে। {label} রিফ্রেশ করতে ক্লিক করুন।",
     },
   },
   setupBanner: {

@@ -1301,6 +1301,10 @@ export const zhCN = {
       // missing those exports.
       generate: "生成{label}",
       generating: "生成中…",
+      stale: "已过时",
+      regenerate: "重新生成 {label}",
+      regenerateTooltip: "重新生成 {label}",
+      regenerateOutdatedTooltip: "导出后内容已更改。点击以刷新 {label}。",
     },
   },
   setupBanner: {

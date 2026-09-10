@@ -1303,6 +1303,10 @@ export const frFR = {
       // missing those exports.
       generate: "Générer {label}",
       generating: "Génération…",
+      stale: "Obsolète",
+      regenerate: "Régénérer {label}",
+      regenerateTooltip: "Régénérer {label}",
+      regenerateOutdatedTooltip: "Le contenu a changé depuis l'export. Cliquez pour actualiser {label}.",
     },
   },
   setupBanner: {

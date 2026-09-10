@@ -109,6 +109,7 @@ export interface StudioArtifact {
   output_payload: StudioArtifactOutputPayload
   citations: Array<Record<string, unknown>>
   export_paths: StudioArtifactExportPaths
+  stale_export_formats?: string[]
   revision_of_id?: string | null
   created?: string | null
   updated?: string | null

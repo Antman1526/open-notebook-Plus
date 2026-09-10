@@ -1302,6 +1302,10 @@ export const deDE = {
       // missing those exports.
       generate: "{label} generieren",
       generating: "Wird generiert…",
+      stale: "Veraltet",
+      regenerate: "{label} neu erzeugen",
+      regenerateTooltip: "{label} neu erzeugen",
+      regenerateOutdatedTooltip: "Inhalt wurde seit dem Export geändert. Klicken, um {label} zu aktualisieren.",
     },
   },
   setupBanner: {
