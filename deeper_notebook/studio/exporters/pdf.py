@@ -123,8 +123,14 @@ def _body_font_candidates() -> list[tuple[str, str | None]]:
         candidates.append((env_font, None))
     candidates.extend(
         [
-            ("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", None),
-            ("/Library/Fonts/Arial Unicode.ttf", None),
+            (
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+            ),
+            (
+                "/Library/Fonts/Arial Unicode.ttf",
+                "/Library/Fonts/Arial Bold.ttf",
+            ),
             (
                 "/System/Library/Fonts/Supplemental/Arial.ttf",
                 "/System/Library/Fonts/Supplemental/Arial Bold.ttf",

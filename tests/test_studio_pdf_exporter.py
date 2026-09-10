@@ -392,3 +392,26 @@ def test_font_resolution_runs_once_per_process(tmp_path: Path, monkeypatch) -> N
     write_course_pack_pdf(_course_pack(), tmp_path / "second.pdf")
 
     assert len(calls) == calls_after_first_run
+
+
+def test_bold_paired_candidate_registers_dnbodybold(monkeypatch) -> None:
+    """When a candidate specifies a bold file that exists, DNBodyBold is registered
+    and used for headings."""
+    import reportlab
+
+    vera = Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+    vera_bd = Path(reportlab.__file__).parent / "fonts" / "VeraBd.ttf"
+    assert vera.is_file() and vera_bd.is_file()
+
+    monkeypatch.setattr(pdf_module, "_FONTS_RESOLVED", False)
+    monkeypatch.setattr(pdf_module, "_BODY_FONT", "Helvetica")
+    monkeypatch.setattr(pdf_module, "_BODY_FONT_BOLD", "Helvetica-Bold")
+    monkeypatch.setattr(
+        pdf_module, "_body_font_candidates", lambda: [(str(vera), str(vera_bd))]
+    )
+
+    pdf_module._resolve_fonts()
+
+    assert pdf_module._BODY_FONT == "DNBody"
+    assert pdf_module._BODY_FONT_BOLD == "DNBodyBold"
+    assert pdf_module._STYLES["Heading1"].fontName == "DNBodyBold"
