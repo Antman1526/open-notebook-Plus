@@ -25,7 +25,16 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.121 — 2026-09-10 — Export & Synthesis Content Integrity, Artifact File Cleanup & Batch Refresh
+
+🐛 **Notebook export and executive synthesis content integrity.** `Notebook.get_sources()` and `Notebook.get_notes()` were previously omitting `source.full_text` and `note.content` via SurrealQL `omit` clauses. When exporting notebooks to disk (`/notebooks/{id}/export`) or generating executive cross-source synthesis (`/notebooks/{id}/synthesis`), note bodies rendered as `(no content)` and source texts rendered as `(no full text)`. Added `include_full_text: bool = False` to `get_sources()` and `include_content: bool = False` to `get_notes()`, keeping sidebar listing fast while allowing export and synthesis callers to fetch full text. Added lazy hydration fallbacks in both endpoints so note and source bodies are always preserved even if called with mocked or partial projections.
+
+🔒 **Orphaned export file cleanup on artifact deletion.** When deleting a `StudioArtifact`, previously only the database record was removed, leaving generated files (`.docx`, `.pptx`, `.pdf`, `.zip`, `.epub`, `.csv`, `.svg`) on disk. `StudioArtifact.delete()` now safely unlinks persisted export paths while strictly verifying that each file is contained within the configured `_artifact_export_dir()`, preventing path traversal.
+
+✨ **Batch stale export refresh in Evidence Studio.** In `ArtifactExportMenu.tsx`, when an artifact has multiple outdated exports (`stale_export_formats.length > 1`), a "Refresh all outdated ({count})" batch button is now displayed. Added `refreshAllOutdated` and `refreshingAll` translations across all 14 supported locales with 100% `{count}` placeholder parity.
+
 ## v0.8.120 — 2026-09-10 — Evidence Studio Export Regeneration, Freshness Tracking & i18n Gaps
+
 
 ✨ **Multi-file on-demand export regeneration & format aliases.** The single-format export endpoint (`POST /studio/artifacts/{id}/exports/{format}`) now supports course pack multi-file bundles (`scorm_package`, `xapi_package`, `research_bundle`, `instructor_guide`, `learner_handout`, `module_checklist`, `assessment`) alongside single-file formats (`docx`, `pptx`, `pdf`, `xlsx`, `csv`, `markdown`, `json`, `png`, `svg`). Callers can also use friendly format aliases (`scorm`, `xapi`, `bundle`, `svg`, `checklist`).
 
