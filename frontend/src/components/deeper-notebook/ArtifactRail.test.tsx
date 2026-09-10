@@ -53,9 +53,21 @@ vi.mock('@/lib/hooks/use-video-overviews', () => ({
   useComposeVideoOverview: (...args: unknown[]) => useComposeVideoOverview(...args),
 }))
 
-vi.mock('@/lib/hooks/use-translation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}))
+// v0.8.118 — ArtifactExportMenu is now localized, so resolve keys through
+// the real en-US strings (falling back to the key) to keep the English
+// assertions below meaningful.
+vi.mock('@/lib/hooks/use-translation', async () => {
+  const { enUS } = await import('@/lib/locales/en-US')
+  const resolve = (key: string): string => {
+    let node: unknown = enUS
+    for (const part of key.split('.')) {
+      if (typeof node !== 'object' || node === null || !(part in (node as Record<string, unknown>))) return key
+      node = (node as Record<string, unknown>)[part]
+    }
+    return typeof node === 'string' ? node : key
+  }
+  return { useTranslation: () => ({ t: resolve }) }
+})
 
 describe('ArtifactRail', () => {
   const createArtifact = vi.fn()
