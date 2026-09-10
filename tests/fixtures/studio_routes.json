@@ -99,6 +99,15 @@
     "status_code": 200
   },
   {
+    "path": "/studio/artifacts/{artifact_id}/exports/{format}",
+    "methods": [
+      "POST"
+    ],
+    "endpoint_name": "regenerate_studio_artifact_export",
+    "response_model": "api.schemas.studio.StudioArtifactResponse",
+    "status_code": 200
+  },
+  {
     "path": "/studio/artifacts/{artifact_id}/mind-map/branches/{node_path:path}/context",
     "methods": [
       "POST"

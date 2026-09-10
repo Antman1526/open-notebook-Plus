@@ -1298,6 +1298,10 @@ export const deDE = {
       folder: "Ordner",
       openFolder: "{label}-Ordner öffnen",
       browserDownloadPrefix: "Browser-Download - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "{label} generieren",
+      generating: "Wird generiert…",
     },
   },
   setupBanner: {

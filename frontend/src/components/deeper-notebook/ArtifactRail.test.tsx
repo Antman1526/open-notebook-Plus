@@ -14,6 +14,7 @@ const useStudioWorkflowRuns = vi.fn()
 const useCreateStudioWorkflowRun = vi.fn()
 const useApproveStudioWorkflowRun = vi.fn()
 const useUpdateStudioArtifact = vi.fn()
+const useRegenerateStudioExport = vi.fn()
 const useComposeVideoOverview = vi.fn()
 const isEvidenceStudioEnabled = vi.fn()
 const evidenceReviewProps = vi.fn()
@@ -28,6 +29,7 @@ vi.mock('@/lib/hooks/use-studio', () => ({
   useCreateStudioWorkflowRun: (...args: unknown[]) => useCreateStudioWorkflowRun(...args),
   useApproveStudioWorkflowRun: (...args: unknown[]) => useApproveStudioWorkflowRun(...args),
   useUpdateStudioArtifact: (...args: unknown[]) => useUpdateStudioArtifact(...args),
+  useRegenerateStudioExport: (...args: unknown[]) => useRegenerateStudioExport(...args),
 }))
 
 vi.mock('@/lib/features', async importOriginal => {
@@ -140,6 +142,11 @@ describe('ArtifactRail', () => {
     useUpdateStudioArtifact.mockReturnValue({
       mutateAsync: updateArtifact,
       isPending: false,
+    })
+    useRegenerateStudioExport.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      variables: undefined,
     })
     useComposeVideoOverview.mockReturnValue({
       mutateAsync: vi.fn(),

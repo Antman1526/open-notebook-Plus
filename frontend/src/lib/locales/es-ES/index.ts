@@ -1300,6 +1300,10 @@ export const esES = {
       folder: "Carpeta",
       openFolder: "Abrir la carpeta de {label}",
       browserDownloadPrefix: "Descarga del navegador - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Generar {label}",
+      generating: "Generando…",
     },
   },
   setupBanner: {

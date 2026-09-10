@@ -1298,6 +1298,10 @@ export const ptBR = {
       folder: "Pasta",
       openFolder: "Abrir pasta de {label}",
       browserDownloadPrefix: "Download do navegador - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Gerar {label}",
+      generating: "Gerando…",
     },
   },
   setupBanner: {

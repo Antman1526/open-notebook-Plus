@@ -1297,6 +1297,10 @@ export const zhCN = {
       folder: "文件夹",
       openFolder: "打开{label}所在文件夹",
       browserDownloadPrefix: "浏览器下载 - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "生成{label}",
+      generating: "生成中…",
     },
   },
   setupBanner: {

@@ -1,7 +1,30 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/lib/api/studio', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api/studio')>('@/lib/api/studio')
+  return {
+    ...actual,
+    studioApi: {
+      ...actual.studioApi,
+      regenerateExport: vi.fn(),
+    },
+  }
+})
+
+import { studioApi } from '@/lib/api/studio'
 import { ArtifactExportMenu } from './ArtifactExportMenu'
+
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    React.createElement(QueryClientProvider, { client: queryClient }, ui),
+  )
+}
 
 const exportTranslations: Record<string, string> = {
   'studio.export.regionLabel': 'Artifact exports',
@@ -22,6 +45,8 @@ const exportTranslations: Record<string, string> = {
   'studio.export.folder': 'Folder',
   'studio.export.openFolder': 'Open {label} folder',
   'studio.export.browserDownloadPrefix': 'Browser download - ',
+  'studio.export.generate': 'Generate {label}',
+  'studio.export.generating': 'Generating…',
 }
 
 vi.mock('@/lib/hooks/use-translation', () => ({
@@ -31,6 +56,21 @@ vi.mock('@/lib/hooks/use-translation', () => ({
     setLanguage: vi.fn(),
   }),
 }))
+
+const coursePackArtifact = {
+  id: 'artifact:1',
+  notebook_id: 'notebook:alpha',
+  artifact_type: 'course_pack' as const,
+  title: 'Onboarding Course Pack',
+  status: 'completed' as const,
+  source_ids: ['source:one'],
+  output_payload: {},
+  citations: [],
+  export_paths: {
+    docx: '/exports/onboarding.docx',
+    markdown: '/exports/onboarding.md',
+  },
+}
 
 const artifact = {
   id: 'studio_artifact:exports',
@@ -51,8 +91,12 @@ const artifact = {
 }
 
 describe('ArtifactExportMenu', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('groups persisted exports by their intended use with local-file actions', () => {
-    render(<ArtifactExportMenu artifact={artifact} markdown="# Quarterly Evidence Report" />)
+    renderWithQueryClient(<ArtifactExportMenu artifact={artifact} markdown="# Quarterly Evidence Report" />)
 
     expect(screen.getByRole('region', { name: 'Artifact exports' })).toBeInTheDocument()
     expect(screen.getByText('Editable')).toBeInTheDocument()
@@ -74,7 +118,7 @@ describe('ArtifactExportMenu', () => {
   })
 
   it('keeps source downloads reachable when a completed artifact has not persisted files yet', () => {
-    render(
+    renderWithQueryClient(
       <ArtifactExportMenu
         artifact={{ ...artifact, export_paths: {} }}
         markdown="# Quarterly Evidence Report"
@@ -95,7 +139,7 @@ describe('ArtifactExportMenu', () => {
   })
 
   it('renders a persisted EPUB export with the EPUB label in the Bundle group', () => {
-    render(
+    renderWithQueryClient(
       <ArtifactExportMenu
         artifact={{
           ...artifact,
@@ -118,7 +162,7 @@ describe('ArtifactExportMenu', () => {
   })
 
   it('renders EPUB and PDF entries with their labels under the translated group headings', () => {
-    render(
+    renderWithQueryClient(
       <ArtifactExportMenu
         artifact={{
           ...artifact,
@@ -139,5 +183,41 @@ describe('ArtifactExportMenu', () => {
 
     expect(within(bundleGroup as HTMLElement).getByText('EPUB')).toBeInTheDocument()
     expect(within(visualGroup as HTMLElement).getByText('PDF')).toBeInTheDocument()
+  })
+
+  it('shows a Generate PDF button for a course pack missing pdf and calls the API on click', async () => {
+    vi.mocked(studioApi.regenerateExport).mockResolvedValue({
+      ...coursePackArtifact,
+      export_paths: { ...coursePackArtifact.export_paths, pdf: '/exports/onboarding.pdf' },
+    })
+
+    renderWithQueryClient(
+      <ArtifactExportMenu artifact={coursePackArtifact} markdown="# Onboarding Course Pack" />,
+    )
+
+    const generatePdf = screen.getByRole('button', { name: 'Generate PDF' })
+    expect(generatePdf).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate EPUB' })).toBeInTheDocument()
+
+    fireEvent.click(generatePdf)
+
+    await waitFor(() => {
+      expect(studioApi.regenerateExport).toHaveBeenCalledWith('artifact:1', 'pdf')
+    })
+  })
+
+  it('does not show a Generate PDF button once pdf is already present', () => {
+    renderWithQueryClient(
+      <ArtifactExportMenu
+        artifact={{
+          ...coursePackArtifact,
+          export_paths: { ...coursePackArtifact.export_paths, pdf: '/exports/onboarding.pdf' },
+        }}
+        markdown="# Onboarding Course Pack"
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Generate PDF' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate EPUB' })).toBeInTheDocument()
   })
 })

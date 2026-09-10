@@ -923,6 +923,163 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
     return export_paths
 
 
+# v0.8.119 — single-format export regeneration for POST
+# /studio/artifacts/{artifact_id}/exports/{format}. Reuses the same
+# per-format writers and document-building step as `persist_artifact_exports`
+# above rather than duplicating them.
+def _document_for_artifact(artifact: StudioArtifact):
+    try:
+        return parse_payload_document(artifact.artifact_type, artifact.output_payload)
+    except (InvalidInputError, ValueError):
+        return None
+
+
+def _producible_export_formats(artifact: StudioArtifact) -> set[str]:
+    """The export formats `persist_artifact_exports` can produce for this artifact.
+
+    Derived from the same per-format writers `persist_artifact_exports` calls
+    (the course-pack block, `_persist_office_exports`, `_persist_visual_exports`,
+    and the data-table CSV branch) so it stays in sync with that function
+    instead of duplicating a separately maintained list.
+    """
+    formats = {"markdown", "json"}
+    if artifact.artifact_type in _COURSE_PACK_ARTIFACT_TYPES:
+        formats.update({"docx", "epub", "pdf"})
+        return formats
+
+    document = _document_for_artifact(artifact)
+    if isinstance(document, (GenericDocument, ResearchRunDocument)):
+        formats.add("docx")
+    elif isinstance(document, DataTableDocument):
+        formats.add("xlsx")
+    elif isinstance(document, SlideDeckDocument):
+        formats.update({"pptx", "pdf"})
+    elif isinstance(document, InfographicDocument):
+        formats.update({"png", "pdf"})
+
+    if artifact.artifact_type == "data_table":
+        content = str((artifact.output_payload or {}).get("content") or "")
+        if _data_table_csv(content):
+            formats.add("csv")
+    return formats
+
+
+def persist_single_export(artifact: StudioArtifact, export_format: str) -> str | None:
+    """Regenerate exactly one export format for an already-generated artifact.
+
+    Reuses `persist_artifact_exports`'s per-format writers and its
+    document-building step (`parse_payload_document` / the markdown stored in
+    `output_payload["content"]`), but rebuilds only `export_format`. Writes
+    over the artifact's existing path for that format when one is already on
+    record, so a link a caller already has stays valid; otherwise allocates a
+    fresh path with the same `_artifact_export_path` convention
+    `persist_artifact_exports` uses. Returns ``None`` when `export_format` is
+    not producible for this artifact (the caller should treat that as an
+    unsupported-format request).
+    """
+    if export_format not in _producible_export_formats(artifact):
+        return None
+
+    payload = artifact.output_payload if isinstance(artifact.output_payload, dict) else {}
+    content = str(payload.get("content") or "")
+
+    export_dir = _artifact_export_dir()
+    export_dir.mkdir(parents=True, exist_ok=True)
+
+    artifact_slug = _artifact_export_slug(artifact.id, fallback="artifact")
+    title_slug = _artifact_export_slug(artifact.title, fallback=artifact.artifact_type)
+    stem = f"{artifact_slug}-{title_slug}"
+
+    existing = artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+
+    def _target(key: str, suffix: str, *, stem_suffix: str = "") -> Path:
+        current = existing.get(key)
+        if current:
+            return Path(current)
+        return _artifact_export_path(export_dir, f"{stem}{stem_suffix}", suffix)
+
+    if export_format == "markdown":
+        path = _target("markdown", ".md")
+        path.write_text(_artifact_markdown_export(artifact, content), encoding="utf-8")
+        return str(path)
+
+    if export_format == "json":
+        path = _target("json", ".json")
+        path.write_text(
+            json.dumps(_artifact_export_payload(artifact), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return str(path)
+
+    if export_format == "csv":
+        csv_text = _data_table_csv(content)
+        if not csv_text:
+            return None
+        path = _target("csv", ".csv", stem_suffix="-data-table")
+        path.write_text(csv_text, encoding="utf-8")
+        return str(path)
+
+    document = _document_for_artifact(artifact)
+    if document is None:
+        return None
+
+    if export_format == "docx":
+        if not isinstance(document, (GenericDocument, CoursePackDocument, ResearchRunDocument)):
+            return None
+        path = _target("docx", ".docx")
+        export_document(document, path)
+        return str(path)
+
+    if export_format == "epub":
+        if not isinstance(document, CoursePackDocument):
+            return None
+        path = _target("epub", ".epub")
+        write_course_pack_epub(document, path)
+        return str(path)
+
+    if export_format == "xlsx":
+        if not isinstance(document, DataTableDocument):
+            return None
+        path = _target("xlsx", ".xlsx")
+        export_spreadsheet(document, path)
+        return str(path)
+
+    if export_format == "pdf":
+        if isinstance(document, CoursePackDocument):
+            path = _target("pdf", ".pdf")
+            write_course_pack_pdf(document, path)
+            return str(path)
+        if isinstance(document, SlideDeckDocument):
+            pptx_path = _target("pptx", ".pptx")
+            pdf_path = _target("pdf", ".pdf")
+            export_slide_deck(document, pptx_path, pdf_path)
+            return str(pdf_path)
+        if isinstance(document, InfographicDocument):
+            png_path = _target("png", ".png")
+            pdf_path = _target("pdf", ".pdf")
+            export_infographic(document, png_path, pdf_path)
+            return str(pdf_path)
+        return None
+
+    if export_format == "pptx":
+        if not isinstance(document, SlideDeckDocument):
+            return None
+        pptx_path = _target("pptx", ".pptx")
+        pdf_path = _target("pdf", ".pdf")
+        export_slide_deck(document, pptx_path, pdf_path)
+        return str(pptx_path)
+
+    if export_format == "png":
+        if not isinstance(document, InfographicDocument):
+            return None
+        png_path = _target("png", ".png")
+        pdf_path = _target("pdf", ".pdf")
+        export_infographic(document, png_path, pdf_path)
+        return str(png_path)
+
+    return None
+
+
 def _brief(exc: BaseException) -> str:
     """Truncate exception text for safe inclusion in user-visible warnings.
 

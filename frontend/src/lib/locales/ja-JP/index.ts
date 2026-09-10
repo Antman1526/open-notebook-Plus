@@ -1297,6 +1297,10 @@ export const jaJP = {
       folder: "フォルダ",
       openFolder: "{label} のフォルダを開く",
       browserDownloadPrefix: "ブラウザダウンロード - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "{label}を生成",
+      generating: "生成中…",
     },
   },
   setupBanner: {

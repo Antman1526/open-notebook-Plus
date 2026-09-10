@@ -1297,6 +1297,10 @@ export const zhTW = {
       folder: "資料夾",
       openFolder: "開啟{label}資料夾",
       browserDownloadPrefix: "瀏覽器下載 - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "產生{label}",
+      generating: "產生中…",
     },
   },
   setupBanner: {

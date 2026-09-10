@@ -1299,6 +1299,10 @@ export const caES = {
       folder: "Carpeta",
       openFolder: "Obre la carpeta de {label}",
       browserDownloadPrefix: "Baixada del navegador - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Genera {label}",
+      generating: "Generant…",
     },
   },
   setupBanner: {

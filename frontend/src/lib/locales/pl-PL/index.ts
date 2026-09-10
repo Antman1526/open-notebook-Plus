@@ -1298,6 +1298,10 @@ export const plPL = {
       folder: "Folder",
       openFolder: "Otwórz folder {label}",
       browserDownloadPrefix: "Pobieranie w przeglądarce - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Generuj {label}",
+      generating: "Generowanie…",
     },
   },
   setupBanner: {

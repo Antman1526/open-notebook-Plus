@@ -1298,6 +1298,10 @@ export const bnIN = {
       folder: "ফোল্ডার",
       openFolder: "{label} ফোল্ডার খুলুন",
       browserDownloadPrefix: "ব্রাউজার ডাউনলোড - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "{label} তৈরি করুন",
+      generating: "তৈরি হচ্ছে…",
     },
   },
   setupBanner: {

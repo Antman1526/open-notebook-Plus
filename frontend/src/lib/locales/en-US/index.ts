@@ -1319,6 +1319,10 @@ export const enUS = {
       folder: "Folder",
       openFolder: "Open {label} folder",
       browserDownloadPrefix: "Browser download - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Generate {label}",
+      generating: "Generating…",
     },
   },
   setupBanner: {

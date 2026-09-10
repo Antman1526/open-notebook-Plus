@@ -305,4 +305,15 @@ export const studioApi = {
     )
     return response.data
   },
+  // v0.8.119 — regenerate a single persisted export format (e.g. a course
+  // pack's EPUB or PDF) without regenerating the whole artifact.
+  regenerateExport: async (
+    artifactId: string,
+    format: StudioArtifactExportFormat,
+  ): Promise<StudioArtifact> => {
+    const response = await apiClient.post<StudioArtifact>(
+      `/studio/artifacts/${encodeURIComponent(artifactId)}/exports/${encodeURIComponent(format)}`,
+    )
+    return response.data
+  },
 }

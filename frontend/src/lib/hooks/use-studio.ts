@@ -23,6 +23,7 @@ import {
   studioApi,
   StudioArtifact,
   StudioArtifactCreate,
+  StudioArtifactExportFormat,
   StudioArtifactUpdate,
   StudioWorkflowRun,
   StudioWorkflowRunCreate,
@@ -409,6 +410,34 @@ export function useApproveStudioWorkflowRun(notebookId: string) {
     onSuccess: (run) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.studioArtifacts(notebookId) })
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.studioWorkflowRuns(run.artifact_id) })
+    },
+    onError: (error) => {
+      toast({
+        title: t('common.error'),
+        description: getApiErrorMessage(error, t),
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+// v0.8.119 — regenerate a single persisted export format (e.g. a course
+// pack's missing EPUB or PDF). ArtifactExportMenu only has the artifact
+// itself, not a notebookId, so this invalidates the same broad/per-artifact
+// keys useGenerateStudioArtifact and useUpdateStudioArtifact already use.
+export function useRegenerateStudioExport() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const { t } = useTranslation()
+  return useMutation<
+    StudioArtifact,
+    Error,
+    { artifactId: string; format: StudioArtifactExportFormat }
+  >({
+    mutationFn: ({ artifactId, format }) => studioApi.regenerateExport(artifactId, format),
+    onSuccess: (artifact) => {
+      queryClient.invalidateQueries({ queryKey: ['studio', 'artifacts'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.studioArtifactRevisions(artifact.id) })
     },
     onError: (error) => {
       toast({

@@ -29,13 +29,14 @@ vi.mock('@/lib/api/studio', () => ({
     createWorkflowRun: vi.fn(),
     listWorkflowRuns: vi.fn(),
     approveWorkflowRun: vi.fn(),
+    regenerateExport: vi.fn(),
   },
 }))
 
 import { notebooksApi } from '@/lib/api/notebooks'
 import { sourcesApi } from '@/lib/api/sources'
 import { studioApi } from '@/lib/api/studio'
-import { useStudioCoursePack } from './use-studio'
+import { useRegenerateStudioExport, useStudioCoursePack } from './use-studio'
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({
@@ -220,5 +221,33 @@ describe('useStudioCoursePack', () => {
     })
     expect(studioApi.generateArtifact).not.toHaveBeenCalled()
     expect(response?.generationStatus).toBe('queued')
+  })
+})
+
+describe('useRegenerateStudioExport', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the regenerate-export API with the artifact id and format', async () => {
+    vi.mocked(studioApi.regenerateExport).mockResolvedValue({
+      id: 'artifact:1',
+      notebook_id: 'notebook:course',
+      artifact_type: 'course_pack',
+      title: 'Onboarding Course Pack',
+      status: 'completed',
+      source_ids: [],
+      output_payload: {},
+      citations: [],
+      export_paths: { pdf: '/exports/onboarding.pdf' },
+    })
+
+    const { result } = renderHook(() => useRegenerateStudioExport(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ artifactId: 'artifact:1', format: 'pdf' })
+    })
+
+    expect(studioApi.regenerateExport).toHaveBeenCalledWith('artifact:1', 'pdf')
   })
 })

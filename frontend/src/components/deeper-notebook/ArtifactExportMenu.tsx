@@ -20,8 +20,16 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { useRegenerateStudioExport } from '@/lib/hooks/use-studio'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import type { StudioArtifact, StudioArtifactExportFormat } from '@/lib/api/studio'
+
+// v0.8.119 — course-pack artifacts can be missing EPUB/PDF (e.g. persisted
+// before v0.8.117, or a prior export attempt failed) without needing the
+// whole artifact regenerated. Only these two formats are offered here since
+// they're the only course-pack exports the single-format endpoint targets.
+const COURSE_PACK_ARTIFACT_TYPES = new Set(['course_pack', 'training_guide'])
+const GENERATABLE_COURSE_PACK_FORMATS: StudioArtifactExportFormat[] = ['epub', 'pdf']
 
 type ExportGroup = 'editable' | 'visual' | 'data' | 'source' | 'bundle'
 type Translate = (key: string) => string
@@ -203,6 +211,11 @@ export function ArtifactExportMenu({
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const exports = artifactExports(artifact, markdown, t)
   const browserDownloadPrefix = t('studio.export.browserDownloadPrefix')
+  const regenerateExport = useRegenerateStudioExport()
+  const exportPaths = artifact.export_paths ?? {}
+  const missingCoursePackFormats = COURSE_PACK_ARTIFACT_TYPES.has(artifact.artifact_type)
+    ? GENERATABLE_COURSE_PACK_FORMATS.filter((format) => !exportPaths[format])
+    : []
 
   useEffect(() => () => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
@@ -230,6 +243,29 @@ export function ArtifactExportMenu({
             {t('studio.export.availableCount').replace('{count}', String(exports.length))}
           </span>
         </div>
+        {missingCoursePackFormats.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {missingCoursePackFormats.map((format) => {
+              const label = exportLabel(format)
+              const isPending = regenerateExport.isPending
+                && regenerateExport.variables?.format === format
+              return (
+                <Button
+                  key={format}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => regenerateExport.mutate({ artifactId: artifact.id, format })}
+                >
+                  {isPending
+                    ? t('studio.export.generating')
+                    : t('studio.export.generate').replace('{label}', label)}
+                </Button>
+              )
+            })}
+          </div>
+        )}
         <div className="mt-2 divide-y">
           {EXPORT_GROUP_META.map(({ id, labelKey, Icon }) => {
             const groupExports = exports.filter((item) => item.group === id)

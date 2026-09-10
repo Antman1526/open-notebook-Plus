@@ -1297,6 +1297,10 @@ export const ruRU = {
       folder: "Папка",
       openFolder: "Открыть папку {label}",
       browserDownloadPrefix: "Загрузка браузера - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "Создать {label}",
+      generating: "Создание…",
     },
   },
   setupBanner: {

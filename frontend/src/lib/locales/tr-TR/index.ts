@@ -1297,6 +1297,10 @@ export const trTR = {
       folder: "Klasör",
       openFolder: "{label} klasörünü aç",
       browserDownloadPrefix: "Tarayıcı indirmesi - ",
+      // v0.8.119 — "Generate EPUB"/"Generate PDF" buttons for course packs
+      // missing those exports.
+      generate: "{label} Oluştur",
+      generating: "Oluşturuluyor…",
     },
   },
   setupBanner: {
