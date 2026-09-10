@@ -5,10 +5,16 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 import reportlab.rl_config as rl_config
+from reportlab.pdfbase import pdfmetrics as rl_pdfmetrics
 
+import deeper_notebook.studio.exporters.pdf as pdf_module
 from deeper_notebook.domain.notebook import StudioArtifact
-from deeper_notebook.studio.exporters.pdf import write_course_pack_pdf
+from deeper_notebook.studio.exporters.pdf import (
+    _wrap_script_runs,
+    write_course_pack_pdf,
+)
 from deeper_notebook.studio.generation import persistence as persistence_module
 from deeper_notebook.studio.generation.persistence import persist_artifact_exports
 from deeper_notebook.studio.payloads import build_structured_payload
@@ -240,3 +246,149 @@ def test_pdf_export_failure_still_leaves_docx_and_epub(tmp_path: Path, monkeypat
     assert Path(paths["docx"]).exists()
     assert Path(paths["epub"]).exists()
     assert "pdf" not in artifact.export_paths
+
+
+def test_cyrillic_and_greek_text_renders_without_raising(tmp_path: Path) -> None:
+    document = _course_pack(
+        second_module_content=(
+            "Кириллица: Привет, мир! И немного Ελληνικά: Καλημέρα κόσμε."
+        )
+    )
+    path = tmp_path / "cyrillic-greek.pdf"
+
+    write_course_pack_pdf(document, path)  # must not raise
+
+    assert path.read_bytes()[:5] == b"%PDF-"
+
+    pdf_module._resolve_fonts()
+    if pdf_module._BODY_FONT == "Helvetica":
+        pytest.skip("no system Unicode TTF candidate found on this host")
+
+    original_compression = rl_config.pageCompression
+    rl_config.pageCompression = 0
+    try:
+        uncompressed_path = tmp_path / "cyrillic-greek-uncompressed.pdf"
+        write_course_pack_pdf(document, uncompressed_path)
+        uncompressed_bytes = uncompressed_path.read_bytes()
+    finally:
+        rl_config.pageCompression = original_compression
+
+    # reportlab's TTFont subsetting renames `/BaseFont` to the font's own
+    # internal PostScript name (e.g. "ArialUnicodeMS"), never to the name it
+    # was registered under ("DNBody") — so the registered name itself is not
+    # a reliable string to search for. `/FontFile2` is: it only appears when
+    # a real TrueType font (not a base-14 font) was embedded, which is
+    # exactly what a resolved body font candidate causes.
+    assert b"/FontFile2" in uncompressed_bytes
+
+
+def test_cjk_text_renders_and_uses_cid_fonts(tmp_path: Path) -> None:
+    document = _course_pack(
+        second_module_content=(
+            "Chinese: 你好，世界。\n\nJapanese: こんにちは、世界。\n\nKorean: 안녕하세요, 세계."
+        )
+    )
+    path = tmp_path / "cjk.pdf"
+
+    write_course_pack_pdf(document, path)  # must not raise
+
+    assert path.read_bytes()[:5] == b"%PDF-"
+
+    # CID fonts need no font file (they are always available), so this
+    # assertion never needs to skip.
+    original_compression = rl_config.pageCompression
+    rl_config.pageCompression = 0
+    try:
+        uncompressed_path = tmp_path / "cjk-uncompressed.pdf"
+        write_course_pack_pdf(document, uncompressed_path)
+        uncompressed_bytes = uncompressed_path.read_bytes()
+    finally:
+        rl_config.pageCompression = original_compression
+
+    assert b"STSong-Light" in uncompressed_bytes
+    assert b"HeiseiMin-W3" in uncompressed_bytes
+    assert b"HYSMyeongJo-Medium" in uncompressed_bytes
+
+
+def test_wrap_script_runs_wraps_only_the_cjk_portion() -> None:
+    result = _wrap_script_runs("Hello 世界")
+
+    assert result == 'Hello <font name="STSong-Light">世界</font>'
+
+
+def test_wrap_script_runs_escapes_before_wrapping() -> None:
+    # `&` must be escaped inside a run that goes on to get wrapped in a
+    # `<font>` tag, and it must be escaped *before* the tag is inserted
+    # around it (raw `&` inside a `<font name="...">` run would corrupt the
+    # markup reportlab parses).
+    result = _wrap_script_runs("A & 世界")
+
+    assert result == 'A &amp; <font name="STSong-Light">世界</font>'
+
+
+def test_pdf_font_env_override_missing_file_falls_through(
+    tmp_path: Path, monkeypatch
+) -> None:
+    missing_font = tmp_path / "does-not-exist.ttf"
+    assert not missing_font.exists()
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_PDF_FONT", str(missing_font))
+    monkeypatch.setattr(pdf_module, "_FONTS_RESOLVED", False)
+    monkeypatch.setattr(pdf_module, "_BODY_FONT", "Helvetica")
+    monkeypatch.setattr(pdf_module, "_BODY_FONT_BOLD", "Helvetica-Bold")
+
+    pdf_module._resolve_fonts()  # must not raise despite the missing override
+
+    path = tmp_path / "env-override-missing.pdf"
+    write_course_pack_pdf(_course_pack(), path)  # must not raise either
+
+    assert path.read_bytes()[:5] == b"%PDF-"
+
+
+def test_bold_falls_back_to_the_unicode_body_font_not_helvetica(monkeypatch, tmp_path):
+    """v0.8.119 — a family with no bold file must NOT leave headings on
+    Helvetica-Bold: that renders Cyrillic/Greek headings as boxes. The
+    regular Unicode face is used instead (bold weight is sacrificed)."""
+    import reportlab
+
+    import deeper_notebook.studio.exporters.pdf as pdf_module
+
+    # A real TTF with no bold sibling: reportlab's own bundled Vera.ttf.
+    vera = Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+    assert vera.is_file()
+
+    monkeypatch.setattr(pdf_module, "_FONTS_RESOLVED", False)
+    monkeypatch.setattr(pdf_module, "_BODY_FONT", "Helvetica")
+    monkeypatch.setattr(pdf_module, "_BODY_FONT_BOLD", "Helvetica-Bold")
+    monkeypatch.setattr(
+        pdf_module, "_body_font_candidates", lambda: [(str(vera), None)]
+    )
+
+    pdf_module._resolve_fonts()
+
+    assert pdf_module._BODY_FONT == "DNBody"
+    assert pdf_module._BODY_FONT_BOLD == "DNBody"
+    assert pdf_module._STYLES["Heading1"].fontName == "DNBody"
+
+
+def test_font_resolution_runs_once_per_process(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(pdf_module, "_FONTS_RESOLVED", False)
+    monkeypatch.setattr(pdf_module, "_BODY_FONT", "Helvetica")
+    monkeypatch.setattr(pdf_module, "_BODY_FONT_BOLD", "Helvetica-Bold")
+
+    calls: list[object] = []
+    original_register_font = rl_pdfmetrics.registerFont
+
+    def _spy(font):
+        calls.append(font)
+        return original_register_font(font)
+
+    monkeypatch.setattr(rl_pdfmetrics, "registerFont", _spy)
+
+    write_course_pack_pdf(_course_pack(), tmp_path / "first.pdf")
+    calls_after_first_run = len(calls)
+    assert calls_after_first_run > 0
+
+    write_course_pack_pdf(_course_pack(), tmp_path / "second.pdf")
+
+    assert len(calls) == calls_after_first_run
