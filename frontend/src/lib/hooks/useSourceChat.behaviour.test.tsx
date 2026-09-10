@@ -51,9 +51,10 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return function Wrapper({ children }: { children: React.ReactNode }) {
+  const Wrapper = function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client: qc }, children)
   }
+  return { Wrapper, qc }
 }
 
 async function renderReadyHook() {
@@ -64,12 +65,31 @@ async function renderReadyHook() {
     id: SESSION_ID, title: 'Session', messages: [],
   } as any)
 
-  const hook = renderHook(() => useSourceChat(SOURCE_ID), { wrapper: makeWrapper() })
+  const { Wrapper, qc } = makeWrapper()
+  const hook = renderHook(() => useSourceChat(SOURCE_ID), { wrapper: Wrapper })
   // Sessions load → auto-select → session fetch. Real timers here are fine;
   // fake timers are installed per test after this settles.
   await waitFor(() => expect(hook.result.current.currentSessionId).toBe(SESSION_ID))
   await waitFor(() => expect(sourceChatApi.getSession).toHaveBeenCalled())
-  return hook
+  return { ...hook, qc }
+}
+
+async function stallWithPartial(result: { current: ReturnType<typeof useSourceChat> }, text: string) {
+  const harness = createSseStream()
+  vi.mocked(sourceChatApi.sendMessage).mockResolvedValue(harness.stream as any)
+  let sendPromise!: Promise<void>
+  await act(async () => {
+    sendPromise = result.current.sendMessage(text)
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  await act(async () => {
+    harness.push({ type: 'ai_message_delta', content: 'partial' })
+    await vi.advanceTimersByTimeAsync(20)
+  })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+    await sendPromise
+  })
 }
 
 describe('useSourceChat (behavioural)', () => {
@@ -212,6 +232,55 @@ describe('useSourceChat (behavioural)', () => {
     expect(harness.cancelled).toBe(true)
     expect(toastError).toHaveBeenCalledTimes(1)
     expect(toastError.mock.calls[0][0]).toBe('apiErrors.streamStalled')
+  })
+
+  it('keeps the interrupted partial across a refetch that returns unchanged server data (v0.8.118)', async () => {
+    const { result, qc } = await renderReadyHook()
+    vi.useFakeTimers()
+    stubRafWithTimeout()
+
+    await stallWithPartial(result, 'q')
+    expect(result.current.messages.find(m => m.type === 'ai')).toMatchObject({ content: 'partial', interrupted: true })
+
+    // A later refetch (window focus, invalidation) that yields the same
+    // server list must not wipe the local interrupted message: react-query's
+    // structural sharing keeps the data reference stable, so the sync
+    // effect does not re-run.
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: ['sourceChatSession', SOURCE_ID, SESSION_ID] })
+      await vi.advanceTimersByTimeAsync(20)
+    })
+    expect(result.current.messages.map(m => [m.type, m.content])).toEqual([
+      ['human', 'q'],
+      ['ai', 'partial'],
+    ])
+  })
+
+  it('replaces the interrupted partial once the server list actually changes (v0.8.118)', async () => {
+    const { result, qc } = await renderReadyHook()
+    vi.useFakeTimers()
+    stubRafWithTimeout()
+
+    await stallWithPartial(result, 'q')
+    expect(result.current.messages.some(m => m.interrupted)).toBe(true)
+
+    // The next completed turn lands server-side: the canonical list wins.
+    vi.mocked(sourceChatApi.getSession).mockResolvedValue({
+      id: SESSION_ID, title: 'Session',
+      messages: [
+        { id: 'm1', type: 'human', content: 'q' },
+        { id: 'm2', type: 'ai', content: 'full answer' },
+      ],
+    } as any)
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: ['sourceChatSession', SOURCE_ID, SESSION_ID] })
+      await vi.advanceTimersByTimeAsync(20)
+    })
+    expect(result.current.messages.map(m => [m.id, m.content])).toEqual([
+      ['m1', 'q'],
+      ['m2', 'full answer'],
+    ])
+    expect(result.current.messages.some(m => m.interrupted)).toBe(false)
   })
 
   it('surfaces a server error event through the generic failure toast, not the stall toast', async () => {

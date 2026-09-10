@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { stubRafWithTimeout } from '@/test/stream-harness'
 import { StreamStallError } from '@/lib/utils/stream-stall'
+import { QUERY_KEYS } from '@/lib/api/query-client'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
 vi.mock('sonner', () => ({
@@ -71,7 +72,12 @@ function makeStream(events: Event[], thenThrow?: unknown) {
       await new Promise((resolve) => setTimeout(resolve, EVENT_GAP_MS))
       yield event
     }
-    if (thenThrow) throw thenThrow
+    if (thenThrow) {
+      // A stall is preceded by silence; give the rAF flush time to land
+      // the last token before the error arrives, as it would in reality.
+      await new Promise((resolve) => setTimeout(resolve, EVENT_GAP_MS))
+      throw thenThrow
+    }
   }
 }
 
@@ -79,9 +85,10 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return function Wrapper({ children }: { children: React.ReactNode }) {
+  const Wrapper = function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client: qc }, children)
   }
+  return { Wrapper, qc }
 }
 
 async function renderReadyHook() {
@@ -91,6 +98,7 @@ async function renderReadyHook() {
   vi.mocked(chatApi.getSession).mockResolvedValue({ id: SESSION_ID, title: 'Session', messages: [] } as any)
   vi.mocked(chatApi.buildContext).mockResolvedValue({ context: { sources: [], notes: [] }, token_count: 0, char_count: 0 } as any)
 
+  const { Wrapper, qc } = makeWrapper()
   const hook = renderHook(
     () => useNotebookChat({
       notebookId: NOTEBOOK_ID,
@@ -99,11 +107,11 @@ async function renderReadyHook() {
       contextSelections: { sources: {}, notes: {} } as any,
       contextCountsEnabled: false,
     }),
-    { wrapper: makeWrapper() },
+    { wrapper: Wrapper },
   )
   await waitFor(() => expect(hook.result.current.currentSessionId).toBe(SESSION_ID))
   await waitFor(() => expect(chatApi.getSession).toHaveBeenCalled())
-  return hook
+  return { ...hook, qc }
 }
 
 describe('useNotebookChat (behavioural)', () => {
@@ -207,6 +215,51 @@ describe('useNotebookChat (behavioural)', () => {
     expect(chatApi.streamMessage).toHaveBeenCalledTimes(2)
     expect(vi.mocked(chatApi.streamMessage).mock.calls[1][0]).toMatchObject({ message: 'stall with text' })
     expect(result.current.messages.find(m => m.id === 'm2')?.content).toBe('second try')
+  })
+
+  it('keeps the interrupted partial across an unchanged refetch and drops it when the server list changes (v0.8.118)', async () => {
+    const { result, qc } = await renderReadyHook()
+    vi.useFakeTimers()
+    stubRafWithTimeout()
+
+    vi.mocked(chatApi.streamMessage).mockImplementation(makeStream([
+      { type: 'start', session_id: SESSION_ID },
+      { type: 'token', content: 'partial' },
+    ], new StreamStallError(60_000)) as any)
+    await act(async () => {
+      const p = result.current.sendMessage('q')
+      await vi.advanceTimersByTimeAsync(10 * EVENT_GAP_MS)
+      await p
+    })
+    expect(result.current.messages.find(m => m.type === 'ai')).toMatchObject({ content: 'partial', interrupted: true })
+
+    // Unchanged server data → structural sharing → sync effect does not run.
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: QUERY_KEYS.notebookChatSession(SESSION_ID) })
+      await vi.advanceTimersByTimeAsync(20)
+    })
+    expect(result.current.messages.map(m => [m.type, m.content])).toEqual([
+      ['human', 'q'],
+      ['ai', 'partial'],
+    ])
+
+    // Changed server data (a completed turn) → canonical list replaces it.
+    vi.mocked(chatApi.getSession).mockResolvedValue({
+      id: SESSION_ID, title: 'Session',
+      messages: [
+        { id: 'm1', type: 'human', content: 'q' },
+        { id: 'm2', type: 'ai', content: 'full answer' },
+      ],
+    } as any)
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: QUERY_KEYS.notebookChatSession(SESSION_ID) })
+      await vi.advanceTimersByTimeAsync(20)
+    })
+    expect(result.current.messages.map(m => [m.id, m.content])).toEqual([
+      ['m1', 'q'],
+      ['m2', 'full answer'],
+    ])
+    expect(result.current.messages.some(m => m.interrupted)).toBe(false)
   })
 
   it('removes the empty placeholder and optimistic bubble when a stall produced nothing', async () => {
