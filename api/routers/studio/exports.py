@@ -55,8 +55,11 @@ async def regenerate_studio_artifact_export(
             detail=f"Unsupported export format: {format!r}",
         )
 
+    canonical_format = persistence.canonical_export_format(format)
     export_paths = dict(artifact.export_paths or {})
-    export_paths[format] = path
+    export_paths[canonical_format] = path
+    if format != canonical_format:
+        export_paths[format] = path
     artifact.export_paths = export_paths
     await artifact.save()
     return _artifact_response(artifact)

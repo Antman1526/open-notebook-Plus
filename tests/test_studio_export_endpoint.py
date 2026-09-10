@@ -143,3 +143,28 @@ def test_regenerate_export_returns_409_when_no_generated_content_yet(monkeypatch
 
     assert response.status_code == 409
     regenerate.assert_not_called()
+
+
+def test_regenerate_export_with_format_alias(monkeypatch):
+    fake_cls = _install_fake_artifacts(monkeypatch)
+    fake_cls.records["studio_artifact:1"] = fake_cls(
+        id="studio_artifact:1",
+        notebook_id="notebook:alpha",
+        artifact_type="course_pack",
+        title="Onboarding Course Pack",
+        status="completed",
+        output_payload={"content": "# Onboarding Course Pack"},
+        export_paths={},
+    )
+    regenerate = MagicMock(return_value="/exports/onboarding-scorm.zip")
+    monkeypatch.setattr(persistence, "persist_single_export", regenerate)
+
+    response = _client().post("/api/studio/artifacts/studio_artifact:1/exports/scorm")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["export_paths"]["scorm_package"] == "/exports/onboarding-scorm.zip"
+    assert body["export_paths"]["scorm"] == "/exports/onboarding-scorm.zip"
+    regenerate.assert_called_once()
+    assert regenerate.call_args.args[1] == "scorm"
+

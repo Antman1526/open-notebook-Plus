@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import html
 import json
 import os
@@ -528,22 +529,66 @@ def _course_pack_xapi_statements(
     }
 
 
-def _write_course_pack_lms_packages(
+def _course_pack_asset_contents(
+    artifact: StudioArtifact,
+    content: str,
+    modules: list[dict[str, object]],
+) -> dict[str, str]:
+    return {
+        "instructor-guide.md": _artifact_markdown_export(artifact, content),
+        "learner-handout.md": _artifact_markdown_export(
+            artifact, _course_pack_learner_markdown(content)
+        ),
+        "module-checklist.json": json.dumps(
+            _course_pack_checklist_export(artifact, modules),
+            ensure_ascii=False,
+            indent=2,
+        ),
+        "assessment.md": _artifact_markdown_export(
+            artifact, _course_pack_assessment_markdown(content)
+        ),
+    }
+
+
+def _write_course_pack_scorm_package(
     *,
     artifact: StudioArtifact,
     content: str,
     modules: list[dict[str, object]],
     scorm_path: Path,
-    xapi_path: Path,
-    assets: dict[str, Path],
+    assets: dict[str, Path | str] | None = None,
 ) -> None:
     index_html = _course_pack_lms_index_html(artifact, content, modules)
+    resolved_assets: dict[str, Path | str] = (
+        assets
+        if assets is not None
+        else _course_pack_asset_contents(artifact, content, modules)
+    )
 
     with zipfile.ZipFile(scorm_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
         package.writestr("imsmanifest.xml", _course_pack_scorm_manifest(artifact))
         package.writestr("index.html", index_html)
-        for arcname, path in assets.items():
-            package.write(path, arcname)
+        for arcname, item in resolved_assets.items():
+            if isinstance(item, Path):
+                package.write(item, arcname)
+            else:
+                package.writestr(arcname, str(item))
+
+
+def _write_course_pack_xapi_package(
+    *,
+    artifact: StudioArtifact,
+    content: str,
+    modules: list[dict[str, object]],
+    xapi_path: Path,
+    assets: dict[str, Path | str] | None = None,
+) -> None:
+    index_html = _course_pack_lms_index_html(artifact, content, modules)
+    resolved_assets: dict[str, Path | str] = (
+        assets
+        if assets is not None
+        else _course_pack_asset_contents(artifact, content, modules)
+    )
 
     with zipfile.ZipFile(xapi_path, "w", compression=zipfile.ZIP_DEFLATED) as package:
         package.writestr("tincan.xml", _course_pack_tincan_xml(artifact))
@@ -556,8 +601,36 @@ def _write_course_pack_lms_packages(
                 indent=2,
             ),
         )
-        for arcname, path in assets.items():
-            package.write(path, arcname)
+        for arcname, item in resolved_assets.items():
+            if isinstance(item, Path):
+                package.write(item, arcname)
+            else:
+                package.writestr(arcname, str(item))
+
+
+def _write_course_pack_lms_packages(
+    *,
+    artifact: StudioArtifact,
+    content: str,
+    modules: list[dict[str, object]],
+    scorm_path: Path,
+    xapi_path: Path,
+    assets: dict[str, Path | str] | None = None,
+) -> None:
+    _write_course_pack_scorm_package(
+        artifact=artifact,
+        content=content,
+        modules=modules,
+        scorm_path=scorm_path,
+        assets=assets,
+    )
+    _write_course_pack_xapi_package(
+        artifact=artifact,
+        content=content,
+        modules=modules,
+        xapi_path=xapi_path,
+        assets=assets,
+    )
 
 
 def _set_visual_export_warning(
@@ -915,6 +988,13 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
             export_paths=export_paths,
         )
     )
+    content_hash = artifact_content_hash(artifact, content)
+    if isinstance(artifact.output_payload, dict):
+        export_hashes = dict(artifact.output_payload.get("export_hashes") or {})
+        for fmt in export_paths:
+            export_hashes[fmt] = content_hash
+        artifact.output_payload["export_hashes"] = export_hashes
+
     artifact.export_paths = export_paths
     json_path.write_text(
         json.dumps(_artifact_export_payload(artifact), ensure_ascii=False, indent=2),
@@ -934,34 +1014,147 @@ def _document_for_artifact(artifact: StudioArtifact):
         return None
 
 
-def _producible_export_formats(artifact: StudioArtifact) -> set[str]:
+_CANONICAL_FORMAT_ALIASES: dict[str, str] = {
+    "scorm": "scorm_package",
+    "xapi": "xapi_package",
+    "bundle": "research_bundle",
+    "svg": "svg_chart",
+    "checklist": "module_checklist",
+}
+
+
+def canonical_export_format(export_format: str) -> str:
+    """Resolve an export format name or alias to its canonical format string."""
+    clean = str(export_format or "").strip().lower()
+    return _CANONICAL_FORMAT_ALIASES.get(clean, clean)
+
+
+def producible_export_formats(
+    artifact: StudioArtifact,
+    *,
+    include_aliases: bool = True,
+) -> set[str]:
     """The export formats `persist_artifact_exports` can produce for this artifact.
 
     Derived from the same per-format writers `persist_artifact_exports` calls
-    (the course-pack block, `_persist_office_exports`, `_persist_visual_exports`,
-    and the data-table CSV branch) so it stays in sync with that function
-    instead of duplicating a separately maintained list.
+    so it stays in sync with that function instead of duplicating a separately
+    maintained list.
     """
     formats = {"markdown", "json"}
-    if artifact.artifact_type in _COURSE_PACK_ARTIFACT_TYPES:
-        formats.update({"docx", "epub", "pdf"})
-        return formats
-
     document = _document_for_artifact(artifact)
-    if isinstance(document, (GenericDocument, ResearchRunDocument)):
-        formats.add("docx")
-    elif isinstance(document, DataTableDocument):
-        formats.add("xlsx")
-    elif isinstance(document, SlideDeckDocument):
-        formats.update({"pptx", "pdf"})
-    elif isinstance(document, InfographicDocument):
-        formats.update({"png", "pdf"})
 
-    if artifact.artifact_type == "data_table":
-        content = str((artifact.output_payload or {}).get("content") or "")
-        if _data_table_csv(content):
-            formats.add("csv")
+    if artifact.artifact_type in _COURSE_PACK_ARTIFACT_TYPES:
+        formats.update(
+            {
+                "docx",
+                "epub",
+                "pdf",
+                "instructor_guide",
+                "learner_handout",
+                "module_checklist",
+                "assessment",
+                "scorm_package",
+                "xapi_package",
+            }
+        )
+        if document is not None:
+            formats.add("research_bundle")
+    else:
+        if isinstance(document, (GenericDocument, ResearchRunDocument)):
+            formats.add("docx")
+        elif isinstance(document, DataTableDocument):
+            formats.add("xlsx")
+        elif isinstance(document, SlideDeckDocument):
+            formats.update({"pptx", "pdf"})
+        elif isinstance(document, InfographicDocument):
+            formats.update({"png", "pdf"})
+
+        if document is not None:
+            formats.add("research_bundle")
+
+        if artifact.artifact_type == "data_table":
+            content = str((artifact.output_payload or {}).get("content") or "")
+            if _data_table_csv(content):
+                formats.add("csv")
+
+    payload = (
+        artifact.output_payload if isinstance(artifact.output_payload, dict) else {}
+    )
+    if isinstance(payload.get("chart"), dict):
+        try:
+            ChartDocument.model_validate(payload["chart"])
+            formats.add("svg_chart")
+        except (TypeError, ValueError):
+            pass
+
+    if include_aliases:
+        alias_matches = {
+            alias
+            for alias, canonical in _CANONICAL_FORMAT_ALIASES.items()
+            if canonical in formats
+        }
+        formats.update(alias_matches)
+
     return formats
+
+
+_producible_export_formats = producible_export_formats
+
+
+def artifact_content_hash(
+    artifact: StudioArtifact, content: str | None = None
+) -> str:
+    """Compute sha256 hash of the artifact content for staleness tracking."""
+    if content is None:
+        payload = (
+            artifact.output_payload
+            if isinstance(artifact.output_payload, dict)
+            else {}
+        )
+        content = str(payload.get("content") or "")
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def is_export_stale(artifact: StudioArtifact, export_format: str) -> bool:
+    """Return True if the recorded export for `export_format` is missing or out-of-date.
+
+    An export is considered stale when:
+      * No export path exists on the artifact for this format (or its alias).
+      * The file at the export path does not exist on disk.
+      * No export hash was recorded, or the recorded export hash does not match
+        the current artifact content hash.
+    """
+    canonical = canonical_export_format(export_format)
+    export_paths = (
+        artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+    )
+    path_str = export_paths.get(canonical) or export_paths.get(export_format)
+    if not path_str:
+        return True
+    if not Path(path_str).is_file():
+        return True
+
+    payload = (
+        artifact.output_payload if isinstance(artifact.output_payload, dict) else {}
+    )
+    hashes = payload.get("export_hashes")
+    if not isinstance(hashes, dict):
+        return True
+
+    recorded_hash = hashes.get(canonical) or hashes.get(export_format)
+    if not recorded_hash:
+        return True
+
+    current_hash = artifact_content_hash(artifact)
+    return recorded_hash != current_hash
+
+
+def get_stale_export_formats(artifact: StudioArtifact) -> list[str]:
+    """Return all recorded export formats that are currently stale."""
+    export_paths = (
+        artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+    )
+    return [fmt for fmt in export_paths if is_export_stale(artifact, fmt)]
 
 
 def persist_single_export(artifact: StudioArtifact, export_format: str) -> str | None:
@@ -977,10 +1170,13 @@ def persist_single_export(artifact: StudioArtifact, export_format: str) -> str |
     not producible for this artifact (the caller should treat that as an
     unsupported-format request).
     """
-    if export_format not in _producible_export_formats(artifact):
+    canonical = canonical_export_format(export_format)
+    if canonical not in producible_export_formats(artifact, include_aliases=False):
         return None
 
-    payload = artifact.output_payload if isinstance(artifact.output_payload, dict) else {}
+    payload = (
+        artifact.output_payload if isinstance(artifact.output_payload, dict) else {}
+    )
     content = str(payload.get("content") or "")
 
     export_dir = _artifact_export_dir()
@@ -990,7 +1186,9 @@ def persist_single_export(artifact: StudioArtifact, export_format: str) -> str |
     title_slug = _artifact_export_slug(artifact.title, fallback=artifact.artifact_type)
     stem = f"{artifact_slug}-{title_slug}"
 
-    existing = artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+    existing = (
+        artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+    )
 
     def _target(key: str, suffix: str, *, stem_suffix: str = "") -> Path:
         current = existing.get(key)
@@ -998,86 +1196,228 @@ def persist_single_export(artifact: StudioArtifact, export_format: str) -> str |
             return Path(current)
         return _artifact_export_path(export_dir, f"{stem}{stem_suffix}", suffix)
 
-    if export_format == "markdown":
+    target_path: Path | None = None
+
+    if canonical == "markdown":
         path = _target("markdown", ".md")
         path.write_text(_artifact_markdown_export(artifact, content), encoding="utf-8")
-        return str(path)
+        target_path = path
 
-    if export_format == "json":
+    elif canonical == "json":
         path = _target("json", ".json")
         path.write_text(
-            json.dumps(_artifact_export_payload(artifact), ensure_ascii=False, indent=2),
+            json.dumps(
+                _artifact_export_payload(artifact), ensure_ascii=False, indent=2
+            ),
             encoding="utf-8",
         )
-        return str(path)
+        target_path = path
 
-    if export_format == "csv":
+    elif canonical == "csv":
         csv_text = _data_table_csv(content)
         if not csv_text:
             return None
         path = _target("csv", ".csv", stem_suffix="-data-table")
         path.write_text(csv_text, encoding="utf-8")
-        return str(path)
+        target_path = path
 
-    document = _document_for_artifact(artifact)
-    if document is None:
-        return None
-
-    if export_format == "docx":
-        if not isinstance(document, (GenericDocument, CoursePackDocument, ResearchRunDocument)):
+    elif canonical == "instructor_guide":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
             return None
-        path = _target("docx", ".docx")
-        export_document(document, path)
-        return str(path)
+        path = _target("instructor_guide", ".md", stem_suffix="-instructor-guide")
+        path.write_text(_artifact_markdown_export(artifact, content), encoding="utf-8")
+        target_path = path
 
-    if export_format == "epub":
-        if not isinstance(document, CoursePackDocument):
+    elif canonical == "learner_handout":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
             return None
-        path = _target("epub", ".epub")
-        write_course_pack_epub(document, path)
-        return str(path)
+        path = _target("learner_handout", ".md", stem_suffix="-learner-handout")
+        path.write_text(
+            _artifact_markdown_export(
+                artifact, _course_pack_learner_markdown(content)
+            ),
+            encoding="utf-8",
+        )
+        target_path = path
 
-    if export_format == "xlsx":
-        if not isinstance(document, DataTableDocument):
+    elif canonical == "module_checklist":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
             return None
-        path = _target("xlsx", ".xlsx")
-        export_spreadsheet(document, path)
-        return str(path)
+        path = _target("module_checklist", ".json", stem_suffix="-module-checklist")
+        course_pack_modules = _course_pack_modules(content)
+        path.write_text(
+            json.dumps(
+                _course_pack_checklist_export(artifact, course_pack_modules),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        target_path = path
 
-    if export_format == "pdf":
-        if isinstance(document, CoursePackDocument):
-            path = _target("pdf", ".pdf")
-            write_course_pack_pdf(document, path)
-            return str(path)
-        if isinstance(document, SlideDeckDocument):
+    elif canonical == "assessment":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
+            return None
+        path = _target("assessment", ".md", stem_suffix="-assessment")
+        path.write_text(
+            _artifact_markdown_export(
+                artifact, _course_pack_assessment_markdown(content)
+            ),
+            encoding="utf-8",
+        )
+        target_path = path
+
+    elif canonical == "scorm_package":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
+            return None
+        path = _target("scorm_package", ".zip", stem_suffix="-scorm")
+        course_pack_modules = _course_pack_modules(content)
+        _write_course_pack_scorm_package(
+            artifact=artifact,
+            content=content,
+            modules=course_pack_modules,
+            scorm_path=path,
+        )
+        target_path = path
+
+    elif canonical == "xapi_package":
+        if artifact.artifact_type not in _COURSE_PACK_ARTIFACT_TYPES:
+            return None
+        path = _target("xapi_package", ".zip", stem_suffix="-xapi")
+        course_pack_modules = _course_pack_modules(content)
+        _write_course_pack_xapi_package(
+            artifact=artifact,
+            content=content,
+            modules=course_pack_modules,
+            xapi_path=path,
+        )
+        target_path = path
+
+    elif canonical == "svg_chart":
+        chart_payload = payload.get("chart")
+        if not isinstance(chart_payload, dict):
+            return None
+        try:
+            chart = ChartDocument.model_validate(chart_payload)
+            path = _target("svg_chart", ".svg", stem_suffix="-chart")
+            path.write_text(render_svg_chart(chart), encoding="utf-8")
+            target_path = path
+        except (TypeError, ValueError):
+            return None
+
+    elif canonical == "research_bundle":
+        document = _document_for_artifact(artifact)
+        if document is None:
+            return None
+        path = _target("research_bundle", ".zip", stem_suffix="-research-bundle")
+        report = payload.get("evaluation_report", {})
+        evaluation_report = report if isinstance(report, dict) else {}
+        current_export_paths = dict(existing)
+        current_export_paths["research_bundle"] = str(path)
+        try:
+            build_research_bundle(
+                path,
+                artifact=_artifact_export_payload(artifact),
+                markdown=_artifact_markdown_export(artifact, content),
+                citations=[
+                    citation
+                    for citation in artifact.citations
+                    if isinstance(citation, dict)
+                ],
+                source_metadata=_selected_source_metadata(artifact),
+                evaluation_report=evaluation_report,
+                generated_files=_bundle_generated_files(current_export_paths, path),
+            )
+            target_path = path
+        except Exception as exc:
+            logger.warning(
+                "Evidence Studio research bundle generation failed for {}: {}",
+                artifact.id,
+                exc,
+            )
+            return None
+
+    else:
+        document = _document_for_artifact(artifact)
+        if document is None:
+            return None
+
+        if canonical == "docx":
+            if not isinstance(
+                document, (GenericDocument, CoursePackDocument, ResearchRunDocument)
+            ):
+                return None
+            path = _target("docx", ".docx")
+            export_document(document, path)
+            target_path = path
+
+        elif canonical == "epub":
+            if not isinstance(document, CoursePackDocument):
+                return None
+            path = _target("epub", ".epub")
+            write_course_pack_epub(document, path)
+            target_path = path
+
+        elif canonical == "xlsx":
+            if not isinstance(document, DataTableDocument):
+                return None
+            path = _target("xlsx", ".xlsx")
+            export_spreadsheet(document, path)
+            target_path = path
+
+        elif canonical == "pdf":
+            if isinstance(document, CoursePackDocument):
+                path = _target("pdf", ".pdf")
+                write_course_pack_pdf(document, path)
+                target_path = path
+            elif isinstance(document, SlideDeckDocument):
+                pptx_path = _target("pptx", ".pptx")
+                pdf_path = _target("pdf", ".pdf")
+                export_slide_deck(document, pptx_path, pdf_path)
+                target_path = pdf_path
+            elif isinstance(document, InfographicDocument):
+                png_path = _target("png", ".png")
+                pdf_path = _target("pdf", ".pdf")
+                export_infographic(document, png_path, pdf_path)
+                target_path = pdf_path
+            else:
+                return None
+
+        elif canonical == "pptx":
+            if not isinstance(document, SlideDeckDocument):
+                return None
             pptx_path = _target("pptx", ".pptx")
             pdf_path = _target("pdf", ".pdf")
             export_slide_deck(document, pptx_path, pdf_path)
-            return str(pdf_path)
-        if isinstance(document, InfographicDocument):
+            target_path = pptx_path
+
+        elif canonical == "png":
+            if not isinstance(document, InfographicDocument):
+                return None
             png_path = _target("png", ".png")
             pdf_path = _target("pdf", ".pdf")
             export_infographic(document, png_path, pdf_path)
-            return str(pdf_path)
+            target_path = png_path
+
+    if target_path is None:
         return None
 
-    if export_format == "pptx":
-        if not isinstance(document, SlideDeckDocument):
-            return None
-        pptx_path = _target("pptx", ".pptx")
-        pdf_path = _target("pdf", ".pdf")
-        export_slide_deck(document, pptx_path, pdf_path)
-        return str(pptx_path)
+    # Track content hash for staleness detection
+    content_hash = artifact_content_hash(artifact, content)
+    hashes = dict(payload.get("export_hashes") or {})
+    hashes[canonical] = content_hash
+    if export_format != canonical:
+        hashes[export_format] = content_hash
+    payload["export_hashes"] = hashes
+    artifact.output_payload = payload
 
-    if export_format == "png":
-        if not isinstance(document, InfographicDocument):
-            return None
-        png_path = _target("png", ".png")
-        pdf_path = _target("pdf", ".pdf")
-        export_infographic(document, png_path, pdf_path)
-        return str(png_path)
+    updated_export_paths = dict(existing)
+    updated_export_paths[canonical] = str(target_path)
+    if export_format != canonical:
+        updated_export_paths[export_format] = str(target_path)
+    artifact.export_paths = updated_export_paths
 
-    return None
+    return str(target_path)
 
 
 def _brief(exc: BaseException) -> str:

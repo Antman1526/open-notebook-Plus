@@ -28,6 +28,10 @@ from .generation import (
 from .generation.service import generate_artifact
 
 persist_artifact_exports = persistence.persist_artifact_exports
+persist_single_export = persistence.persist_single_export
+is_export_stale = persistence.is_export_stale
+producible_export_formats = persistence.producible_export_formats
+canonical_export_format = persistence.canonical_export_format
 
 # Legacy helper names remain importable while call sites migrate gradually.
 _ARTIFACT_TYPE_INSTRUCTIONS = prompts._ARTIFACT_TYPE_INSTRUCTIONS
@@ -86,7 +90,11 @@ def __getattr__(name: str):
 
 __all__ = [
     "ArtifactGenerationRequest",
+    "canonical_export_format",
     "generate_artifact",
     "generate_studio_artifact",
+    "is_export_stale",
     "persist_artifact_exports",
+    "persist_single_export",
+    "producible_export_formats",
 ]

@@ -475,6 +475,9 @@ def _artifact_output_payload(
 from deeper_notebook.studio.generation.persistence import (
     _course_pack_tincan_xml,
     _course_pack_xapi_statements,
+    _write_course_pack_lms_packages,
+    _write_course_pack_scorm_package,
+    _write_course_pack_xapi_package,
 )
 
 
