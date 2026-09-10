@@ -25,6 +25,49 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.119 — 2026-09-10 — The v0.8.118 open items, closed
+
+🐛 **Podcast toasts showed a literal `{name}`.** The eight
+`podcasts.*Desc` strings carry a single-brace placeholder, but
+`use-podcasts.ts` called a bare `t(key)`, so every create/update/delete/
+duplicate toast rendered the placeholder verbatim. The mutations now
+substitute the name: from the payload on create and update, from the
+returned profile on duplicate, and from the cached list (read before the
+invalidation clears it) on delete.
+
+🛠 **Placeholder parity test** (`locales/placeholders.test.ts`) found that
+bug and the drift behind it: zh-CN and zh-TW had dropped `{name}` from all
+eight strings. Every locale string must now carry exactly the placeholders
+its en-US counterpart carries, in the same brace style. This settles the
+"interpolation convention" question the other way from how it was filed:
+single-brace `{param}` and i18next `{{param}}` are both established across
+many namespaces, so neither is being migrated; the parity test guards the
+mixed convention instead.
+
+🛠 **Key guard widened.** `keys-exist.test.ts` now checks single-segment
+keys too (en-US has top-level string keys) and prints a non-blocking count
+of calls that only work because of an English `defaultValue` — real
+translation gaps for a future locale pass.
+
+✨ **Non-Latin text in the course-pack PDF.** Font resolution runs once per
+process: a body font discovered from `DEEPER_NOTEBOOK_PDF_FONT` or the
+platform's usual Unicode faces (macOS Arial Unicode, Windows Arial, Linux
+DejaVu), plus reportlab's CID faces for Simplified and Traditional Chinese,
+Japanese and Korean, which need no font files at all. Han, Kana and Hangul
+runs are wrapped in the matching CID font inside each paragraph, so a mixed
+"Hello 世界" line renders both halves. When the chosen family ships no bold
+file, headings use the regular Unicode face rather than Helvetica-Bold:
+losing the weight is cosmetic, losing the glyphs is not. Nothing is
+bundled and no dependency was added.
+
+✨ **On-demand single-format export.**
+`POST /studio/artifacts/{id}/exports/{format}` regenerates one format for
+an already-generated artifact, so course packs created before v0.8.117 can
+get an EPUB or PDF without regenerating the artifact. Writes over the
+recorded path when there is one, so links already handed out stay valid.
+The menu shows "Generate EPUB" / "Generate PDF" on course packs missing
+either, with a per-format pending state.
+
 ## v0.8.118 — 2026-09-09 — Open items from v0.8.117
 
 🛠 **Every literal translation key is now checked.**

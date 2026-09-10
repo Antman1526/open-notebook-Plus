@@ -3,14 +3,14 @@
 **Date**: September 9, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits** (v0.8.115 – v0.8.118, 2026-09-09):
+**Latest Commits** (v0.8.115 – v0.8.119):
+- `92981998`: `feat(studio): regenerate a single export format on demand`
+- `72f5edce`: `feat(studio): render non-Latin text in the course-pack PDF`
+- `f63d611a`: `test(i18n): key guard also checks single-segment keys and reports defaultValue-only gaps`
+- `827cdc27`: `fix(i18n): podcast toasts showed a literal "{name}"; add placeholder parity test`
 - `dc89cf6a`: `feat(i18n): localize the Studio artifact export menu`
-- `2b2075ff`: `test(chat): interrupted partial survives an unchanged refetch, yields to a changed one`
-- `7a4e9ba3`: `test(i18n): fail on any literal t() key missing from en-US`
 - `497f49de`: `feat(studio): text-flow PDF export for course packs via reportlab`
 - `06dc8cd3`: `feat(studio): EPUB 3 export for course packs`
-- `dec3e99b`: `feat(chat): "Interrupted" badge with inline retry on stalled partial answers; fix retry i18n key`
-- `8e98616e`: `feat(streaming): backend heartbeat frames and server-side idle limit for model streams`
 - `eb5eaf29`: `fix(frontend): detect stalled model streams instead of hanging in "streaming" forever`
 
 > **Path note:** the Desktop repo folder is a symlink to
@@ -130,26 +130,26 @@ All gates are currently passing 100%:
 
 ### Open items, in priority order
 
-Items 2–5 of the v0.8.117 list were closed in v0.8.118 (`desktop/CHANGELOG.md`).
-Item 1 (dead `_persist_artifact_exports` duplicate in
-`api/routers/studio/artifacts.py`) is in progress in a separate session; do
-not touch that file until it lands.
+The v0.8.118 list was closed in v0.8.119 (`desktop/CHANGELOG.md`). Two i18n
+guards now run in CI: `locales/keys-exist.test.ts` (every literal `t()` key
+resolves) and `locales/placeholders.test.ts` (no placeholder drift between
+locales).
 
-1. **Studio interpolation convention.** `studio.*` strings use single-brace
-   `{param}` with manual `.replace()` while the rest of the app uses i18next
-   `{{param}}`. Pick one (i18next's) and migrate the `studio` namespace so
-   `t(key, { param })` works uniformly.
-2. **`keys-exist.test.ts` scope.** It checks dotted literals only. Extend it to
-   single-segment keys once the few top-level ones are inventoried, and
-   consider flagging `defaultValue` fallbacks as translation gaps in a
-   separate, non-blocking report.
-3. **EPUB/PDF on-demand export endpoint.** Exports are written at persist time
-   only. A `POST /studio/artifacts/{id}/exports/{format}` that (re)generates a
-   single format would let the menu offer formats for older artifacts.
-4. **Course-pack PDF typography.** `exporters/pdf.py` uses reportlab's standard
-   fonts; CJK lesson content will render as boxes. Register a bundled Unicode
-   TTF (and add it to the desktop data files) before advertising the PDF for
-   non-Latin locales.
+1. **Translation gaps behind `defaultValue`.** `keys-exist.test.ts` prints a
+   non-blocking count of `t()` calls that only render because of an English
+   `defaultValue` — those never localize. Inventory them and add real keys.
+2. **Bold Unicode face for the PDF.** On macOS the resolved body font
+   (Arial Unicode) has no bold file, so headings render in the regular
+   weight. Pair a bold candidate per platform, or accept it and say so in
+   the export UI.
+3. **Wider on-demand export coverage.** `persist_single_export` handles the
+   single-file formats (docx, epub, pdf, markdown, json, xlsx, csv, pptx,
+   png). The multi-file bundles (scorm_package, xapi_package,
+   research_bundle, instructor_guide, learner_handout) still regenerate only
+   with the whole artifact.
+4. **Export freshness.** A regenerated export silently overwrites the
+   recorded path. If an artifact is edited after export, nothing marks the
+   on-disk file as stale; consider storing a content hash alongside the path.
 
 ## 6. Quick Cheat-Sheet for Common Commands
 
