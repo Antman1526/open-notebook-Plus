@@ -25,6 +25,58 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.116 — 2026-09-09 — Streams that tell you they are alive, and recover when they are not
+
+Follow-up to v0.8.115 across five commits. The handoff backlog that
+motivated them cited files that do not exist; the real gaps were found by
+reading the code and are listed here with their actual locations.
+
+✨ **Backend heartbeat frames + server-side idle limit**
+(`api/utils/stream_keepalive.py`). `/chat/stream`, `/search/ask`, and
+source chat now emit a heartbeat every `DEEPER_NOTEBOOK_STREAM_HEARTBEAT_SEC`
+(10 s) of model silence, and end the stream with an error frame if the
+model produces nothing for `DEEPER_NOTEBOOK_STREAM_IDLE_TIMEOUT_SEC`
+(300 s), cancelling the model call instead of leaking it. SSE streams get
+a `: heartbeat` comment line (invisible to their `data:` parsers by
+construction); NDJSON gets `{"type":"heartbeat"}`, which
+`chatApi.streamMessage` drops after the bytes have reset the client's
+idle timer. Bounded queue preserves back-pressure; closing the wrapper on
+client disconnect still runs the source generator's `finally` (session
+lock, memory extraction). Both settings are registered in
+`deeper_notebook.environment` and documented in the env reference.
+Client default `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS` drops 120 s → 60 s.
+
+🎨 **Stall recovery in the chat hooks.** On a `StreamStallError`,
+`useNotebookChat` and `useSourceChat` keep the partial AI message (and the
+user's bubble) when any text arrived, and only fall back to the ordinary
+cleanup when the placeholder is empty. All three hooks (incl. `useAsk`)
+add a "Try Again" action to the stall toast that re-sends the same input
+through a ref to the latest send function.
+
+⚡ **Search results virtualized at 50+ cards.** The list is capped at 100
+variable-height cards inside a 60vh scroll container; above the same
+threshold `SourcesColumn` uses, it renders through the shared
+`VirtualizedListAuto`. Cards are keyed by `result.id` on both paths
+(index keys were a pre-existing smell). Real location:
+`app/(dashboard)/search/page.tsx`, not the handoff's `SourceGallery.tsx`.
+
+🎨 **Keyboard navigation for the vault graph** (`components/vault/VaultGraph.tsx`,
+React Flow). Nodes were already focusable but React Flow's own keydown
+only toggles selection, so Enter never reached `onNavigate` and arrows
+tried to drag. Enter/Space now opens the focused node (never an
+`unresolved:` placeholder); arrow keys move focus to the nearest node in
+that direction. A visually hidden hint (`knowledge.graphKeyboardHint`, 14
+locales) is wired via `aria-describedby`. `/` already opens the knowledge
+command surface, so no second handler was added.
+
+🛠 **Behavioural streaming tests.** `src/test/stream-harness.ts` (push /
+close / error a `ReadableStream`, `cancelled` flag, rAF-as-setTimeout
+stub) plus `use-ask.behaviour.test.ts` and
+`useSourceChat.behaviour.test.tsx`, which drive the hooks for real: happy
+path, stall-keeps-partial-and-retries, stall-with-nothing-cleans-up,
+server error vs stall toast, superseding send aborts silently. The
+partial-answer test fails against the pre-v0.8.116 hook.
+
 ## v0.8.115 — 2026-09-09 — Stalled model streams no longer hang the UI
 
 🐛 **A silent streaming response parked the chat, source chat, and Ask

@@ -3,11 +3,16 @@
 **Date**: September 9, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits**:
-- `8039f65d`: `fix(frontend): resolve typescript AskModels mismatch, eliminate lint errors, and guard dialog hook dependencies`
-- `00cade8a`: `fix(test): stabilize desktop smoke exit race, probe timeouts, and Node 26 storage mocks`
-- `a22beba2`: `feat(ui): elevate capture inbox, studio, knowledge header, and settings with agency visual architecture`
-- `a069089c`: `feat(ui): elevate visual architecture with doppelrand cards, frosted dialogs, and button-in-button controls`
+**Latest Commits** (v0.8.115 / v0.8.116, 2026-09-09):
+- `5ccd162e`: `test(frontend): behavioural streaming tests for useAsk and useSourceChat`
+- `80c8e5b8`: `feat(knowledge): keyboard navigation for the vault graph`
+- `3ee72316`: `perf(search): virtualize result lists of 50+ cards with the shared VirtualizedListAuto`
+- `c3fe0d8e`: `feat(chat): keep partial answers and offer one-click retry when a stream stalls`
+- `8e98616e`: `feat(streaming): backend heartbeat frames and server-side idle limit for model streams`
+- `eb5eaf29`: `fix(frontend): detect stalled model streams instead of hanging in "streaming" forever`
+
+> **Path note:** the Desktop repo folder is a symlink to
+> `~/Documents/Open Notebook/Deeper-Notebook`; tool output may print either path.
 
 ---
 
@@ -53,10 +58,11 @@ All gates are currently passing 100%:
 
 | Gate / Suite | Command | Status |
 | :--- | :--- | :--- |
-| **Frontend Vitest** | `cd frontend && npm test` | **249/249 test files passed (1,847 tests)** |
+| **Frontend Vitest** | `cd frontend && npm test` | **254/254 test files passed (1,893 tests)** |
 | **Frontend ESLint** | `cd frontend && npm run lint` | **0 errors, 0 warnings** |
 | **Frontend TypeScript** | `cd frontend && npx tsc --noEmit` | **0 errors** |
-| **Desktop Smoke Tests**| `python3 -m pytest desktop/tests/test_package_release_smoke.py` | **32/32 passed** |
+| **Desktop Smoke Tests**| `.venv/bin/pytest desktop/tests/test_package_release_smoke.py` | **32/32 passed** |
+| **Backend stream routers** | `.venv/bin/pytest tests/test_stream_keepalive.py tests/test_chat_stream.py tests/test_v0_7_200_search_typed_exceptions.py tests/test_v0_8_44_source_chat_mcp_disable.py` | **passing (94 across the touched router suites)** |
 | **Rebrand Audit** | `python3 scripts/rebrand_audit.py --check` | **0 unexpected identities, 0 stale entries** |
 | **Desktop Package** | `hdiutil verify dist/Deeper-Notebook-mac-arm64.dmg` | **Checksum VALID (183MB DMG)** |
 
@@ -98,32 +104,34 @@ All gates are currently passing 100%:
 9. **macOS Production Release Packaging**:
    - Next.js standalone build -> PyInstaller `.app` bundle -> codesign ad-hoc re-sealing -> `.dmg` drag-and-drop installer (`dist/Deeper-Notebook-mac-arm64.dmg`).
 
+10. **Stream Resilience (v0.8.115 / v0.8.116)**:
+   - `frontend/src/lib/utils/stream-stall.ts`: per-read idle-timeout guard (`readWithIdleTimeout`, `StreamStallError`) used by `lib/api/chat.ts`, `lib/hooks/use-ask.ts`, `lib/hooks/useSourceChat.ts`. `NEXT_PUBLIC_STREAM_IDLE_TIMEOUT_MS` (default 60 s, `0` disables). Never add a bare `await reader.read()` on a streaming body; `stream-stall-guard.test.ts` fails on it.
+   - `api/utils/stream_keepalive.py`: heartbeat frames + server-side idle limit wrapped around the three streaming endpoints. `DEEPER_NOTEBOOK_STREAM_HEARTBEAT_SEC` (10) / `DEEPER_NOTEBOOK_STREAM_IDLE_TIMEOUT_SEC` (300). New env settings must be registered in `deeper_notebook/environment.py` or `resolve_env` raises `KeyError`.
+   - Stall recovery: partial answers are kept and the stall toast carries a "Try Again" action in all three hooks.
+   - `frontend/src/test/stream-harness.ts` + `*.behaviour.test.ts(x)`: real streaming tests for the hooks.
+
 ---
 
 ## 5. Recommended Next Areas to Improve (Backlog for Claude)
 
-Here are the highest-impact areas to continue driving quality and feature excellence:
+> **Correction (2026-09-09):** the previous version of this section cited
+> `components/sources/SourceGallery.tsx`, `components/vault/ResearchCoreWorkspace.tsx`,
+> and `lib/hooks/use-chat.ts`. None of those files exist. The real locations
+> are given below. Priorities 1–4 of the old list were addressed in v0.8.116
+> (see section 4, item 10, and `desktop/CHANGELOG.md`).
 
-### Priority 1: Large-Scale List & Graph Virtualization
-- **Context**: For notebooks containing hundreds of sources or complex knowledge graphs, DOM rendering can become heavy.
-- **Location**: `frontend/src/components/sources/SourceGallery.tsx`, `frontend/src/components/vault/ResearchCoreWorkspace.tsx`.
-- **Opportunity**: Leverage `@tanstack/react-virtual` (already in `package.json`) to virtualize dense lists and review canvas node culling.
+### Status of the previous backlog
+- **List virtualization** — `SourcesColumn.tsx` was already virtualized; the search results page (`app/(dashboard)/search/page.tsx`) is now virtualized at 50+ cards. The CSS-grid gallery at `components/deeper-notebook/source-gallery/SourceGallery.tsx` is intentionally not virtualized (grid layout, small N).
+- **Offline / network resilience** — done: client idle guard, backend heartbeat + idle limit, partial-answer retention, retry toast.
+- **Graph keyboard accessibility** — done in `components/vault/VaultGraph.tsx` (React Flow). `/` already opens the knowledge command surface via `KnowledgeCommandBridge.tsx`.
+- **Export format extensions (EPUB / PDF course packs)** — still open; `api/routers/studio.py`, `app/(dashboard)/studio/page.tsx`.
 
-### Priority 2: Offline & Network Resilience for Local Model Inference
-- **Context**: When running local models via Ollama or Llama.cpp, unexpected daemon crashes or sleep-wake cycles during long inference streams can leave pending UI states.
-- **Location**: `frontend/src/lib/hooks/use-ask.ts`, `frontend/src/lib/hooks/use-chat.ts`.
-- **Opportunity**: Add auto-reconnection attempts, stream timeout detection, and user-friendly "Resume Generation" / "Fallback to Offline Buffer" recovery toasts.
-
-### Priority 3: Enhanced Knowledge Graph Interactions & Keyboard Accessibility
-- **Context**: The Knowledge Graph in `/knowledge` has an elevated header, but keyboard navigation through graph nodes can be improved.
-- **Location**: `frontend/src/components/vault/ResearchCoreWorkspace.tsx` and related graph components.
-- **Opportunity**: Add standard keyboard shortcuts (`Tab`/`Arrow` traversal, `Enter` to open node detail, `/` to focus graph search filter).
-
-### Priority 4: Export Format Extensions
-- **Context**: The Obsidian exporter is complete and verified. Users may also benefit from rich EPUB or PDF bundled course-pack exports from the Studio.
-- **Location**: `api/routers/studio.py`, `frontend/src/app/(dashboard)/studio/page.tsx`.
-
----
+### Open items, in priority order
+1. **Interrupted-message marker in the chat UI.** The hooks keep partial text on a stall, but nothing in `components/source/ChatPanel.tsx` (or the notebook chat panel) shows that the message was cut off. Add an `interrupted` flag on the local message and a small badge + inline retry; the toast is the only affordance today.
+2. **Behavioural test for `useNotebookChat`.** `use-ask` and `useSourceChat` now have real streaming tests; the notebook hook is still covered only by the source-text contract. Reuse `src/test/stream-harness.ts` (NDJSON framing via `pushRaw`) and mock `chatApi.streamMessage`.
+3. **Backend heartbeat coverage through the HTTP layer.** `tests/test_stream_keepalive.py` tests the wrapper directly; add one `TestClient` test per endpoint that stubs the generator to sleep past the heartbeat interval and asserts a heartbeat frame is on the wire.
+4. **EPUB / PDF course-pack export** (unchanged from the previous backlog).
+5. **Search page size.** `app/(dashboard)/search/page.tsx` is ~940 lines with deep-research, ask, and search modes in one component; the result card is already extracted (`renderSearchResultCard`), which is the natural seam for splitting the modes into files.
 
 ## 6. Quick Cheat-Sheet for Common Commands
 
@@ -143,8 +151,8 @@ python3 scripts/rebrand_audit.py --check
 # 5. Fix shifted allowlist pins (if any file with approvals was modified)
 python3 scripts/repair_rebrand_pins.py
 
-# 6. Run desktop smoke tests
-python3 -m pytest desktop/tests/test_package_release_smoke.py
+# 6. Run desktop smoke tests (use the project venv, not system python3)
+.venv/bin/pytest desktop/tests/test_package_release_smoke.py
 
 # 7. Run backend pytest suite on a specific router
 .venv/bin/pytest tests/test_vault_api.py
