@@ -7,7 +7,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ExportAllArtifactsDialog } from './ExportAllArtifactsDialog'
 import { useExportNotebookArtifactBundle } from '@/lib/hooks/use-studio'
-import { useFsHome } from '@/lib/hooks/use-fs'
+import { useFsHome, useFsMkdir } from '@/lib/hooks/use-fs'
 
 vi.mock('@/lib/hooks/use-studio', () => ({
   useExportNotebookArtifactBundle: vi.fn(),
@@ -107,6 +107,46 @@ describe('ExportAllArtifactsDialog', () => {
   })
 
   // v0.8.125 — "Include podcast audio and video" checkbox, default on.
+  it('creates the destination parent folder before bundling (v0.8.125, found live)', async () => {
+    const bundleMock = makeBundleMock()
+    vi.mocked(useExportNotebookArtifactBundle).mockReturnValue(bundleMock)
+    const mkdirMutate = vi.fn().mockResolvedValue({})
+    vi.mocked(useFsMkdir).mockReturnValue({ mutateAsync: mkdirMutate, isPending: false } as never)
+    render(<ExportAllArtifactsDialog {...baseProps} />)
+    await waitFor(() => {
+      expect((screen.getByLabelText('notebooks.exportDestination') as HTMLInputElement).value).toContain('.zip')
+    })
+
+    fireEvent.click(screen.getByText('notebooks.export.button'))
+
+    await waitFor(() => {
+      expect(mkdirMutate).toHaveBeenCalledWith('/Users/me/DeeperNotebook-Exports')
+      expect(bundleMock.mutateAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(mkdirMutate.mock.invocationCallOrder[0]).toBeLessThan(
+      (bundleMock.mutateAsync as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0],
+    )
+  })
+
+  it('shows the API error inline when the bundle request fails', async () => {
+    const bundleMock = makeBundleMock({
+      mutateAsync: vi.fn().mockRejectedValue({
+        response: { data: { detail: 'Parent directory does not exist: /nope' } },
+      }),
+    } as never)
+    vi.mocked(useExportNotebookArtifactBundle).mockReturnValue(bundleMock)
+    vi.mocked(useFsMkdir).mockReturnValue({ mutateAsync: vi.fn().mockResolvedValue({}), isPending: false } as never)
+    render(<ExportAllArtifactsDialog {...baseProps} />)
+    await waitFor(() => {
+      expect((screen.getByLabelText('notebooks.exportDestination') as HTMLInputElement).value).toContain('.zip')
+    })
+
+    fireEvent.click(screen.getByText('notebooks.export.button'))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Parent directory does not exist')
+  })
+
   it('submits include_media default-on, and false when unchecked', async () => {
     const bundleMock = makeBundleMock()
     vi.mocked(useExportNotebookArtifactBundle).mockReturnValue(bundleMock)

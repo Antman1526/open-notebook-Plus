@@ -30,7 +30,8 @@ import {
 import { FolderOpen } from 'lucide-react'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useExportNotebookArtifactBundle } from '@/lib/hooks/use-studio'
-import { useFsHome } from '@/lib/hooks/use-fs'
+import { getApiErrorMessage } from '@/lib/utils/error-handler'
+import { useFsHome, useFsMkdir } from '@/lib/hooks/use-fs'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { DirectoryPicker } from '@/components/notebooks/DirectoryPicker'
 import { StudioBundleCompression } from '@/lib/api/studio'
@@ -49,6 +50,11 @@ function slugFromNotebookId(notebookId: string): string {
   const normalized = raw.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
   return slug.slice(0, 80) || 'notebook'
+}
+
+function parentDir(path: string): string {
+  const i = path.lastIndexOf('/')
+  return i > 0 ? path.slice(0, i) : path
 }
 
 function joinPath(dir: string, leaf: string): string {
@@ -76,6 +82,12 @@ export function ExportAllArtifactsDialog({
 }: ExportAllArtifactsDialogProps) {
   const { t } = useTranslation()
   const exportBundle = useExportNotebookArtifactBundle()
+  // v0.8.125 — found live: the default destination folder does not exist on
+  // a fresh machine and the zip routes refuse to create parents, so the first
+  // export failed with a 400 the dialog never showed. Create the parent first
+  // and surface any API error inline.
+  const mkdir = useFsMkdir()
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const homeQuery = useFsHome(open)
 
   const [destination, setDestination] = useState('')
@@ -108,6 +120,7 @@ export function ExportAllArtifactsDialog({
       setRegenerateStale(true)
       setIncludeMedia(true)
       setPickerOpen(false)
+      setSubmitError(null)
     }
   }, [open])
 
@@ -117,12 +130,15 @@ export function ExportAllArtifactsDialog({
   }
 
   const handleSubmit = async () => {
-    if (!destination.trim()) return
+    const target = destination.trim()
+    if (!target) return
+    setSubmitError(null)
     try {
+      await mkdir.mutateAsync(parentDir(target))
       await exportBundle.mutateAsync({
         notebookId,
         data: {
-          destination: destination.trim(),
+          destination: target,
           overwrite,
           compression,
           regenerate_stale: regenerateStale,
@@ -130,12 +146,13 @@ export function ExportAllArtifactsDialog({
         },
       })
       onOpenChange(false)
-    } catch {
-      // Toast is handled by the mutation hook.
+    } catch (error) {
+      // The mutation hook also toasts; keep the reason visible in the dialog.
+      setSubmitError(getApiErrorMessage(error, (key) => t(key), 'apiErrors.genericError'))
     }
   }
 
-  const isPending = exportBundle.isPending
+  const isPending = exportBundle.isPending || mkdir.isPending
 
   return (
     <>
@@ -247,6 +264,11 @@ export function ExportAllArtifactsDialog({
             </div>
           </div>
 
+          {submitError ? (
+            <p role="alert" className="text-sm text-destructive" data-testid="export-all-error">
+              {submitError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
               {t('filesystem.cancel')}
