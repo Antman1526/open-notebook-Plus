@@ -334,6 +334,34 @@ class TestSourceListingErrors:
         mock_repo_query.assert_not_called()
 
 
+class TestSourceListingNullSafety:
+    """v0.8.125 — found live: a source whose processing never ran (worker
+    down, command reaped) has full_text = NONE, and string::len(NONE) makes
+    SurrealDB reject the whole list query. Both list queries must coalesce."""
+
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    def test_global_list_query_coalesces_full_text(self, mock_repo_query, client):
+        mock_repo_query.return_value = []
+        response = client.get("/api/sources")
+        assert response.status_code == 200
+        query = mock_repo_query.call_args.args[0]
+        assert 'string::len(full_text ?? "")' in query
+        assert "string::len(full_text)" not in query
+
+    @patch("api.routers.sources.Notebook.get", new_callable=AsyncMock)
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    def test_notebook_list_query_coalesces_full_text(
+        self, mock_repo_query, mock_nb_get, client
+    ):
+        mock_nb_get.return_value = object()
+        mock_repo_query.return_value = []
+        response = client.get("/api/sources", params={"notebook_id": "notebook:n1"})
+        assert response.status_code == 200
+        query = mock_repo_query.call_args.args[0]
+        assert 'string::len(full_text ?? "")' in query
+        assert "string::len(full_text)" not in query
+
+
 class TestSourceListingProcessingInfo:
     @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
     def test_get_sources_includes_fetched_command_progress_and_result(

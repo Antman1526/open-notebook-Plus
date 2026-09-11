@@ -523,10 +523,13 @@ async def get_sources(
                 raise HTTPException(status_code=404, detail="Notebook not found")
 
             # Query sources for specific notebook - include command field with FETCH  # nosec B608
+            # v0.8.125 — `full_text ?? ""`: a source whose processing never ran
+            # (worker down, reaped command) has full_text = NONE, and
+            # string::len(NONE) makes the whole list 500. Found live.
             query = f"""
                 SELECT id, asset, created, title, updated, topics, provenance,
                 source_type, command,
-                string::len(full_text) AS extracted_char_count,
+                string::len(full_text ?? "") AS extracted_char_count,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
                 (SELECT VALUE count() FROM reference WHERE in = $parent.id GROUP ALL)[0].count OR 0 AS notebook_count,
                 (SELECT VALUE count() FROM source_embedding WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS embedded_chunks,
@@ -549,7 +552,7 @@ async def get_sources(
             query = f"""
                 SELECT id, asset, created, title, updated, topics, provenance,
                 source_type, command,
-                string::len(full_text) AS extracted_char_count,
+                string::len(full_text ?? "") AS extracted_char_count,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
                 (SELECT VALUE count() FROM reference WHERE in = $parent.id GROUP ALL)[0].count OR 0 AS notebook_count,
                 (SELECT VALUE count() FROM source_embedding WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS embedded_chunks,
