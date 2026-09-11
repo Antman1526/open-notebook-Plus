@@ -44,7 +44,7 @@ from api.utils.iso import iso  # v0.7.181 — Safari-safe datetime serialization
 # and run-to-run variance (+/-0.7 s) is larger than the difference. Deferring it
 # would move a Pydantic model between packages and risk the command input
 # schema for nothing. Leave it.
-from commands.source_commands import SourceProcessingInput
+from commands.source_commands import SourceProcessingInput, process_source_command
 from deeper_notebook.config import UPLOADS_FOLDER
 from deeper_notebook.database.repository import ensure_record_id, repo_query
 from deeper_notebook.domain.notebook import Asset, Notebook, Source
@@ -936,7 +936,16 @@ async def create_source(
                 for notebook_id in notebook_ids:
                     await source.add_to_notebook(notebook_id)
 
-                # Execute command synchronously
+                # v0.8.126 — call the command function in-process instead of
+                # queueing it through execute_command_sync(). The "sync" path
+                # has no surreal-commands-worker process servicing the
+                # SurrealDB command queue, so the previous
+                # asyncio.to_thread(execute_command_sync, ...) call always
+                # blocked for the full timeout and then failed. The @command
+                # decorator (surreal_commands.decorators.command) registers a
+                # RunnableLambda-wrapped copy in the command registry but
+                # returns the original coroutine function unchanged, so
+                # process_source_command can be awaited directly here.
                 command_input = SourceProcessingInput(
                     source_id=str(source.id),
                     content_state=content_state,
@@ -945,19 +954,37 @@ async def create_source(
                     embed=source_data.embed,
                 )
 
-                # Run in thread pool to avoid blocking the event loop
-                # execute_command_sync uses asyncio.run() internally which can't
-                # be called from an already-running event loop (FastAPI)
-                result = await asyncio.to_thread(
-                    execute_command_sync,
-                    LEGACY_COMMAND_APP,
-                    "process_source",  # command name
-                    command_input.model_dump(),
-                    timeout=300,  # 5 minute timeout for sync processing
+                sync_timeout = float(
+                    resolve_env("DEEPER_NOTEBOOK_SOURCE_SYNC_TIMEOUT_SEC", "300")
+                    or 300
                 )
 
-                if not result.is_success():
-                    logger.error(f"Sync processing failed: {result.error_message}")
+                processing_succeeded = False
+                processing_error_message: Optional[str] = None
+                try:
+                    output = await asyncio.wait_for(
+                        process_source_command(command_input),
+                        timeout=sync_timeout,
+                    )
+                    processing_succeeded = output.success
+                    processing_error_message = output.error_message
+                except asyncio.TimeoutError:
+                    processing_error_message = (
+                        f"Source processing timed out after {sync_timeout}s"
+                    )
+                except HTTPException:
+                    # v0.7.108 — re-raise typed HTTPExceptions so the next
+                    # `except Exception` doesn't clobber them to 500.
+                    raise
+                except Exception as e:
+                    # Any other failure (e.g. a transient error that the
+                    # surreal_commands worker would previously have retried)
+                    # is treated the same as a failed CommandResult — there
+                    # is no worker/retry loop in this in-process path.
+                    processing_error_message = str(e)
+
+                if not processing_succeeded:
+                    logger.error(f"Sync processing failed: {processing_error_message}")
                     # Clean up source record
                     try:
                         await source.delete()
@@ -977,7 +1004,7 @@ async def create_source(
                             raise
                         except Exception:
                             pass
-                    # v0.7.184 — Don't echo result.error_message to the
+                    # v0.7.184 — Don't echo the error message to the
                     # client. Worker error messages can carry SurrealDB
                     # driver frames, file paths, partial RecordIDs —
                     # same info-leak class the v0.7.168/177 podcast_service
@@ -986,7 +1013,7 @@ async def create_source(
                     logger.error(
                         "Sync source processing failed for source {}: {}",
                         source.id,
-                        result.error_message,
+                        processing_error_message,
                     )
                     raise HTTPException(
                         status_code=500,

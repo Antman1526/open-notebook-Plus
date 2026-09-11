@@ -1,5 +1,6 @@
 """Tests for the sources API endpoint."""
 
+import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -862,6 +863,161 @@ class TestGetSourceNotFound:
         response = client.get("/api/sources/source:gone")
 
         assert response.status_code == 404
+
+
+class TestSyncSourceProcessing:
+    """v0.8.126 — POST /sources with async_processing=false must process
+    in-process (await process_source_command(...) directly) instead of
+    queueing through execute_command_sync(), which hangs for the full
+    timeout with no surreal-commands-worker running (#A)."""
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.execute_command_sync")
+    @patch("api.routers.sources.process_source_command", new_callable=AsyncMock)
+    @patch("api.routers.sources.Source.get", new_callable=AsyncMock)
+    @patch("api.routers.sources.Source.add_to_notebook", new_callable=AsyncMock)
+    @patch("api.routers.sources.Notebook.get", new_callable=AsyncMock)
+    async def test_sync_create_succeeds_without_calling_execute_command_sync(
+        self,
+        mock_nb_get,
+        mock_add_nb,
+        mock_source_get,
+        mock_process_command,
+        mock_execute_sync,
+        client,
+    ):
+        from commands.source_commands import SourceProcessingOutput
+
+        mock_nb_get.return_value = MagicMock()
+        # execute_command_sync must never be called on the sync path anymore.
+        mock_execute_sync.side_effect = AssertionError(
+            "execute_command_sync should not be called by the sync path"
+        )
+
+        mock_process_command.return_value = SourceProcessingOutput(
+            success=True,
+            source_id="source:fake",
+            insights_created=0,
+            processing_time=0.01,
+        )
+
+        processed_source = MagicMock()
+        processed_source.id = "source:fake"
+        processed_source.title = "Processing..."
+        processed_source.topics = []
+        processed_source.provenance = {}
+        processed_source.source_type = "text"
+        processed_source.asset = None
+        processed_source.full_text = "hello world"
+        processed_source.created = "2026-01-01T00:00:00Z"
+        processed_source.updated = "2026-01-01T00:00:00Z"
+        processed_source.get_embedded_chunks = AsyncMock(return_value=0)
+        mock_source_get.return_value = processed_source
+
+        async def capture_save(self_source):
+            self_source.id = "source:fake"
+            self_source.command = None
+
+        with patch.object(Source, "save", autospec=True, side_effect=capture_save):
+            response = client.post(
+                "/api/sources",
+                data={
+                    "type": "text",
+                    "content": "hello world",
+                    "notebooks": '["notebook:1"]',
+                    "async_processing": "false",
+                },
+            )
+
+        assert response.status_code == 200
+        mock_execute_sync.assert_not_called()
+        mock_process_command.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.execute_command_sync")
+    @patch("api.routers.sources.process_source_command", new_callable=AsyncMock)
+    @patch("api.routers.sources.Source.add_to_notebook", new_callable=AsyncMock)
+    @patch("api.routers.sources.Notebook.get", new_callable=AsyncMock)
+    async def test_sync_create_failure_deletes_source_and_returns_failure_status(
+        self,
+        mock_nb_get,
+        mock_add_nb,
+        mock_process_command,
+        mock_execute_sync,
+        client,
+    ):
+        mock_nb_get.return_value = MagicMock()
+        mock_process_command.side_effect = RuntimeError("boom: transient failure")
+
+        async def capture_save(self_source):
+            self_source.id = "source:fake"
+            self_source.command = None
+
+        with (
+            patch.object(Source, "save", autospec=True, side_effect=capture_save),
+            patch.object(Source, "delete", autospec=True) as mock_delete,
+        ):
+            response = client.post(
+                "/api/sources",
+                data={
+                    "type": "text",
+                    "content": "hello world",
+                    "notebooks": '["notebook:1"]',
+                    "async_processing": "false",
+                },
+            )
+
+            assert response.status_code == 500
+            assert response.json()["detail"] == "Source processing failed"
+            mock_delete.assert_awaited_once()
+        mock_execute_sync.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.execute_command_sync")
+    @patch("api.routers.sources.process_source_command", new_callable=AsyncMock)
+    @patch("api.routers.sources.Source.add_to_notebook", new_callable=AsyncMock)
+    @patch("api.routers.sources.Notebook.get", new_callable=AsyncMock)
+    async def test_sync_create_timeout_maps_to_failure_path(
+        self,
+        mock_nb_get,
+        mock_add_nb,
+        mock_process_command,
+        mock_execute_sync,
+        client,
+        monkeypatch,
+    ):
+        # Tiny timeout so the test doesn't actually wait 300s.
+        monkeypatch.setenv("DEEPER_NOTEBOOK_SOURCE_SYNC_TIMEOUT_SEC", "0.05")
+
+        mock_nb_get.return_value = MagicMock()
+
+        async def never_returns(_input):
+            await asyncio.sleep(10)
+
+        mock_process_command.side_effect = never_returns
+
+        async def capture_save(self_source):
+            self_source.id = "source:fake"
+            self_source.command = None
+
+        with (
+            patch.object(Source, "save", autospec=True, side_effect=capture_save),
+            patch.object(Source, "delete", autospec=True) as mock_delete,
+        ):
+            response = client.post(
+                "/api/sources",
+                data={
+                    "type": "text",
+                    "content": "hello world",
+                    "notebooks": '["notebook:1"]',
+                    "async_processing": "false",
+                },
+            )
+
+            assert response.status_code == 500
+            assert response.json()["detail"] == "Source processing failed"
+            mock_delete.assert_awaited_once()
+        mock_execute_sync.assert_not_called()
 
 
 if __name__ == "__main__":

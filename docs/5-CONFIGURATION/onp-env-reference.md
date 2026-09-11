@@ -320,6 +320,36 @@ sync SurrealDB WS handshake. Already wrapped in `asyncio.to_thread`
 
 ---
 
+## Synchronous source processing (v0.8.126)
+
+`POST /api/sources` with `async_processing=false` runs source processing
+in-process — `await`ing the `process_source_command` function directly
+instead of queueing it through `execute_command_sync` — because the sync
+path has no `surreal-commands-worker` process to service the SurrealDB
+command queue. Previously this always hung for the full 300s timeout and
+failed.
+
+| Env var | Default | What it bounds |
+|---|---:|---|
+| `DEEPER_NOTEBOOK_SOURCE_SYNC_TIMEOUT_SEC` | 300 | In-process `process_source_command` call on the sync source-creation path |
+
+---
+
+## API server process (`run_api.py`, v0.8.126)
+
+Plain `os.getenv` process settings for the uvicorn-hosted API server —
+not `DEEPER_NOTEBOOK_*` product settings, so they have no `DN_` / `ONP_`
+aliases.
+
+| Env var | Default | Purpose |
+|---|---:|---|
+| `API_HOST` | `127.0.0.1` | Bind host for the API server |
+| `API_PORT` | `5055` | Bind port for the API server |
+| `API_RELOAD` | `true` | Enable uvicorn's file-watching auto-reload (dev only) |
+| `API_GRACEFUL_SHUTDOWN_SEC` | 20 | `uvicorn.run(..., timeout_graceful_shutdown=...)` — bounds how long the old process waits for in-flight requests to finish before a dev reload (or shutdown) forces it closed. Without this, a long-running request (e.g. the sync source-processing path above) could keep the previous process holding the port indefinitely across a reload. |
+
+---
+
 ## Version history of caps
 
 | Version | What changed |
@@ -351,3 +381,4 @@ sync SurrealDB WS handshake. Already wrapped in `asyncio.to_thread`
 | v0.7.115 | `ONP_SUBMIT_COMMAND_TIMEOUT_SEC` |
 | v0.7.116 | Per-provider `ONP_CONNECTION_TEST_TIMEOUT_SEC_<PROVIDER>` |
 | v0.8.116 | `ONP_STREAM_HEARTBEAT_SEC`, `ONP_STREAM_IDLE_TIMEOUT_SEC` |
+| v0.8.126 | `ONP_SOURCE_SYNC_TIMEOUT_SEC`; `API_GRACEFUL_SHUTDOWN_SEC` and `API_RELOAD` documented |

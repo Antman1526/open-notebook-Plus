@@ -28,4 +28,8 @@ if __name__ == "__main__":
         port=port,
         reload=reload,
         reload_dirs=[str(current_dir)] if reload else None,
+        # v0.8.126 — bound graceful shutdown so a reload (triggered by a
+        # file change) doesn't leave the old process holding the port
+        # while an in-flight request is still running.
+        timeout_graceful_shutdown=int(os.getenv("API_GRACEFUL_SHUTDOWN_SEC", "20")),
     )
