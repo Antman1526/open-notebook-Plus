@@ -621,6 +621,11 @@ async def get_sources(
                 status = "unknown"
 
             extracted_char_count = row.get("extracted_char_count")
+            # v0.8.127 — a source processed in-process (v0.8.126 sync path) or
+            # one predating command tracking has no command row. If text was
+            # extracted, it is complete; report that instead of no status.
+            if status is None and (extracted_char_count or 0) > 0:
+                status = "completed"
             embedded_chunks = int(row.get("embedded_chunks") or 0)
 
             response_list.append(
@@ -1250,6 +1255,10 @@ async def get_source(source_id: str):
             except Exception as e:
                 logger.warning(f"Failed to get status for source {source_id}: {e}")
                 status = "unknown"
+        elif getattr(source, "full_text", None):
+            # v0.8.127 — same derivation as the list: extracted text with no
+            # command row means processing completed (sync path / legacy).
+            status = "completed"
 
         embedded_chunks = await source.get_embedded_chunks()
 

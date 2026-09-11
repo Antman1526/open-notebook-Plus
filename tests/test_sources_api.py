@@ -335,6 +335,50 @@ class TestSourceListingErrors:
         mock_repo_query.assert_not_called()
 
 
+class TestSourceListingDerivedStatus:
+    """v0.8.127 — a source with extracted text and no command row (in-process
+    sync path, or predating command tracking) reports status "completed"
+    instead of no status; with no text and no command it stays None."""
+
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    def test_list_derives_completed_from_extracted_text(self, mock_repo_query, client):
+        mock_repo_query.return_value = [
+            {
+                "id": "source:sync",
+                "title": "Sync source",
+                "topics": [],
+                "asset": None,
+                "created": "2026-09-11T10:00:00Z",
+                "updated": "2026-09-11T10:00:00Z",
+                "command": None,
+                "extracted_char_count": 116,
+                "insights_count": 0,
+                "notebook_count": 1,
+                "embedded_chunks": 0,
+            },
+            {
+                "id": "source:pending",
+                "title": "Never processed",
+                "topics": [],
+                "asset": None,
+                "created": "2026-09-11T10:00:00Z",
+                "updated": "2026-09-11T10:00:00Z",
+                "command": None,
+                "extracted_char_count": 0,
+                "insights_count": 0,
+                "notebook_count": 1,
+                "embedded_chunks": 0,
+            },
+        ]
+
+        response = client.get("/api/sources")
+
+        assert response.status_code == 200
+        by_id = {row["id"]: row for row in response.json()}
+        assert by_id["source:sync"]["status"] == "completed"
+        assert by_id["source:pending"]["status"] is None
+
+
 class TestSourceListingNullSafety:
     """v0.8.125 — found live: a source whose processing never ran (worker
     down, command reaped) has full_text = NONE, and string::len(NONE) makes
