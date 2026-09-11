@@ -1,12 +1,16 @@
 # Project Handoff: Deeper Notebook (for Claude)
 
-**Date**: September 10, 2026  
+**Date**: September 11, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits & Additions** (v0.8.115 – v0.8.122):
-- `feat(studio): mind map deep-linking, semantic minimap, bundle cleanup & canvas filter chips` (v0.8.123)
-- `feat(studio): video overview disk safety, mind map note editing, graph artifact grounding & i18n polish` (v0.8.122)
-- `feat(studio): export content integrity, orphaned export cleanup, and batch stale refresh` (v0.8.121)
+**Latest Commits & Additions** (v0.8.115 – v0.8.124):
+- `80d67390`: `feat(studio): one-click export of every completed artifact as a single zip` (v0.8.124)
+- `711aee12`: `feat(notebooks): mind map media preview, canvas search, and cluster-by-type layout` (v0.8.124)
+- `8108d1c1`: `feat(studio): retention job for old revisions and stale exports, disabled by default` (v0.8.124)
+- `639a2b6e`: `chore: sort import blocks flagged by ruff I001` (v0.8.124)
+- `8b48a72e`: `feat(studio): mind map deep-linking, semantic minimap, bundle cleanup & canvas filter chips` (v0.8.123)
+- `976f37b6`: `feat(studio): video overview disk safety, mind map note editing, graph artifact grounding & i18n polish` (v0.8.122)
+- `7228baf3`: `fix(studio): preserve content in exports and synthesis, clean up orphaned export files` (v0.8.121)
 - `db815041`: `feat(studio): surface export staleness and per-item regeneration in Evidence Studio` (v0.8.120)
 - `948b1ba8`: `fix(i18n): resolve translation gaps behind defaultValue across all 14 locales` (v0.8.120)
 - `33dc3461`: `feat(studio): support multi-file export regeneration, aliases, and staleness tracking` (v0.8.120)
@@ -67,7 +71,7 @@ All gates are currently passing 100%:
 
 | Gate / Suite | Command | Status |
 | :--- | :--- | :--- |
-| **Frontend Vitest** | `cd frontend && npm test` | **260/260 test files passed (1,934 tests)** |
+| **Frontend Vitest** | `cd frontend && npm test` | **263/263 test files passed (1,954 tests)** |
 | **Frontend ESLint** | `cd frontend && npm run lint` | **0 errors, 0 warnings** |
 | **Frontend TypeScript** | `cd frontend && npx tsc --noEmit` | **0 errors** |
 | **Desktop Smoke Tests**| `.venv/bin/pytest desktop/tests/test_package_release_smoke.py` | **32/32 passed** |
@@ -141,19 +145,24 @@ All gates are currently passing 100%:
 
 ## 5. Completed Items & Next Areas to Explore
 
-### Recently Completed in v0.8.121 – v0.8.122
-- [x] **Video overview disk safety and directory cleanup:** `StudioArtifact.delete()` safely unlinks video overviews and deletes artifact video folders with path traversal containment.
-- [x] **Mind map interactive note editing:** Connected `NoteEditorDialog` to React Flow note nodes via `MindMapButton.tsx`.
-- [x] **Knowledge graph studio artifact integration:** Embedded `studio_artifact` nodes and `"grounded_in"` edges into `Notebook.get_graph()`.
-- [x] **14-locale i18n polish:** Zero remaining hardcoded text in search evidence button and studio trust margin, with 100% placeholder parity.
-- [x] **Notebook export and executive synthesis content integrity:** Added `include_full_text` and `include_content` flags to domain methods with defensive fallback lazy hydration.
-- [x] **Orphaned export file cleanup on artifact deletion:** Implemented `StudioArtifact.delete()` with sandboxed file unlinking.
-- [x] **Batch stale export refresh:** Added "Refresh all outdated ({count})" batch button in `ArtifactExportMenu.tsx`.
+### Recently Completed in v0.8.124
+- [x] **Inherited commits verified and pushed.** v0.8.120–v0.8.123 were local only; gates re-run, twelve ruff import-order findings and one stale rebrand pin fixed, then pushed.
+- [x] **Studio retention job, OFF by default** (`deeper_notebook/studio/retention.py`, lifespan-wired like the checkpoint pruner). Keeps newest N revisions per artifact, unlinks exports that are both content-stale and older than a day threshold. Enable with `DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS > 0`; `..._DRY_RUN=true` counts without touching anything.
+- [x] **Export all artifacts as one zip.** `POST /studio/notebooks/{id}/exports/bundle`, `{slug}/{format}/{filename}` + `manifest.json`, same destination/overwrite guards as the notebook export; "Export all artifacts" button in the Studio rail header with a trimmed dialog.
+- [x] **Mind map media preview, search, cluster-by-type.** Slide-deck nodes with a video overview open an in-canvas preview (Shift-click still navigates); search dims non-matching nodes and edges with a live count; a cluster toggle lays each type on its own sub-circle. `NotebookGraphNode.artifact_type` added on the frontend.
+
+### Facts learned this cycle (verify before relying on)
+- Nothing creates a `podcast_audio` StudioArtifact today; the studio generation registry rejects that type. The mind map preview's audio branch is defensive only.
+- `StudioArtifact` revisions chain through `revision_of_id`; `get_revisions` already orders newest first.
+- Periodic work is an `asyncio` loop inside the FastAPI lifespan (`_track_task`), never APScheduler or `surreal_commands`. The desktop launcher has a separate `threading` timer for auto-export only.
+- A `compatibility_alias` rebrand pin that drifts onto active text fails the audit at **load time** with a `ValueError`, not as a "stale" report. `scripts/repair_rebrand_pins.py` still fixes it.
 
 ### Next Recommended Areas to Explore
-1. **Interactive Artifact Viewer Modal from Mind Map:** Add direct single-click previewing of Studio artifacts when clicking `studio_artifact` nodes in the Mind Map.
-2. **Audio/Video Playback in Mind Map:** Play video overview or podcast directly in an inline popover modal from graph nodes.
-3. **Automated archive compaction:** Compact older studio revisions or export zip bundles past a configurable age threshold.
+1. **Retention job: surface it in Settings.** It ships disabled and env-only. A Settings card showing the last `RetentionReport` (with a "dry run now" button hitting a small `POST /studio/retention/dry-run`) would let users see what it would remove before enabling it.
+2. **Bundle export: include media.** The zip carries export files only. Podcast audio and video-overview MP4/VTT under `DATA_FOLDER/video-overviews` are not bundled; add them under `{slug}/media/` with the same containment guard `_cleanup_export_files` uses.
+3. **Mind map preview for sources and notes.** The popover exists only for previewable artifacts. A source node could show its cover and first excerpt via the existing `SourceCover`/evidence peek; a note node its first lines.
+4. **Search-to-focus.** Canvas search dims non-matches; add Enter to `fitView` on the matching set and arrow keys to step between matches, reusing the keyboard model from `VaultGraph.tsx`.
+5. **Cluster layout persistence.** The cluster toggle and search query reset on reopen; persist both in the existing notebook-scoped UI store alongside the filter chip.
 
 ---
 

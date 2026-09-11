@@ -25,6 +25,48 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.124 — 2026-09-11 — The v0.8.123 strategic areas, plus housekeeping on the inherited commits
+
+🛠 **Housekeeping first.** The twelve v0.8.120–v0.8.123 commits were local
+only; before building on them the gates were re-run. Frontend green (260
+files, 1936 tests). Backend ruff had twelve import-order findings (three
+of them the v0.8.116 keepalive imports) and the rebrand audit had one stale
+pin from the handoff edit; both fixed and pushed with the inherited work.
+
+🛠 **Studio retention job, OFF by default** (`deeper_notebook/studio/retention.py`).
+A lifespan task wired exactly like the checkpoint pruner: keeps the newest
+N revisions per artifact and deletes the rest through
+`StudioArtifact.delete()` (which already removes export files under
+containment guards); unlinks export files that are both content-stale and
+older than a day threshold, dropping the key so the UI offers "Generate"
+again. `DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS` defaults to 0 and
+the loop returns immediately; unlike checkpoint rows these are user-facing
+artefacts, so an operator opts in, and `..._DRY_RUN=true` counts without
+touching anything. Counter `studio_retention_runs_total`. Four settings
+registered and documented.
+
+✨ **Export every completed artifact as one zip.**
+`POST /studio/notebooks/{id}/exports/bundle` writes
+`{artifact-slug}/{format}/{filename}` plus a `manifest.json` to a chosen
+path, through the same destination and overwrite guards as the notebook
+export; stale formats are regenerated first, with a failing format
+recorded as a warning rather than a 500. "Export all artifacts" in the
+Studio rail header opens a trimmed export dialog.
+
+✨ **Mind map: in-canvas media preview, search, cluster-by-type.** Clicking
+a slide-deck node with a video overview opens a preview popover with the
+inline player instead of leaving the map (Shift-click still navigates); an
+Open button hands off to the rail via `dn:select-artifact`. A search box
+dims non-matching nodes and edges without disturbing the radial layout,
+with a live match count. A cluster toggle lays each node type out on its
+own sub-circle around a per-type satellite hub, same angle formula, no
+React Flow group nodes. `NotebookGraphNode` gains `artifact_type`, which
+the backend already sent.
+
+Caveat recorded for the next reader: nothing creates a `podcast_audio`
+studio artifact today (the generation registry rejects it), so the audio
+branch of the preview is defensive and falls back to "unavailable" copy.
+
 ## v0.8.123 — 2026-09-10 — Mind Map Deep-Linking, Semantic MiniMap, Bundle Cleanup & Canvas Filter Chips
 
 ✨ **Mind map to studio artifact deep-linking.** Connected `onSelectArtifact` in `MindMapButton.tsx` to dispatch `dn:select-artifact` custom event and close the canvas modal, and registered a responsive listener in `ArtifactRail.tsx`. Clicking any studio artifact node in the Mind Map immediately opens the full artifact drawer/modal with markdown preview, citations, export options, and revision history.
