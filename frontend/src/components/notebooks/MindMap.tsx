@@ -5,7 +5,10 @@
 // dep) using React Flow. Clicking a source/note node deep-links to it via the
 // callbacks. Loaded with next/dynamic ssr:false by the caller (React Flow needs
 // the DOM). Data comes from GET /api/notebooks/{id}/graph.
-import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
+// v0.8.124 — canvas search/dim, cluster-by-type layout, and a media preview
+// popover for podcast_audio/slide_deck studio_artifact nodes (improvement
+// roadmap).
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import {
   ReactFlow,
   Background,
@@ -20,6 +23,7 @@ import { Loader2 } from 'lucide-react'
 import { useNotebookGraph } from '@/lib/hooks/use-notebook-graph'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
+import MindMapNodePreview, { type MindMapNodePreviewAnchor } from './MindMapNodePreview'
 
 interface MindMapProps {
   notebookId: string
@@ -78,11 +82,25 @@ export default function MindMap({
 }: MindMapProps) {
   const { t } = useTranslation()
   const [filter, setFilter] = useState<FilterType>('all')
+  const [query, setQuery] = useState('')
+  const [clusterByType, setClusterByType] = useState(false)
+  const [preview, setPreview] = useState<{
+    id: string
+    artifactType?: string | null
+    anchor: MindMapNodePreviewAnchor
+  } | null>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
   const { data, isLoading, isError } = useNotebookGraph(notebookId, open)
 
   const typeById = useMemo(() => {
     const m = new Map<string, string>()
     data?.nodes.forEach((n) => m.set(n.id, n.type))
+    return m
+  }, [data])
+
+  const artifactTypeById = useMemo(() => {
+    const m = new Map<string, string | null | undefined>()
+    data?.nodes.forEach((n) => m.set(n.id, n.artifact_type))
     return m
   }, [data])
 
@@ -114,16 +132,32 @@ export default function MindMap({
     })
   }, [data, filter])
 
+  const normalizedQuery = query.trim().toLowerCase()
+
+  // v0.8.124 — canvas search: the hub always matches (it's not a search
+  // target, just always "in view"); spokes match on a case-insensitive
+  // substring of their label.
+  const matchesQuery = useCallback(
+    (label: string) => !normalizedQuery || label.toLowerCase().includes(normalizedQuery),
+    [normalizedQuery]
+  )
+
+  const matchCount = useMemo(() => {
+    if (!normalizedQuery) return spokes.length
+    return spokes.filter((n) => matchesQuery(n.label)).length
+  }, [spokes, normalizedQuery, matchesQuery])
+
   const { nodes, edges } = useMemo(() => {
     if (!data) return { nodes: [] as Node[], edges: [] as Edge[] }
     const hub = data.nodes.find((n) => n.type === 'notebook')
-    const radius = Math.max(260, spokes.length * 32)
 
     const rfNodes: Node[] = []
     const visibleNodeIds = new Set<string>()
+    const matchedIds = new Set<string>()
 
     if (hub) {
       visibleNodeIds.add(hub.id)
+      matchedIds.add(hub.id)
       rfNodes.push({
         id: hub.id,
         position: { x: 0, y: 0 },
@@ -132,36 +166,108 @@ export default function MindMap({
         draggable: false,
       })
     }
-    spokes.forEach((n, i) => {
+
+    // v0.8.124 — cluster-by-type: one satellite center per present type,
+    // evenly spaced around the hub; each type's nodes lay out on a
+    // sub-circle around its own satellite, using the same angle formula as
+    // the single-circle layout below. Applied to `spokes`, i.e. after the
+    // existing type filter.
+    const positionsById = new Map<string, { x: number; y: number }>()
+    if (clusterByType) {
+      const typeOrder: Array<'source' | 'note' | 'studio_artifact'> = ['source', 'note', 'studio_artifact']
+      const groups = typeOrder
+        .map((type) => ({ type, nodes: spokes.filter((n) => n.type === type) }))
+        .filter((group) => group.nodes.length > 0)
+      const satelliteRadius = Math.max(320, spokes.length * 28)
+      groups.forEach((group, gi) => {
+        const satelliteAngle = (gi / Math.max(1, groups.length)) * Math.PI * 2
+        const center = {
+          x: Math.cos(satelliteAngle) * satelliteRadius,
+          y: Math.sin(satelliteAngle) * satelliteRadius,
+        }
+        const subRadius = Math.max(120, group.nodes.length * 26)
+        group.nodes.forEach((n, ni) => {
+          const angle = (ni / Math.max(1, group.nodes.length)) * Math.PI * 2
+          positionsById.set(n.id, {
+            x: center.x + Math.cos(angle) * subRadius,
+            y: center.y + Math.sin(angle) * subRadius,
+          })
+        })
+      })
+    } else {
+      const radius = Math.max(260, spokes.length * 32)
+      spokes.forEach((n, i) => {
+        const angle = (i / Math.max(1, spokes.length)) * Math.PI * 2
+        positionsById.set(n.id, { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius })
+      })
+    }
+
+    spokes.forEach((n) => {
       visibleNodeIds.add(n.id)
-      const angle = (i / Math.max(1, spokes.length)) * Math.PI * 2
+      const matches = matchesQuery(n.label)
+      if (matches) matchedIds.add(n.id)
+      const searchStyle: CSSProperties = normalizedQuery
+        ? matches
+          ? { border: '2px solid var(--dn-graph-edge)' }
+          : { opacity: 0.25 }
+        : {}
       rfNodes.push({
         id: n.id,
-        position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
+        position: positionsById.get(n.id) ?? { x: 0, y: 0 },
         data: { label: n.label },
-        style: nodeStyle(n.type),
+        style: { ...nodeStyle(n.type), ...searchStyle },
       })
     })
 
     const rfEdges: Edge[] = data.edges
       .filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
-      .map((e, i) => ({
-        id: `e${i}`,
-        source: e.source,
-        target: e.target,
-        style: { stroke: 'var(--dn-graph-edge)', strokeWidth: 1.5 },
-      }))
+      .map((e, i) => {
+        const dimmed = normalizedQuery && !matchedIds.has(e.source) && !matchedIds.has(e.target)
+        return {
+          id: `e${i}`,
+          source: e.source,
+          target: e.target,
+          style: {
+            stroke: 'var(--dn-graph-edge)',
+            strokeWidth: 1.5,
+            ...(dimmed ? { opacity: 0.2 } : {}),
+          },
+        }
+      })
     return { nodes: rfNodes, edges: rfEdges }
-  }, [data, spokes])
+  }, [data, spokes, clusterByType, normalizedQuery, matchesQuery])
 
+  // v0.8.124 — a plain click on a podcast_audio/slide_deck studio_artifact
+  // node opens the inline preview instead of navigating away; Shift-click
+  // (or the preview's Open button) still navigates via onSelectArtifact.
+  // Every other node type keeps its exact prior behavior.
   const onNodeClick = useCallback(
-    (_event: MouseEvent, node: Node) => {
+    (event: MouseEvent, node: Node) => {
       const type = typeById.get(node.id)
-      if (type === 'source') onSelectSource?.(node.id)
-      else if (type === 'note') onSelectNote?.(node.id)
-      else if (type === 'studio_artifact') onSelectArtifact?.(node.id)
+      if (type === 'source') {
+        onSelectSource?.(node.id)
+        return
+      }
+      if (type === 'note') {
+        onSelectNote?.(node.id)
+        return
+      }
+      if (type === 'studio_artifact') {
+        const artifactType = artifactTypeById.get(node.id)
+        const previewable = artifactType === 'podcast_audio' || artifactType === 'slide_deck'
+        if (previewable && !event.shiftKey) {
+          const rect = canvasRef.current?.getBoundingClientRect()
+          const anchor = {
+            x: rect ? event.clientX - rect.left : 0,
+            y: rect ? event.clientY - rect.top : 0,
+          }
+          setPreview({ id: node.id, artifactType, anchor })
+          return
+        }
+        onSelectArtifact?.(node.id)
+      }
     },
-    [typeById, onSelectSource, onSelectNote, onSelectArtifact]
+    [typeById, artifactTypeById, onSelectSource, onSelectNote, onSelectArtifact]
   )
 
   const minimapNodeColor = useCallback(
@@ -193,7 +299,7 @@ export default function MindMap({
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={canvasRef} className="relative h-full w-full">
       <div className="absolute top-3 left-4 z-10 flex flex-wrap items-center gap-1.5 rounded-lg border bg-background/90 p-1 backdrop-blur-xs shadow-xs">
         <button
           type="button"
@@ -247,6 +353,32 @@ export default function MindMap({
         >
           {t('mindMap.filterArtifacts', { defaultValue: 'Artifacts ({count})' }).replace('{count}', String(counts.artifacts))}
         </button>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label={t('mindMap.searchLabel', { defaultValue: 'Search nodes' })}
+          placeholder={t('mindMap.searchPlaceholder', { defaultValue: 'Search…' })}
+          className="h-[26px] w-32 rounded-md border bg-background px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        {normalizedQuery && (
+          <span className="text-xs text-muted-foreground">
+            {t('mindMap.matches', { defaultValue: '{count} matches' }).replace('{count}', String(matchCount))}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => setClusterByType((v) => !v)}
+          aria-pressed={clusterByType}
+          className={cn(
+            'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            clusterByType
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+        >
+          {t('mindMap.clusterByType', { defaultValue: 'Cluster by type' })}
+        </button>
       </div>
       <ReactFlow
         nodes={nodes}
@@ -261,6 +393,19 @@ export default function MindMap({
         <Controls showInteractive={false} />
         <MiniMap pannable zoomable nodeColor={minimapNodeColor} />
       </ReactFlow>
+      {preview && (
+        <MindMapNodePreview
+          notebookId={notebookId}
+          artifactId={preview.id}
+          artifactType={preview.artifactType}
+          anchor={preview.anchor}
+          onClose={() => setPreview(null)}
+          onOpenArtifact={(id) => {
+            setPreview(null)
+            onSelectArtifact?.(id)
+          }}
+        />
+      )}
     </div>
   )
 }

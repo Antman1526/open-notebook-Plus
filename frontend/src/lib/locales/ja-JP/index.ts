@@ -1309,6 +1309,14 @@ export const jaJP = {
       regenerateOutdatedTooltip: "エクスポート後に内容が変更されました。クリックして{label}を更新。",
       refreshAllOutdated: "期限切れをすべて更新 ({count})",
       refreshingAll: "すべて更新中…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "すべての成果物をエクスポート",
+      bundleTitle: "すべての成果物をエクスポート",
+      bundleDescription: "このノートブック内の完了した成果物をすべて1つのZIPファイルにまとめます。",
+      regenerateStale: "まず古いエクスポートを再生成",
+      bundleSuccess: "{count} 件の成果物を {destination} にエクスポートしました",
+      bundleEmpty: "エクスポートできる完了済みの成果物がありません",
     },
   },
   setupBanner: {
@@ -1438,6 +1446,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "ソース ({count})",
   filterNotes: "ノート ({count})",
   filterArtifacts: "成果物 ({count})",
+  searchLabel: "ノードを検索",
+  searchPlaceholder: "検索…",
+  matches: "{count} 件一致",
+  clusterByType: "種類でクラスタ化",
+  previewOpen: "Studioで開く",
+  previewPlay: "再生",
+  previewLoading: "読み込み中…",
+  previewUnavailable: "プレビューは利用できません。",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

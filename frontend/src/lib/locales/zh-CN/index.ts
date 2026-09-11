@@ -1309,6 +1309,14 @@ export const zhCN = {
       regenerateOutdatedTooltip: "导出后内容已更改。点击以刷新 {label}。",
       refreshAllOutdated: "刷新所有已过期的导出 ({count})",
       refreshingAll: "正在全部刷新…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "导出全部产物",
+      bundleTitle: "导出全部产物",
+      bundleDescription: "将此笔记本中所有已完成的产物打包为一个 zip 文件。",
+      regenerateStale: "先重新生成过期的导出",
+      bundleSuccess: "已将 {count} 个产物导出到 {destination}",
+      bundleEmpty: "没有可导出的已完成产物",
     },
   },
   setupBanner: {
@@ -1438,6 +1446,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "来源 ({count})",
   filterNotes: "笔记 ({count})",
   filterArtifacts: "产物 ({count})",
+  searchLabel: "搜索节点",
+  searchPlaceholder: "搜索…",
+  matches: "{count} 个匹配项",
+  clusterByType: "按类型聚类",
+  previewOpen: "在工作室中打开",
+  previewPlay: "播放",
+  previewLoading: "加载中…",
+  previewUnavailable: "预览不可用。",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

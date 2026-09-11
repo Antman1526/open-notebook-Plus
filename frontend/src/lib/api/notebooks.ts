@@ -14,16 +14,19 @@ import {
 } from '@/lib/types/api'
 
 // v0.8.83 — mind-map graph types (improvement roadmap, Batch 3)
+// v0.8.124 — carry artifact_type through so the mind map can branch preview
+// behavior per studio_artifact kind (podcast_audio / slide_deck vs. others).
 export interface NotebookGraphNode {
   id: string
   type: 'notebook' | 'source' | 'note' | 'studio_artifact'
   label: string
+  artifact_type?: string | null
 }
 
 export interface NotebookGraphEdge {
   source: string
   target: string
-  kind: 'reference' | 'artifact' | 'grounded_in'
+  kind: 'reference' | 'artifact' | 'grounded_in' | 'studio_artifact'
 }
 
 export interface NotebookGraph {

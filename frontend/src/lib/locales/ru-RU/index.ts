@@ -1309,6 +1309,14 @@ export const ruRU = {
       regenerateOutdatedTooltip: "Содержимое изменилось после экспорта. Нажмите для обновления {label}.",
       refreshAllOutdated: "Обновить все устаревшие ({count})",
       refreshingAll: "Обновление всех…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "Экспортировать все артефакты",
+      bundleTitle: "Экспортировать все артефакты",
+      bundleDescription: "Объединяет все завершённые артефакты в этом блокноте в один zip-файл.",
+      regenerateStale: "Сначала обновить устаревшие экспорты",
+      bundleSuccess: "Экспортировано {count} артефактов в {destination}",
+      bundleEmpty: "Нет завершённых артефактов для экспорта",
     },
   },
   setupBanner: {
@@ -1438,6 +1446,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "Источники ({count})",
   filterNotes: "Заметки ({count})",
   filterArtifacts: "Артефакты ({count})",
+  searchLabel: "Поиск узлов",
+  searchPlaceholder: "Поиск…",
+  matches: "{count} совпадений",
+  clusterByType: "Группировать по типу",
+  previewOpen: "Открыть в Studio",
+  previewPlay: "Воспроизвести",
+  previewLoading: "Загрузка…",
+  previewUnavailable: "Предпросмотр недоступен.",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

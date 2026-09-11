@@ -1310,6 +1310,14 @@ export const deDE = {
       regenerateOutdatedTooltip: "Inhalt wurde seit dem Export geändert. Klicken, um {label} zu aktualisieren.",
       refreshAllOutdated: "Alle veralteten aktualisieren ({count})",
       refreshingAll: "Alle werden aktualisiert…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "Alle Artefakte exportieren",
+      bundleTitle: "Alle Artefakte exportieren",
+      bundleDescription: "Bündelt jedes abgeschlossene Artefakt in diesem Notizbuch in einer einzigen ZIP-Datei.",
+      regenerateStale: "Veraltete Exporte zuerst aktualisieren",
+      bundleSuccess: "{count} Artefakte nach {destination} exportiert",
+      bundleEmpty: "Keine abgeschlossenen Artefakte zum Exportieren",
     },
   },
   setupBanner: {
@@ -1439,6 +1447,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "Quellen ({count})",
   filterNotes: "Notizen ({count})",
   filterArtifacts: "Artefakte ({count})",
+  searchLabel: "Knoten durchsuchen",
+  searchPlaceholder: "Suchen…",
+  matches: "{count} Treffer",
+  clusterByType: "Nach Typ gruppieren",
+  previewOpen: "Im Studio öffnen",
+  previewPlay: "Abspielen",
+  previewLoading: "Wird geladen…",
+  previewUnavailable: "Vorschau nicht verfügbar.",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

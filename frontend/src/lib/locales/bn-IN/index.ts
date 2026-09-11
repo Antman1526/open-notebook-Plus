@@ -1310,6 +1310,14 @@ export const bnIN = {
       regenerateOutdatedTooltip: "এক্সপোর্টের পর বিষয়বস্তু পরিবর্তিত হয়েছে। {label} রিফ্রেশ করতে ক্লিক করুন।",
       refreshAllOutdated: "সমস্ত পুরানো রিফ্রেশ করুন ({count})",
       refreshingAll: "সমস্ত রিফ্রেশ করা হচ্ছে…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "সমস্ত আর্টিফ্যাক্ট রপ্তানি করুন",
+      bundleTitle: "সমস্ত আর্টিফ্যাক্ট রপ্তানি করুন",
+      bundleDescription: "এই নোটবুকের প্রতিটি সম্পন্ন আর্টিফ্যাক্ট একটি একক জিপ ফাইলে একত্র করুন।",
+      regenerateStale: "প্রথমে পুরনো এক্সপোর্টগুলি পুনরায় তৈরি করুন",
+      bundleSuccess: "{count}টি আর্টিফ্যাক্ট {destination}-এ রপ্তানি করা হয়েছে",
+      bundleEmpty: "রপ্তানি করার জন্য কোনো সম্পন্ন আর্টিফ্যাক্ট নেই",
     },
   },
   setupBanner: {
@@ -1439,6 +1447,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "উৎস ({count})",
   filterNotes: "নোট ({count})",
   filterArtifacts: "শিল্পকর্ম ({count})",
+  searchLabel: "নোড অনুসন্ধান করুন",
+  searchPlaceholder: "অনুসন্ধান করুন…",
+  matches: "{count}টি মিল",
+  clusterByType: "ধরন অনুযায়ী ক্লাস্টার করুন",
+  previewOpen: "স্টুডিওতে খুলুন",
+  previewPlay: "চালান",
+  previewLoading: "লোড হচ্ছে…",
+  previewUnavailable: "প্রিভিউ উপলব্ধ নয়।",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

@@ -1311,6 +1311,14 @@ export const frFR = {
       regenerateOutdatedTooltip: "Le contenu a changé depuis l'export. Cliquez pour actualiser {label}.",
       refreshAllOutdated: "Actualiser tous les obsolètes ({count})",
       refreshingAll: "Actualisation de tous…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "Exporter tous les artefacts",
+      bundleTitle: "Exporter tous les artefacts",
+      bundleDescription: "Regroupez tous les artefacts terminés de ce notebook dans un seul fichier zip.",
+      regenerateStale: "Régénérer d'abord les exports obsolètes",
+      bundleSuccess: "{count} artefacts exportés vers {destination}",
+      bundleEmpty: "Aucun artefact terminé à exporter",
     },
   },
   setupBanner: {
@@ -1440,6 +1448,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "Sources ({count})",
   filterNotes: "Notes ({count})",
   filterArtifacts: "Artefacts ({count})",
+  searchLabel: "Rechercher des nœuds",
+  searchPlaceholder: "Rechercher…",
+  matches: "{count} résultats",
+  clusterByType: "Regrouper par type",
+  previewOpen: "Ouvrir dans Studio",
+  previewPlay: "Lire",
+  previewLoading: "Chargement…",
+  previewUnavailable: "Aperçu indisponible.",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

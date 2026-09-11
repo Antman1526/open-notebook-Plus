@@ -1309,6 +1309,14 @@ export const trTR = {
       regenerateOutdatedTooltip: "İçerik dışa aktarımdan sonra değişti. {label} yenilemek için tıklayın.",
       refreshAllOutdated: "Tüm güncel olmayanları yenile ({count})",
       refreshingAll: "Tümü yenileniyor…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "Tüm eserleri dışa aktar",
+      bundleTitle: "Tüm eserleri dışa aktar",
+      bundleDescription: "Bu defterdeki tamamlanmış her eseri tek bir zip dosyasında birleştirir.",
+      regenerateStale: "Önce güncel olmayan dışa aktarmaları yenile",
+      bundleSuccess: "{count} eser {destination} konumuna aktarıldı",
+      bundleEmpty: "Dışa aktarılacak tamamlanmış eser yok",
     },
   },
   setupBanner: {
@@ -1438,6 +1446,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "Kaynaklar ({count})",
   filterNotes: "Notlar ({count})",
   filterArtifacts: "Yapılar ({count})",
+  searchLabel: "Düğümlerde ara",
+  searchPlaceholder: "Ara…",
+  matches: "{count} eşleşme",
+  clusterByType: "Türe göre kümele",
+  previewOpen: "Stüdyoda aç",
+  previewPlay: "Oynat",
+  previewLoading: "Yükleniyor…",
+  previewUnavailable: "Önizleme kullanılamıyor.",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

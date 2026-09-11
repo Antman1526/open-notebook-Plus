@@ -1311,6 +1311,14 @@ export const caES = {
       regenerateOutdatedTooltip: "El contingut ha canviat després de l'exportació. Fes clic per actualitzar {label}.",
       refreshAllOutdated: "Actualitzar tots els obsolets ({count})",
       refreshingAll: "Actualitzant tots…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "Exporta tots els artefactes",
+      bundleTitle: "Exporta tots els artefactes",
+      bundleDescription: "Agrupa cada artefacte completat d'aquest quadern en un únic fitxer zip.",
+      regenerateStale: "Regenera primer les exportacions obsoletes",
+      bundleSuccess: "S'han exportat {count} artefactes a {destination}",
+      bundleEmpty: "No hi ha artefactes completats per exportar",
     },
   },
   setupBanner: {
@@ -1440,6 +1448,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "Fonts ({count})",
   filterNotes: "Notes ({count})",
   filterArtifacts: "Artefactes ({count})",
+  searchLabel: "Cerca nodes",
+  searchPlaceholder: "Cerca…",
+  matches: "{count} coincidències",
+  clusterByType: "Agrupa per tipus",
+  previewOpen: "Obre a l'Estudi",
+  previewPlay: "Reprodueix",
+  previewLoading: "Carregant…",
+  previewUnavailable: "Vista prèvia no disponible.",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

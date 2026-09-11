@@ -1309,6 +1309,14 @@ export const zhTW = {
       regenerateOutdatedTooltip: "匯出後內容已變更。點擊以重新整理 {label}。",
       refreshAllOutdated: "重新整理所有已過期的匯出 ({count})",
       refreshingAll: "正在全部重新整理…",
+      // v0.8.124 — one-click export of every completed artifact as a zip
+      // (ArtifactRail header button + ExportAllArtifactsDialog.tsx).
+      exportAll: "匯出所有產出物",
+      bundleTitle: "匯出所有產出物",
+      bundleDescription: "將此筆記本中所有已完成的產出物打包成一個 zip 檔案。",
+      regenerateStale: "先重新產生過期的匯出",
+      bundleSuccess: "已將 {count} 個產出物匯出至 {destination}",
+      bundleEmpty: "沒有可匯出的已完成產出物",
     },
   },
   setupBanner: {
@@ -1438,6 +1446,14 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   filterSources: "來源 ({count})",
   filterNotes: "筆記 ({count})",
   filterArtifacts: "產物 ({count})",
+  searchLabel: "搜尋節點",
+  searchPlaceholder: "搜尋…",
+  matches: "{count} 個相符項目",
+  clusterByType: "依類型分組",
+  previewOpen: "在工作室中開啟",
+  previewPlay: "播放",
+  previewLoading: "載入中…",
+  previewUnavailable: "無法預覽。",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {
