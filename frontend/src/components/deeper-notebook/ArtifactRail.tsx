@@ -260,6 +260,23 @@ export function ArtifactRail({
     selectedArtifact?.id ?? null,
     { enabled: enabled && Boolean(selectedArtifact) },
   )
+  useEffect(() => {
+    const handleSelectArtifact = (event: Event) => {
+      const customEvent = event as CustomEvent<{ artifactId?: string }>
+      const targetId = customEvent.detail?.artifactId
+      if (!targetId) return
+      const found = artifacts.find((a) => a.id === targetId)
+      if (found) {
+        setSelectedArtifact(found)
+        setSelectedCitation(null)
+      }
+    }
+    window.addEventListener('dn:select-artifact', handleSelectArtifact)
+    return () => {
+      window.removeEventListener('dn:select-artifact', handleSelectArtifact)
+    }
+  }, [artifacts])
+
   const isCreating = (
     createArtifact.isPending
     || createWorkflowRun.isPending

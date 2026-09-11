@@ -5,7 +5,7 @@
 // dep) using React Flow. Clicking a source/note node deep-links to it via the
 // callbacks. Loaded with next/dynamic ssr:false by the caller (React Flow needs
 // the DOM). Data comes from GET /api/notebooks/{id}/graph.
-import { useCallback, useMemo, type CSSProperties, type MouseEvent } from 'react'
+import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import {
   ReactFlow,
   Background,
@@ -19,6 +19,7 @@ import { Loader2 } from 'lucide-react'
 
 import { useNotebookGraph } from '@/lib/hooks/use-notebook-graph'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { cn } from '@/lib/utils'
 
 interface MindMapProps {
   notebookId: string
@@ -28,6 +29,8 @@ interface MindMapProps {
   onSelectNote?: (noteId: string) => void
   onSelectArtifact?: (artifactId: string) => void
 }
+
+type FilterType = 'all' | 'source' | 'note' | 'studio_artifact'
 
 const NODE_BG: Record<string, string> = {
   notebook: 'var(--dn-graph-fallback)',
@@ -74,6 +77,7 @@ export default function MindMap({
   onSelectArtifact,
 }: MindMapProps) {
   const { t } = useTranslation()
+  const [filter, setFilter] = useState<FilterType>('all')
   const { data, isLoading, isError } = useNotebookGraph(notebookId, open)
 
   const typeById = useMemo(() => {
@@ -82,14 +86,44 @@ export default function MindMap({
     return m
   }, [data])
 
+  const counts = useMemo(() => {
+    let sources = 0
+    let notes = 0
+    let artifacts = 0
+    if (data?.nodes) {
+      for (const n of data.nodes) {
+        if (n.type === 'source') sources++
+        else if (n.type === 'note') notes++
+        else if (n.type === 'studio_artifact') artifacts++
+      }
+    }
+    return {
+      all: sources + notes + artifacts,
+      sources,
+      notes,
+      artifacts,
+    }
+  }, [data])
+
+  const spokes = useMemo(() => {
+    if (!data) return []
+    return data.nodes.filter((n) => {
+      if (n.type === 'notebook') return false
+      if (filter === 'all') return true
+      return n.type === filter
+    })
+  }, [data, filter])
+
   const { nodes, edges } = useMemo(() => {
     if (!data) return { nodes: [] as Node[], edges: [] as Edge[] }
     const hub = data.nodes.find((n) => n.type === 'notebook')
-    const spokes = data.nodes.filter((n) => n.type !== 'notebook')
     const radius = Math.max(260, spokes.length * 32)
 
     const rfNodes: Node[] = []
+    const visibleNodeIds = new Set<string>()
+
     if (hub) {
+      visibleNodeIds.add(hub.id)
       rfNodes.push({
         id: hub.id,
         position: { x: 0, y: 0 },
@@ -99,6 +133,7 @@ export default function MindMap({
       })
     }
     spokes.forEach((n, i) => {
+      visibleNodeIds.add(n.id)
       const angle = (i / Math.max(1, spokes.length)) * Math.PI * 2
       rfNodes.push({
         id: n.id,
@@ -108,14 +143,16 @@ export default function MindMap({
       })
     })
 
-    const rfEdges: Edge[] = data.edges.map((e, i) => ({
-      id: `e${i}`,
-      source: e.source,
-      target: e.target,
-      style: { stroke: 'var(--dn-graph-edge)', strokeWidth: 1.5 },
-    }))
+    const rfEdges: Edge[] = data.edges
+      .filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
+      .map((e, i) => ({
+        id: `e${i}`,
+        source: e.source,
+        target: e.target,
+        style: { stroke: 'var(--dn-graph-edge)', strokeWidth: 1.5 },
+      }))
     return { nodes: rfNodes, edges: rfEdges }
-  }, [data])
+  }, [data, spokes])
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node) => {
@@ -125,6 +162,14 @@ export default function MindMap({
       else if (type === 'studio_artifact') onSelectArtifact?.(node.id)
     },
     [typeById, onSelectSource, onSelectNote, onSelectArtifact]
+  )
+
+  const minimapNodeColor = useCallback(
+    (node: Node) => {
+      const type = typeById.get(node.id) ?? 'notebook'
+      return NODE_BG[type] ?? 'var(--dn-graph-fallback)'
+    },
+    [typeById]
   )
 
   if (isLoading) {
@@ -148,7 +193,61 @@ export default function MindMap({
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="relative h-full w-full">
+      <div className="absolute top-3 left-4 z-10 flex flex-wrap items-center gap-1.5 rounded-lg border bg-background/90 p-1 backdrop-blur-xs shadow-xs">
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={cn(
+            'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            filter === 'all'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+          aria-pressed={filter === 'all'}
+        >
+          {t('mindMap.filterAll', { defaultValue: 'All ({count})' }).replace('{count}', String(counts.all))}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter('source')}
+          className={cn(
+            'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            filter === 'source'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+          aria-pressed={filter === 'source'}
+        >
+          {t('mindMap.filterSources', { defaultValue: 'Sources ({count})' }).replace('{count}', String(counts.sources))}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter('note')}
+          className={cn(
+            'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            filter === 'note'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+          aria-pressed={filter === 'note'}
+        >
+          {t('mindMap.filterNotes', { defaultValue: 'Notes ({count})' }).replace('{count}', String(counts.notes))}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter('studio_artifact')}
+          className={cn(
+            'inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+            filter === 'studio_artifact'
+              ? 'bg-primary text-primary-foreground shadow-xs'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+          aria-pressed={filter === 'studio_artifact'}
+        >
+          {t('mindMap.filterArtifacts', { defaultValue: 'Artifacts ({count})' }).replace('{count}', String(counts.artifacts))}
+        </button>
+      </div>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -160,8 +259,9 @@ export default function MindMap({
       >
         <Background gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable />
+        <MiniMap pannable zoomable nodeColor={minimapNodeColor} />
       </ReactFlow>
     </div>
   )
 }
+

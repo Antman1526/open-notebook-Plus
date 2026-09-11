@@ -1767,4 +1767,38 @@ describe('ArtifactRail', () => {
       expect(deleteArtifact).toHaveBeenCalledWith('studio_artifact:delete-me')
     })
   })
+
+  it('opens an artifact when dn:select-artifact event is dispatched', async () => {
+    isEvidenceStudioEnabled.mockReturnValue(true)
+    useStudioArtifacts.mockReturnValue({
+      data: [
+        {
+          id: 'studio_artifact:target',
+          notebook_id: 'notebook:alpha',
+          artifact_type: 'notes',
+          title: 'Target Notes',
+          status: 'completed',
+          source_ids: ['source:one'],
+          output_payload: { content: '# Target Notes Content' },
+          citations: [],
+          export_paths: {},
+        },
+      ],
+      isLoading: false,
+    })
+
+    render(<ArtifactRail notebookId="notebook:alpha" />)
+    expect(screen.queryByRole('heading', { name: 'Target Notes' })).not.toBeInTheDocument()
+
+    window.dispatchEvent(
+      new CustomEvent('dn:select-artifact', {
+        detail: { artifactId: 'studio_artifact:target' },
+      })
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Target Notes' })).toBeInTheDocument()
+    })
+  })
 })
+

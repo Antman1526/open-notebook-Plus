@@ -16,14 +16,14 @@ import {
 // v0.8.83 — mind-map graph types (improvement roadmap, Batch 3)
 export interface NotebookGraphNode {
   id: string
-  type: 'notebook' | 'source' | 'note'
+  type: 'notebook' | 'source' | 'note' | 'studio_artifact'
   label: string
 }
 
 export interface NotebookGraphEdge {
   source: string
   target: string
-  kind: 'reference' | 'artifact'
+  kind: 'reference' | 'artifact' | 'grounded_in'
 }
 
 export interface NotebookGraph {

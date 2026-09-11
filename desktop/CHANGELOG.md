@@ -25,6 +25,16 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.123 — 2026-09-10 — Mind Map Deep-Linking, Semantic MiniMap, Bundle Cleanup & Canvas Filter Chips
+
+✨ **Mind map to studio artifact deep-linking.** Connected `onSelectArtifact` in `MindMapButton.tsx` to dispatch `dn:select-artifact` custom event and close the canvas modal, and registered a responsive listener in `ArtifactRail.tsx`. Clicking any studio artifact node in the Mind Map immediately opens the full artifact drawer/modal with markdown preview, citations, export options, and revision history.
+
+🎨 **Semantic MiniMap styling & graph node type alignment.** Configured React Flow's `<MiniMap />` in `MindMap.tsx` with dynamic `nodeColor` callback mapping each node to its semantic CSS design token (`--dn-graph-source`, `--dn-graph-note`, `--dn-graph-artifact`, and fallback `--dn-graph-fallback`). Aligned frontend `NotebookGraphNode` and `NotebookGraphEdge` TypeScript definitions with backend models (`studio_artifact`, `grounded_in`).
+
+🔒 **Multi-file bundle export directory disk cleanup.** Extended `StudioArtifact._cleanup_export_files()` in `deeper_notebook/domain/notebook.py` to sweep and safely unlink all files and child bundle directories (e.g. SCORM, xAPI, research bundles matching `{slug}-*` or `{slug}`) within `_artifact_export_dir()`, with strict path traversal containment guards, ensuring zero orphaned directory trees upon artifact deletion.
+
+✨ **Mind map node-type filter chips & 14-locale i18n.** Added interactive filter chips bar atop the Mind Map canvas (`All ({count})`, `Sources ({count})`, `Notes ({count})`, `Artifacts ({count})`) with dynamic radial coordinate redistribution and edge filtering. Added `filterAll`, `filterSources`, `filterNotes`, and `filterArtifacts` under `mindMap` across all 14 supported locales with 100% `{count}` placeholder parity and 0 unused keys.
+
 ## v0.8.122 — 2026-09-10 — Video Overview Disk Safety, Mind Map Note Editing, Graph Artifact Grounding & i18n Polish
 
 🔒 **Video overview orphaned file disk safety.** `StudioArtifact._cleanup_export_files()` now unlinks video overview assets (`video_mp4`, `video_captions`) located under `DATA_FOLDER / "video-overviews" / {artifact_slug}` upon artifact deletion, preventing disk bloat while enforcing strict directory containment to protect against path traversal. It also safely prunes empty artifact video directories.

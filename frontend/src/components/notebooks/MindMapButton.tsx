@@ -53,6 +53,12 @@ export function MindMapButton({ notebookId }: { notebookId: string }) {
               open={open}
               onSelectSource={(id) => setSourceId(id)}
               onSelectNote={(id) => setNoteId(id)}
+              onSelectArtifact={(id) => {
+                setOpen(false)
+                window.dispatchEvent(
+                  new CustomEvent('dn:select-artifact', { detail: { artifactId: id } })
+                )
+              }}
             />
           </div>
         </DialogContent>

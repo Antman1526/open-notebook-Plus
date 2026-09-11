@@ -1436,6 +1436,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   empty: "Add sources or notes to this notebook to see its mind map.",
   button: "Mind map",
   title: "Mind map",
+  filterAll: "Tots ({count})",
+  filterSources: "Fonts ({count})",
+  filterNotes: "Notes ({count})",
+  filterArtifacts: "Artefactes ({count})",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

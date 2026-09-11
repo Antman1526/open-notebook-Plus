@@ -81,7 +81,7 @@ function renderSearchResultCard(
     visualGalleryEnabled: boolean
     openModal: (type: ModalType, id: string) => void
     onViewEvidence: (result: SearchResult) => void
-    t: (key: string) => string
+    t: (key: string, options?: { defaultValue?: string }) => string
   }
 ): React.ReactNode {
   // A result's own record ID defines its route and kind.

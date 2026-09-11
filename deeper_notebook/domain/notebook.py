@@ -1885,8 +1885,10 @@ class StudioArtifact(ObjectModel):
         from deeper_notebook.studio.generation.persistence import _artifact_export_dir
 
         allowed_roots: list[Path] = []
+        export_root: Optional[Path] = None
         try:
-            allowed_roots.append(_artifact_export_dir().resolve())
+            export_root = _artifact_export_dir().resolve()
+            allowed_roots.append(export_root)
         except Exception as exc:
             logger.warning(
                 f"Failed to resolve export directory for artifact {self.id} cleanup: {exc}"
@@ -1913,6 +1915,31 @@ class StudioArtifact(ObjectModel):
             except Exception as exc:
                 logger.warning(
                     f"Failed to clean up export file {path_str} for artifact {self.id}: {exc}"
+                )
+
+        if export_root is not None and getattr(self, "id", None):
+            try:
+                slug = str(self.id).replace(":", "-")
+                for item in list(export_root.iterdir()):
+                    if item.is_dir() and (
+                        item.name == slug or item.name.startswith(f"{slug}-")
+                    ):
+                        if export_root in item.parents:
+                            for child in list(item.iterdir()):
+                                try:
+                                    if child.is_file():
+                                        child.unlink(missing_ok=True)
+                                except Exception as c_exc:
+                                    logger.warning(
+                                        f"Failed to unlink bundle file {child}: {c_exc}"
+                                    )
+                            try:
+                                item.rmdir()
+                            except Exception:
+                                pass
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to clean up bundle directories for artifact {self.id}: {exc}"
                 )
 
         if video_root is not None and getattr(self, "id", None):

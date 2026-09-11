@@ -4,6 +4,7 @@
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
 **Latest Commits & Additions** (v0.8.115 – v0.8.122):
+- `feat(studio): mind map deep-linking, semantic minimap, bundle cleanup & canvas filter chips` (v0.8.123)
 - `feat(studio): video overview disk safety, mind map note editing, graph artifact grounding & i18n polish` (v0.8.122)
 - `feat(studio): export content integrity, orphaned export cleanup, and batch stale refresh` (v0.8.121)
 - `db815041`: `feat(studio): surface export staleness and per-item regeneration in Evidence Studio` (v0.8.120)
@@ -78,7 +79,22 @@ All gates are currently passing 100%:
 
 ## 4. Key Architectural Additions & Features
 
-1. **Video Overview Orphaned File Disk Safety (v0.8.122)**:
+1. **Mind Map to Studio Artifact Deep-Linking (v0.8.123)**:
+   - Connected `onSelectArtifact` in `MindMapButton.tsx` to dispatch the `dn:select-artifact` custom event and close the mind map dialog.
+   - Added an active listener in `ArtifactRail.tsx` that catches `dn:select-artifact`, finds the target artifact in memory, and immediately selects it to open the full viewer drawer/modal with markdown preview, citations, export options, and revision history.
+
+2. **Semantic MiniMap Styling & Graph Node Type Alignment (v0.8.123)**:
+   - Configured React Flow's `<MiniMap />` in `MindMap.tsx` with dynamic `nodeColor` callback mapping each node to its semantic CSS design token (`--dn-graph-source`, `--dn-graph-note`, `--dn-graph-artifact`, and fallback `--dn-graph-fallback`).
+   - Aligned frontend `NotebookGraphNode` and `NotebookGraphEdge` TypeScript definitions with backend models (`studio_artifact`, `grounded_in`).
+
+3. **Multi-File Bundle Directory Disk Cleanup (v0.8.123)**:
+   - Extended `StudioArtifact._cleanup_export_files()` in `deeper_notebook/domain/notebook.py` to sweep and safely unlink all files and child bundle directories (e.g. SCORM, xAPI, research bundles matching `{slug}-*` or `{slug}`) within `_artifact_export_dir()`, with strict path traversal containment guards, ensuring zero orphaned directory trees upon artifact deletion.
+
+4. **Mind Map Node-Type Filter Chips & 14-Locale i18n (v0.8.123)**:
+   - Added an interactive filter chips bar atop the Mind Map canvas (`All ({count})`, `Sources ({count})`, `Notes ({count})`, `Artifacts ({count})`) with dynamic radial coordinate redistribution and visible edge filtering.
+   - Added `filterAll`, `filterSources`, `filterNotes`, and `filterArtifacts` under `mindMap` across all 14 supported locales (`en-US`, `zh-CN`, `zh-TW`, `ja-JP`, `pt-BR`, `es-ES`, `fr-FR`, `de-DE`, `it-IT`, `ru-RU`, `tr-TR`, `pl-PL`, `ca-ES`, `bn-IN`) with 100% `{count}` placeholder parity and 0 unused keys.
+
+5. **Video Overview Orphaned File Disk Safety (v0.8.122)**:
    - `StudioArtifact._cleanup_export_files()` in `deeper_notebook/domain/notebook.py` unlinks generated video overview assets (`video_mp4`, `video_captions`) located in `DATA_FOLDER / "video-overviews" / {artifact_slug}` upon artifact deletion.
    - Enforces strict path traversal containment checks (`candidate.is_file() and any(root in candidate.parents for root in allowed_roots)`).
    - Recursively sweeps and prunes empty artifact video directories to prevent disk accumulation.

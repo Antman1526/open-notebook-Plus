@@ -336,3 +336,51 @@ async def test_studio_artifact_delete_cleans_up_video_overviews(
     assert video_root.exists()
 
 
+@pytest.mark.asyncio
+async def test_studio_artifact_delete_cleans_up_bundle_directories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+
+    artifact = _sample_course_pack_artifact()
+    artifact.id = "studio_artifact:bundle_test"
+    slug = "studio_artifact-bundle_test"
+
+    scorm_dir = tmp_path / f"{slug}-scorm"
+    scorm_dir.mkdir(parents=True, exist_ok=True)
+    manifest = scorm_dir / "imsmanifest.xml"
+    manifest.write_text("<manifest></manifest>")
+
+    xapi_dir = tmp_path / f"{slug}-xapi"
+    xapi_dir.mkdir(parents=True, exist_ok=True)
+    tincan = xapi_dir / "tincan.xml"
+    tincan.write_text("<tincan></tincan>")
+
+    other_dir = tmp_path / "other-artifact-scorm"
+    other_dir.mkdir(parents=True, exist_ok=True)
+    other_file = other_dir / "keep.txt"
+    other_file.write_text("keep this")
+
+    artifact.export_paths = {
+        "scorm_package": str(manifest),
+        "xapi_package": str(tincan),
+    }
+
+    monkeypatch.setattr(
+        "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
+    )
+
+    deleted = await artifact.delete()
+    assert deleted is True
+
+    assert not manifest.exists()
+    assert not scorm_dir.exists()
+    assert not tincan.exists()
+    assert not xapi_dir.exists()
+    assert other_dir.exists()
+    assert other_file.exists()
+
+
+
