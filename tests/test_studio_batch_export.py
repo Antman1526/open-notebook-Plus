@@ -265,6 +265,230 @@ def test_bundle_export_returns_404_for_empty_notebook(monkeypatch, tmp_path):
     assert response.status_code == 404
 
 
+class _FakeEpisode:
+    """Minimal PodcastEpisode-shaped stand-in for
+    `persistence.write_notebook_artifact_bundle`'s `episodes` param."""
+
+    def __init__(self, id, name, audio_file, transcript_segments=None):
+        self.id = id
+        self.name = name
+        self.audio_file = audio_file
+        self.transcript_segments = transcript_segments or []
+
+
+# v0.8.125 — write_notebook_artifact_bundle's podcast-bundling path, tested
+# directly against the function (not the route): PodcastEpisode has no
+# notebook_id and no notebook relation exists in this codebase, so the
+# route itself always passes `episodes=[]` (see
+# api/routers/studio/exports.py::_load_notebook_episodes).
+def test_write_bundle_includes_podcast_audio_inside_root(monkeypatch, tmp_path):
+    audio_root = tmp_path / "podcasts" / "episodes"
+    audio_root.mkdir(parents=True)
+    monkeypatch.setattr(persistence, "_PODCAST_AUDIO_ROOT", audio_root)
+
+    episode_dir = audio_root / "ep1"
+    episode_dir.mkdir()
+    audio_path = episode_dir / "audio.mp3"
+    audio_path.write_bytes(b"fake-mp3-bytes")
+
+    destination = tmp_path / "bundle.zip"
+    report = persistence.write_notebook_artifact_bundle(
+        [],
+        destination,
+        zipfile.ZIP_DEFLATED,
+        episodes=[_FakeEpisode("episode:1", "My Episode", str(audio_path))],
+    )
+
+    assert report.media_count == 1
+    assert report.media_bytes == audio_path.stat().st_size
+    assert report.warnings == []
+
+    with zipfile.ZipFile(destination) as zf:
+        names = set(zf.namelist())
+        assert "podcasts/episode-1/audio.mp3" in names
+        manifest = __import__("json").loads(zf.read("manifest.json"))
+        assert manifest["podcasts"] == [
+            {
+                "id": "episode:1",
+                "title": "My Episode",
+                "files": [{"filename": "audio.mp3", "bytes": len(b"fake-mp3-bytes")}],
+                "bytes": len(b"fake-mp3-bytes"),
+            }
+        ]
+
+
+def test_write_bundle_includes_transcript_when_present(monkeypatch, tmp_path):
+    audio_root = tmp_path / "podcasts" / "episodes"
+    audio_root.mkdir(parents=True)
+    monkeypatch.setattr(persistence, "_PODCAST_AUDIO_ROOT", audio_root)
+
+    audio_path = audio_root / "ep2" / "audio.mp3"
+    audio_path.parent.mkdir()
+    audio_path.write_bytes(b"bytes")
+
+    segment = MagicMock()
+    segment.model_dump.return_value = {
+        "start_seconds": 0,
+        "end_seconds": 1,
+        "speaker": "Host",
+        "text": "Hello",
+        "citation_ids": [],
+    }
+
+    destination = tmp_path / "bundle.zip"
+    report = persistence.write_notebook_artifact_bundle(
+        [],
+        destination,
+        zipfile.ZIP_DEFLATED,
+        episodes=[
+            _FakeEpisode(
+                "episode:2", "Episode Two", str(audio_path), transcript_segments=[segment]
+            )
+        ],
+    )
+
+    assert report.media_count == 1
+    with zipfile.ZipFile(destination) as zf:
+        names = set(zf.namelist())
+        assert "podcasts/episode-2/audio.mp3" in names
+        assert "podcasts/episode-2/transcript.json" in names
+
+
+def test_write_bundle_skips_episode_audio_outside_root(monkeypatch, tmp_path):
+    audio_root = tmp_path / "podcasts" / "episodes"
+    audio_root.mkdir(parents=True)
+    monkeypatch.setattr(persistence, "_PODCAST_AUDIO_ROOT", audio_root)
+
+    outside_path = tmp_path / "outside" / "audio.mp3"
+    outside_path.parent.mkdir()
+    outside_path.write_bytes(b"bytes")
+
+    destination = tmp_path / "bundle.zip"
+    report = persistence.write_notebook_artifact_bundle(
+        [],
+        destination,
+        zipfile.ZIP_DEFLATED,
+        episodes=[_FakeEpisode("episode:3", "Escapee", str(outside_path))],
+    )
+
+    assert report.media_count == 0
+    assert report.media_bytes == 0
+    assert any("episode:3" in w for w in report.warnings)
+    with zipfile.ZipFile(destination) as zf:
+        names = zf.namelist()
+        assert not any(name.startswith("podcasts/") for name in names)
+
+
+def test_write_bundle_include_media_false_skips_video_overview_files(tmp_path):
+    """v0.8.125 — the media flag must have a real effect today: with it off,
+    a slide deck's video_mp4 / video_captions export files stay out of the
+    zip while its document exports are still bundled."""
+    import zipfile
+
+    from deeper_notebook.studio.generation import persistence
+
+    docx = tmp_path / "deck.docx"
+    docx.write_bytes(b"docx")
+    mp4 = tmp_path / "deck.mp4"
+    mp4.write_bytes(b"mp4")
+    vtt = tmp_path / "deck.vtt"
+    vtt.write_bytes(b"vtt")
+
+    class _Artifact:
+        id = "studio_artifact:deck1"
+        notebook_id = "notebook:n1"
+        status = "completed"
+        title = "Deck"
+        artifact_type = "slide_deck"
+        export_paths = {"docx": str(docx), "video_mp4": str(mp4), "video_captions": str(vtt)}
+
+    target_on = tmp_path / "on.zip"
+    persistence.write_notebook_artifact_bundle(
+        [_Artifact()], target_on, zipfile.ZIP_DEFLATED, include_media=True
+    )
+    names_on = set(zipfile.ZipFile(target_on).namelist())
+    assert "studio_artifact-deck1/video_mp4/deck.mp4" in names_on
+    assert "studio_artifact-deck1/video_captions/deck.vtt" in names_on
+
+    target_off = tmp_path / "off.zip"
+    persistence.write_notebook_artifact_bundle(
+        [_Artifact()], target_off, zipfile.ZIP_DEFLATED, include_media=False
+    )
+    names_off = set(zipfile.ZipFile(target_off).namelist())
+    assert "studio_artifact-deck1/docx/deck.docx" in names_off
+    assert not any("/video_mp4/" in n or "/video_captions/" in n for n in names_off)
+
+
+def test_bundle_export_include_media_false_bundles_no_podcasts(monkeypatch, tmp_path):
+    fake_cls = _install_fake_artifacts(monkeypatch)
+    md_path = tmp_path / "report.md"
+    md_path.write_text("# Report", encoding="utf-8")
+    _register(
+        fake_cls,
+        "notebook:alpha",
+        fake_cls(
+            id="studio_artifact:1",
+            notebook_id="notebook:alpha",
+            artifact_type="report",
+            title="Report",
+            status="completed",
+            output_payload={"content": "# Report"},
+            export_paths={"markdown": str(md_path)},
+        ),
+    )
+    monkeypatch.setattr(persistence, "get_stale_export_formats", lambda _a: [])
+
+    destination = tmp_path / "bundle.zip"
+    response = _client().post(
+        "/api/studio/notebooks/notebook:alpha/exports/bundle",
+        json={
+            "destination": str(destination),
+            "regenerate_stale": False,
+            "include_media": False,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["media_count"] == 0
+
+
+def test_bundle_export_include_media_true_bundles_zero_episodes_not_notebook_scoped(
+    monkeypatch, tmp_path
+):
+    """PodcastEpisode has no notebook relation, so even with
+    include_media=True (the default) the route bundles zero episodes,
+    without error."""
+    fake_cls = _install_fake_artifacts(monkeypatch)
+    md_path = tmp_path / "report.md"
+    md_path.write_text("# Report", encoding="utf-8")
+    _register(
+        fake_cls,
+        "notebook:alpha",
+        fake_cls(
+            id="studio_artifact:1",
+            notebook_id="notebook:alpha",
+            artifact_type="report",
+            title="Report",
+            status="completed",
+            output_payload={"content": "# Report"},
+            export_paths={"markdown": str(md_path)},
+        ),
+    )
+    monkeypatch.setattr(persistence, "get_stale_export_formats", lambda _a: [])
+
+    destination = tmp_path / "bundle.zip"
+    response = _client().post(
+        "/api/studio/notebooks/notebook:alpha/exports/bundle",
+        json={"destination": str(destination), "regenerate_stale": False},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["media_count"] == 0
+    assert body["warnings"] == []
+
+
 def test_bundle_export_regenerates_stale_and_records_per_format_failure_as_warning(
     monkeypatch, tmp_path
 ):

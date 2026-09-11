@@ -14,7 +14,7 @@ api/routers/exports.py.
 from __future__ import annotations
 
 import asyncio
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
@@ -96,6 +96,16 @@ class NotebookArtifactBundleRequest(BaseModel):
             "recorded as warnings rather than failing the whole export."
         ),
     )
+    # v0.8.125 — include podcast episode audio/transcript alongside artifact
+    # exports. See `_load_notebook_episodes` for why this currently always
+    # bundles zero episodes.
+    include_media: bool = Field(
+        True,
+        description=(
+            "Include podcast episode audio and transcripts in the bundle, "
+            "under podcasts/{episode_slug}/."
+        ),
+    )
 
 
 class NotebookArtifactBundleResponse(BaseModel):
@@ -105,6 +115,7 @@ class NotebookArtifactBundleResponse(BaseModel):
     artifact_count: int
     skipped: int
     warnings: list[str] = []
+    media_count: int = 0
 
 
 async def _regenerate_stale_exports(
@@ -148,6 +159,19 @@ async def _regenerate_stale_exports(
                 )
 
 
+# v0.8.125 — `PodcastEpisode` (deeper_notebook/podcasts/models.py) has no
+# `notebook_id` field and no relation table links an episode back to a
+# notebook. `PodcastService.list_episodes()` (api/podcast_service.py, the
+# same query GET /podcasts/episodes uses) calls `PodcastEpisode.get_all()`
+# globally with zero notebook filtering — there is no notebook-scoped
+# episode query in this codebase to reuse. Bundling every episode in the
+# install into every notebook's export would silently leak unrelated
+# audio, so this bundles nothing rather than guess. Kept as its own
+# function so a future notebook-episode link only needs a body change here.
+async def _load_notebook_episodes(notebook_id: str) -> list[Any]:
+    return []
+
+
 @router.post(
     "/notebooks/{notebook_id}/exports/bundle",
     response_model=NotebookArtifactBundleResponse,
@@ -186,6 +210,8 @@ async def export_studio_artifact_bundle(
     if req.regenerate_stale:
         await _regenerate_stale_exports(artifacts, warnings)
 
+    episodes = await _load_notebook_episodes(notebook_id) if req.include_media else []
+
     zip_compression = _COMPRESSION_BY_NAME[req.compression]
     try:
         report = await asyncio.to_thread(
@@ -193,6 +219,8 @@ async def export_studio_artifact_bundle(
             artifacts,
             target_zip,
             zip_compression,
+            episodes=episodes,
+            include_media=req.include_media,
         )
     except OSError as exc:
         try:
@@ -212,4 +240,5 @@ async def export_studio_artifact_bundle(
         artifact_count=report.artifact_count,
         skipped=report.skipped,
         warnings=[*warnings, *report.warnings],
+        media_count=report.media_count,
     )

@@ -16,10 +16,13 @@ from pathlib import Path
 
 from loguru import logger
 
+from deeper_notebook.config import DATA_FOLDER
 from deeper_notebook.domain.notebook import StudioArtifact
 from deeper_notebook.environment import resolve_env
 from deeper_notebook.exceptions import InvalidInputError
 from deeper_notebook.identity import ACTIVITY_URN_PREFIX, PRODUCT_NAME
+from deeper_notebook.podcasts.models import PodcastEpisode
+from deeper_notebook.podcasts.paths import file_uri_to_local_path
 from deeper_notebook.studio.exporters import (
     export_document,
     export_infographic,
@@ -1494,8 +1497,39 @@ def _artifact_export_payload(artifact: StudioArtifact) -> dict[str, object]:
     }
 
 
+# v0.8.125 — same containment root api/routers/podcasts.py's
+# `_resolve_audio_path` guards against, duplicated here rather than
+# imported: that module lives in the `api` layer, which this `deeper_notebook`
+# package does not depend on.
+_PODCAST_AUDIO_ROOT = (Path(DATA_FOLDER) / "podcasts" / "episodes").resolve()
+
+
+def _resolve_podcast_audio_path(audio_file: str) -> Path | None:
+    """Resolve an episode's `audio_file` string to a Path inside
+    `_PODCAST_AUDIO_ROOT`, or None if it can't be resolved or escapes the
+    root. Mirrors `api/routers/podcasts.py::_resolve_audio_path`."""
+    try:
+        raw = (
+            Path(file_uri_to_local_path(audio_file))
+            if audio_file.startswith("file:")
+            else Path(audio_file)
+        )
+        resolved = raw.resolve()
+    except (OSError, ValueError):
+        return None
+    if not resolved.is_relative_to(_PODCAST_AUDIO_ROOT):
+        return None
+    return resolved
+
+
 # v0.8.124 — single-zip bundle of every *completed* artifact's existing
 # export files, for POST /studio/notebooks/{notebook_id}/exports/bundle.
+# v0.8.125 — extended with an optional `episodes` bundle of podcast audio
+# (+ transcript, when available).
+# v0.8.125 — export keys that hold rendered media rather than documents.
+_MEDIA_EXPORT_FORMATS = frozenset({"video_mp4", "video_captions"})
+
+
 @dataclass
 class BundleReport:
     """Result of `write_notebook_artifact_bundle`."""
@@ -1505,15 +1539,25 @@ class BundleReport:
     artifact_count: int
     skipped: int
     warnings: list[str] = field(default_factory=list)
+    media_count: int = 0
+    media_bytes: int = 0
 
 
 def write_notebook_artifact_bundle(
     artifacts: list[StudioArtifact],
     target_zip: Path,
     compression: int,
+    *,
+    episodes: list[PodcastEpisode] | None = None,
+    include_media: bool = True,
 ) -> BundleReport:
     """Bundle every *completed* artifact's already-persisted export files
     into one zip at `target_zip`.
+
+    ``include_media=False`` leaves out the video-overview files
+    (``video_mp4`` / ``video_captions`` export keys) as well as any podcast
+    episodes, so the flag has a real effect even while episodes are not
+    notebook-scoped (see the route's ``_load_notebook_episodes``).
 
     Layout: ``{artifact_slug}/{format}/{filename}`` per export file, where
     `artifact_slug` is `str(artifact.id).replace(":", "-")` — the same slug
@@ -1528,6 +1572,14 @@ def write_notebook_artifact_bundle(
     about and skipped rather than failing the whole bundle. Raises OSError
     on write failure — callers should clean up a half-written `target_zip`
     themselves (mirrors the notebook-export zip endpoints).
+
+    v0.8.125 — `episodes`, when given, are bundled under
+    ``podcasts/{episode_slug}/{audio filename}`` (plus a sibling
+    ``transcript.json`` when the episode has `transcript_segments`), and
+    recorded in the manifest's ``podcasts`` list (id, title, files, bytes).
+    An episode with no `audio_file`, or whose `audio_file` cannot be
+    resolved inside the podcast audio root, is warned about and skipped —
+    never fails the bundle.
     """
     warnings: list[str] = []
     completed = [a for a in artifacts if a.status == "completed"]
@@ -1535,8 +1587,11 @@ def write_notebook_artifact_bundle(
     notebook_id = str(artifacts[0].notebook_id) if artifacts else None
 
     manifest_artifacts: list[dict[str, object]] = []
+    manifest_podcasts: list[dict[str, object]] = []
     file_count = 0
     total_bytes = 0
+    media_count = 0
+    media_bytes = 0
 
     with zipfile.ZipFile(target_zip, "w", compression=compression) as zf:
         for artifact in completed:
@@ -1546,6 +1601,8 @@ def write_notebook_artifact_bundle(
             )
             formats_entry: list[dict[str, object]] = []
             for export_format, path_str in export_paths.items():
+                if not include_media and export_format in _MEDIA_EXPORT_FORMATS:
+                    continue
                 path = Path(path_str) if path_str else None
                 if not path or not path.is_file():
                     warnings.append(
@@ -1569,11 +1626,63 @@ def write_notebook_artifact_bundle(
                 }
             )
 
+        for episode in episodes or []:
+            audio_file = getattr(episode, "audio_file", None)
+            if not audio_file:
+                continue
+            resolved = _resolve_podcast_audio_path(audio_file)
+            if resolved is None or not resolved.is_file():
+                warnings.append(
+                    f"Skipping missing/out-of-root podcast audio for episode "
+                    f"{episode.id}: {audio_file}"
+                )
+                continue
+
+            slug = str(episode.id).replace(":", "-")
+            episode_files: list[dict[str, object]] = []
+            episode_bytes = 0
+
+            audio_size = resolved.stat().st_size
+            zf.write(resolved, f"podcasts/{slug}/{resolved.name}")
+            episode_files.append({"filename": resolved.name, "bytes": audio_size})
+            file_count += 1
+            total_bytes += audio_size
+            episode_bytes += audio_size
+
+            segments = getattr(episode, "transcript_segments", None)
+            if segments:
+                transcript_payload = [
+                    segment.model_dump() if hasattr(segment, "model_dump") else segment
+                    for segment in segments
+                ]
+                transcript_bytes = json.dumps(
+                    transcript_payload, ensure_ascii=False, indent=2
+                ).encode("utf-8")
+                zf.writestr(f"podcasts/{slug}/transcript.json", transcript_bytes)
+                episode_files.append(
+                    {"filename": "transcript.json", "bytes": len(transcript_bytes)}
+                )
+                file_count += 1
+                total_bytes += len(transcript_bytes)
+                episode_bytes += len(transcript_bytes)
+
+            media_count += 1
+            media_bytes += episode_bytes
+            manifest_podcasts.append(
+                {
+                    "id": str(episode.id),
+                    "title": getattr(episode, "name", None),
+                    "files": episode_files,
+                    "bytes": episode_bytes,
+                }
+            )
+
         manifest = {
             "notebook_id": notebook_id,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "artifacts": manifest_artifacts,
             "skipped": skipped_ids,
+            "podcasts": manifest_podcasts,
         }
         manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
         zf.writestr("manifest.json", manifest_bytes)
@@ -1586,4 +1695,6 @@ def write_notebook_artifact_bundle(
         artifact_count=len(completed),
         skipped=len(skipped_ids),
         warnings=warnings,
+        media_count=media_count,
+        media_bytes=media_bytes,
     )
