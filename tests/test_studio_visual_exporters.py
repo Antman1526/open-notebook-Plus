@@ -8,7 +8,10 @@ import pytest
 from PIL import Image, ImageStat
 from pptx import Presentation
 
+from deeper_notebook.domain.notebook import StudioArtifact
 from deeper_notebook.studio.exporters import export_infographic, export_slide_deck
+from deeper_notebook.studio.generation.persistence import persist_artifact_exports
+from deeper_notebook.studio.payloads import build_structured_payload
 from deeper_notebook.studio.schemas import (
     InfographicDocument,
     SlideDeckDocument,
@@ -204,6 +207,102 @@ def test_infographic_exports_schema_maximum_panel_count(
     _assert_nonblank_image(png_path, expected_size)
     with fitz.open(pdf_path) as pdf:
         assert pdf.page_count == 1
+
+
+# v0.8.127 — coverage for persist_artifact_exports' visual-export path
+# reuse (pptx/png/pdf), mirroring the office-export coverage in
+# test_studio_export_staleness.py for the same v0.8.126 pattern.
+def _slide_deck_artifact() -> StudioArtifact:
+    document = _slide_deck()
+    markdown = (
+        "# Local Evidence Studio\n\nGrounded generation [S1] [S2].\n\n"
+        "Private by default [S2]."
+    )
+    return StudioArtifact(
+        id="studio_artifact:slide-deck-persist",
+        notebook_id="notebook:visual-exports",
+        artifact_type="slide_deck",
+        title="Local Evidence Studio",
+        status="completed",
+        output_payload=build_structured_payload(document, markdown),
+    )
+
+
+def _infographic_artifact() -> StudioArtifact:
+    document = _infographic()
+    markdown = "# Evidence at a glance\n\nSource coverage [S1]. Workflow [S2]."
+    return StudioArtifact(
+        id="studio_artifact:infographic-persist",
+        notebook_id="notebook:visual-exports",
+        artifact_type="infographic",
+        title="Evidence at a glance",
+        status="completed",
+        output_payload=build_structured_payload(document, markdown),
+    )
+
+
+def test_persist_artifact_exports_slide_deck_twice_reuses_paths_and_leaves_no_orphans(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+    artifact = _slide_deck_artifact()
+    content = artifact.output_payload["content"]
+
+    first_paths = persist_artifact_exports(artifact, content)
+    assert "pptx" in first_paths and "pdf" in first_paths
+    files_after_first = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    second_paths = persist_artifact_exports(artifact, content)
+    files_after_second = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    assert second_paths == first_paths
+    assert files_after_second == files_after_first
+    assert not any("-2." in name for name in files_after_second)
+    assert Path(first_paths["pptx"]).is_file()
+    assert Path(first_paths["pdf"]).is_file()
+
+
+def test_persist_artifact_exports_infographic_twice_reuses_paths_and_leaves_no_orphans(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+    artifact = _infographic_artifact()
+    content = artifact.output_payload["content"]
+
+    first_paths = persist_artifact_exports(artifact, content)
+    assert "png" in first_paths and "pdf" in first_paths
+    files_after_first = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    second_paths = persist_artifact_exports(artifact, content)
+    files_after_second = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    assert second_paths == first_paths
+    assert files_after_second == files_after_first
+    assert not any("-2." in name for name in files_after_second)
+    assert Path(first_paths["png"]).is_file()
+    assert Path(first_paths["pdf"]).is_file()
+
+
+def test_persist_artifact_exports_visual_ignores_recorded_path_outside_export_root(
+    tmp_path, monkeypatch
+):
+    export_dir = tmp_path / "exports"
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(export_dir))
+    artifact = _slide_deck_artifact()
+    content = artifact.output_payload["content"]
+
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    outside_pptx = outside_dir / "escaped.pptx"
+    outside_pptx.write_bytes(b"must not be overwritten")
+    artifact.export_paths = {"pptx": str(outside_pptx)}
+
+    export_paths = persist_artifact_exports(artifact, content)
+
+    pptx_path = Path(export_paths["pptx"])
+    assert pptx_path != outside_pptx
+    assert export_dir.resolve() in pptx_path.resolve().parents
+    assert outside_pptx.read_bytes() == b"must not be overwritten"
 
 
 def test_visual_exporters_reject_the_wrong_document(tmp_path):

@@ -170,3 +170,46 @@ def test_persistence_creates_immutable_research_bundle_with_svg(
         artifact_payload = json.loads(archive.read("artifact.json"))
     assert artifact_payload["revision_of_id"] is None
     assert artifact_payload["export_paths"]["research_bundle"] == str(bundle_path)
+
+
+# v0.8.127 — coverage for persist_artifact_exports' svg_chart path reuse,
+# mirroring the research_bundle coverage above for the same v0.8.126 pattern.
+def test_persist_artifact_exports_svg_chart_twice_reuses_path_and_leaves_no_orphan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+    artifact = _artifact()
+    content = "# Findings\n\nGrounded claim [S1]."
+
+    first_paths = persist_artifact_exports(artifact, content)
+    svg_files_after_first = sorted(tmp_path.glob("*-chart.svg"))
+
+    second_paths = persist_artifact_exports(artifact, content)
+    svg_files_after_second = sorted(tmp_path.glob("*-chart.svg"))
+
+    assert second_paths["svg_chart"] == first_paths["svg_chart"]
+    assert svg_files_after_second == svg_files_after_first
+    assert len(svg_files_after_second) == 1
+    assert Path(first_paths["svg_chart"]).is_file()
+
+
+def test_persist_artifact_exports_svg_chart_ignores_recorded_path_outside_export_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    export_dir = tmp_path / "exports"
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(export_dir))
+    artifact = _artifact()
+    content = "# Findings\n\nGrounded claim [S1]."
+
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    outside_svg = outside_dir / "escaped-chart.svg"
+    outside_svg.write_text("must not be overwritten", encoding="utf-8")
+    artifact.export_paths = {"svg_chart": str(outside_svg)}
+
+    export_paths = persist_artifact_exports(artifact, content)
+
+    svg_path = Path(export_paths["svg_chart"])
+    assert svg_path != outside_svg
+    assert export_dir.resolve() in svg_path.resolve().parents
+    assert outside_svg.read_text(encoding="utf-8") == "must not be overwritten"

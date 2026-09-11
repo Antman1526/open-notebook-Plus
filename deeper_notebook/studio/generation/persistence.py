@@ -702,7 +702,16 @@ def _persist_visual_exports(
     artifact: StudioArtifact,
     export_dir: Path,
     stem: str,
+    existing: dict[str, str],
 ) -> dict[str, str]:
+    """Persist slide-deck / infographic visual exports.
+
+    # v0.8.127 — `existing` (the artifact's export_paths before this run)
+    lets pptx/png/pdf write over their own recorded path instead of always
+    allocating a fresh `-2` one; see `_export_target_path`. Slide decks and
+    infographics both record their PDF under the same "pdf" key, so the
+    reused path always belongs to whichever visual type this artifact is.
+    """
     try:
         document = parse_payload_document(
             artifact.artifact_type,
@@ -714,14 +723,14 @@ def _persist_visual_exports(
     paths: list[Path] = []
     try:
         if isinstance(document, SlideDeckDocument):
-            pptx_path = _artifact_export_path(export_dir, stem, ".pptx")
-            pdf_path = _artifact_export_path(export_dir, stem, ".pdf")
+            pptx_path = _export_target_path(export_dir, existing, "pptx", stem, ".pptx")
+            pdf_path = _export_target_path(export_dir, existing, "pdf", stem, ".pdf")
             paths = [pptx_path, pdf_path]
             export_slide_deck(document, pptx_path, pdf_path)
             result = {"pptx": str(pptx_path), "pdf": str(pdf_path)}
         elif isinstance(document, InfographicDocument):
-            png_path = _artifact_export_path(export_dir, stem, ".png")
-            pdf_path = _artifact_export_path(export_dir, stem, ".pdf")
+            png_path = _export_target_path(export_dir, existing, "png", stem, ".png")
+            pdf_path = _export_target_path(export_dir, existing, "pdf", stem, ".pdf")
             paths = [png_path, pdf_path]
             export_infographic(document, png_path, pdf_path)
             result = {"png": str(png_path), "pdf": str(pdf_path)}
@@ -822,16 +831,23 @@ def _persist_office_exports(
 
 
 def _persist_trusted_svg_chart(
-    *, artifact: StudioArtifact, export_dir: Path, stem: str
+    *, artifact: StudioArtifact, export_dir: Path, stem: str, existing: dict[str, str]
 ) -> dict[str, str]:
-    """Export only an explicitly schema-validated chart payload."""
+    """Export only an explicitly schema-validated chart payload.
+
+    # v0.8.127 — `existing` (the artifact's export_paths before this run)
+    lets the chart write over its own recorded path instead of always
+    allocating a fresh `-2` one; see `_export_target_path`.
+    """
     payload = artifact.output_payload
     chart_payload = payload.get("chart") if isinstance(payload, dict) else None
     if not isinstance(chart_payload, dict):
         return {}
     try:
         chart = ChartDocument.model_validate(chart_payload)
-        svg_path = _artifact_export_path(export_dir, f"{stem}-chart", ".svg")
+        svg_path = _export_target_path(
+            export_dir, existing, "svg_chart", f"{stem}-chart", ".svg"
+        )
         svg_path.write_text(render_svg_chart(chart), encoding="utf-8")
         return {"svg_chart": str(svg_path)}
     except (TypeError, ValueError) as exc:
@@ -1030,6 +1046,7 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
             artifact=artifact,
             export_dir=export_dir,
             stem=stem,
+            existing=existing,
         )
     )
     export_paths.update(
@@ -1045,6 +1062,7 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
             artifact=artifact,
             export_dir=export_dir,
             stem=stem,
+            existing=existing,
         )
     )
     export_paths.update(
