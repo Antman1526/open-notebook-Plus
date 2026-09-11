@@ -16,6 +16,15 @@ import pytest
 # Set to empty string instead of deleting to prevent it from being reloaded
 os.environ["DEEPER_NOTEBOOK_PASSWORD"] = ""
 
+# v0.8.127 — keep test logs out of the operator's ~/.deeper-notebook/logs.
+# Fixture runs (fake credentials, forced failures) were landing there as
+# ERROR lines and polluting live diagnostics. load_dotenv below does not
+# override an existing variable, so this wins over a value in .env.
+import tempfile  # noqa: E402
+
+_TEST_LOG_DIR = tempfile.mkdtemp(prefix="deeper-notebook-test-logs-")
+os.environ.setdefault("DEEPER_NOTEBOOK_LOG_DIR", _TEST_LOG_DIR)
+
 # Load environment variables from .env file
 # This must be done BEFORE any imports that depend on environment variables
 from dotenv import load_dotenv
