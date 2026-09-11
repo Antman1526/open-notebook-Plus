@@ -920,6 +920,23 @@ export const frFR = {
     notConfigured: "Non configuré",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Rétention Studio",
+      description: "Voir ce que le job de rétention des artefacts Studio supprimerait, sans l'activer.",
+      enabled: "Activé",
+      disabled: "Désactivé",
+      intervalHours: "Toutes les {hours} h",
+      keepRevisions: "Conserver {count} révisions par artefact",
+      staleDays: "Supprimer les exports obsolètes de plus de {days} jours",
+      lastRun: "Dernière exécution {when}",
+      neverRun: "Jamais exécuté",
+      dryRun: "Simuler maintenant",
+      dryRunning: "Simulation en cours…",
+      wouldRemoveRevisions: "{count} révisions seraient supprimées",
+      wouldRemoveExports: "{count} fichiers d'export seraient supprimés ({bytes})",
+      enableHint: "Définir DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS pour activer",
+    },
     contentProcessing: "Traitement du contenu",
     contentProcessingDesc: "Configurez la manière dont les documents et les URL sont traités",
     docEngine: "Moteur de traitement de documents",
@@ -1317,6 +1334,7 @@ export const frFR = {
       bundleTitle: "Exporter tous les artefacts",
       bundleDescription: "Regroupez tous les artefacts terminés de ce notebook dans un seul fichier zip.",
       regenerateStale: "Régénérer d'abord les exports obsolètes",
+      includeMedia: "Inclure l'audio et la vidéo du podcast",
       bundleSuccess: "{count} artefacts exportés vers {destination}",
       bundleEmpty: "Aucun artefact terminé à exporter",
     },
@@ -1456,6 +1474,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Lire",
   previewLoading: "Chargement…",
   previewUnavailable: "Aperçu indisponible.",
+  previewOpenSource: "Ouvrir la source",
+  previewOpenNote: "Ouvrir la note",
+  matchPosition: "{index} sur {count}",
+  focusHint: "Entrée pour centrer les résultats, flèches pour naviguer",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

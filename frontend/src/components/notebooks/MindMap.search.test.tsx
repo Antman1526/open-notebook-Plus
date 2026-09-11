@@ -1,20 +1,34 @@
 // v0.8.124 — canvas search/dim, cluster-by-type layout, and preview-vs-navigate
 // click routing for the mind map (improvement roadmap).
+// v0.8.125 — source/note preview click routing, search-to-focus (Enter/arrow
+// keys), and per-notebook persisted canvas state (improvement roadmap).
 import React from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { useMindMapStore } from '@/lib/stores/mind-map-store'
 
 const reactFlowProps = vi.hoisted(() => vi.fn())
 const useNotebookGraph = vi.hoisted(() => vi.fn())
 const mindMapNodePreviewProps = vi.hoisted(() => vi.fn())
+const fitViewMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
   Controls: () => null,
   MiniMap: () => null,
-  ReactFlow: (props: { children?: React.ReactNode } & Record<string, unknown>) => {
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReactFlow: () => ({ fitView: fitViewMock }),
+  ReactFlow: (props: { children?: React.ReactNode; nodes?: Array<{ id: string }> } & Record<string, unknown>) => {
     reactFlowProps(props)
-    return <div data-testid="react-flow">{props.children}</div>
+    return (
+      <div data-testid="react-flow">
+        {(props.nodes ?? []).map((n) => (
+          <div key={n.id} data-id={n.id} tabIndex={-1} />
+        ))}
+        {props.children}
+      </div>
+    )
   },
 }))
 
@@ -67,11 +81,25 @@ describe('MindMap canvas search and clustering', () => {
     ],
   }
 
+  beforeEach(() => {
+    localStorage.clear()
+    useMindMapStore.setState({ byNotebook: {} })
+  })
+
   function setup() {
     useNotebookGraph.mockReturnValue({ data: sampleData, isLoading: false, isError: false })
     const onSelectArtifact = vi.fn()
-    render(<MindMap notebookId="notebook:one" onSelectArtifact={onSelectArtifact} />)
-    return { onSelectArtifact }
+    const onSelectSource = vi.fn()
+    const onSelectNote = vi.fn()
+    render(
+      <MindMap
+        notebookId="notebook:one"
+        onSelectArtifact={onSelectArtifact}
+        onSelectSource={onSelectSource}
+        onSelectNote={onSelectNote}
+      />
+    )
+    return { onSelectArtifact, onSelectSource, onSelectNote }
   }
 
   it('dims non-matching nodes on search and shows a match count, without removing nodes', () => {
@@ -129,8 +157,8 @@ describe('MindMap canvas search and clustering', () => {
 
     expect(onSelectArtifact).not.toHaveBeenCalled()
     expect(mindMapNodePreviewProps).toHaveBeenCalled()
-    const previewProps = mindMapNodePreviewProps.mock.calls.at(-1)?.[0] as { artifactId: string; artifactType: string }
-    expect(previewProps.artifactId).toBe('artifact:pod')
+    const previewProps = mindMapNodePreviewProps.mock.calls.at(-1)?.[0] as { nodeId: string; artifactType: string }
+    expect(previewProps.nodeId).toBe('artifact:pod')
     expect(previewProps.artifactType).toBe('podcast_audio')
   })
 
@@ -156,5 +184,129 @@ describe('MindMap canvas search and clustering', () => {
 
     expect(onSelectArtifact).toHaveBeenCalledWith('artifact:pod')
     expect(screen.queryByTestId('mind-map-node-preview')).not.toBeInTheDocument()
+  })
+
+  // v0.8.125 — source/note preview click routing.
+  it('opens the preview for a plain click on a source node', () => {
+    const { onSelectSource } = setup()
+
+    const props = latestProps()
+    act(() => {
+      props.onNodeClick({ clientX: 10, clientY: 10, shiftKey: false }, { id: 'source:one' })
+    })
+
+    expect(onSelectSource).not.toHaveBeenCalled()
+    const previewProps = mindMapNodePreviewProps.mock.calls.at(-1)?.[0] as { nodeId: string; nodeType: string }
+    expect(previewProps.nodeId).toBe('source:one')
+    expect(previewProps.nodeType).toBe('source')
+  })
+
+  it('Shift-click on a source node calls onSelectSource directly', () => {
+    const { onSelectSource } = setup()
+
+    const props = latestProps()
+    act(() => {
+      props.onNodeClick({ clientX: 10, clientY: 10, shiftKey: true }, { id: 'source:one' })
+    })
+
+    expect(onSelectSource).toHaveBeenCalledWith('source:one')
+    expect(screen.queryByTestId('mind-map-node-preview')).not.toBeInTheDocument()
+  })
+
+  it('opens the preview for a plain click on a note node, and Shift-click navigates directly', () => {
+    const { onSelectNote } = setup()
+
+    const props = latestProps()
+    act(() => {
+      props.onNodeClick({ clientX: 10, clientY: 10, shiftKey: false }, { id: 'note:one' })
+    })
+    expect(onSelectNote).not.toHaveBeenCalled()
+    const previewProps = mindMapNodePreviewProps.mock.calls.at(-1)?.[0] as { nodeId: string; nodeType: string }
+    expect(previewProps.nodeId).toBe('note:one')
+    expect(previewProps.nodeType).toBe('note')
+
+    act(() => {
+      props.onNodeClick({ clientX: 10, clientY: 10, shiftKey: true }, { id: 'note:one' })
+    })
+    expect(onSelectNote).toHaveBeenCalledWith('note:one')
+  })
+
+  // v0.8.125 — search-to-focus.
+  it('Enter calls fitView with the matching node ids', () => {
+    setup()
+
+    const input = screen.getByLabelText('Search nodes')
+    fireEvent.change(input, { target: { value: 'Alpha' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(fitViewMock).toHaveBeenCalledWith({
+      nodes: [{ id: 'source:one' }, { id: 'note:one' }],
+      padding: 0.3,
+      duration: 300,
+    })
+  })
+
+  it('ArrowDown steps the active match, focuses the node, and wraps around', () => {
+    setup()
+
+    const input = screen.getByLabelText('Search nodes')
+    fireEvent.change(input, { target: { value: 'Alpha' } })
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(document.activeElement?.getAttribute('data-id')).toBe('source:one')
+    expect(screen.getByText('1 of 2')).toBeInTheDocument()
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(document.activeElement?.getAttribute('data-id')).toBe('note:one')
+    expect(screen.getByText('2 of 2')).toBeInTheDocument()
+
+    // Wraps back around to the first match.
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(document.activeElement?.getAttribute('data-id')).toBe('source:one')
+  })
+
+  it('Escape clears the search query', () => {
+    setup()
+
+    const input = screen.getByLabelText('Search nodes') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Alpha' } })
+    expect(input.value).toBe('Alpha')
+
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(input.value).toBe('')
+  })
+
+  // v0.8.125 — per-notebook persisted canvas state.
+  it('applies a pre-seeded store value on mount', () => {
+    useMindMapStore.getState().setState('notebook:one', {
+      filter: 'source',
+      query: 'Beta',
+      clusterByType: false,
+    })
+
+    setup()
+
+    expect(screen.getByRole('button', { name: 'Sources (2)' })).toHaveAttribute('aria-pressed', 'true')
+    const input = screen.getByLabelText('Search nodes') as HTMLInputElement
+    expect(input.value).toBe('Beta')
+
+    const props = latestProps()
+    // Filtered to sources only: hub + the 2 source nodes.
+    expect(props.nodes.map((n) => n.id).sort()).toEqual(['notebook:one', 'source:one', 'source:two'].sort())
+  })
+
+  it('writes filter/search/cluster changes back to the store for this notebook', () => {
+    setup()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notes (1)' }))
+    const input = screen.getByLabelText('Search nodes')
+    fireEvent.change(input, { target: { value: 'Alpha' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cluster by type' }))
+
+    expect(useMindMapStore.getState().byNotebook['notebook:one']).toEqual({
+      filter: 'note',
+      query: 'Alpha',
+      clusterByType: true,
+    })
   })
 })

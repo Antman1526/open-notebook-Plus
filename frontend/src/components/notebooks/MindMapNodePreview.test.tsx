@@ -1,4 +1,5 @@
 // v0.8.124 — mind-map node preview popover tests (improvement roadmap).
+// v0.8.125 — source/note node preview tests (improvement roadmap).
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
@@ -6,6 +7,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 const setEpisodeMock = vi.hoisted(() => vi.fn())
 const listArtifactsMock = vi.hoisted(() => vi.fn())
 const listEpisodesMock = vi.hoisted(() => vi.fn())
+const sourcesGetMock = vi.hoisted(() => vi.fn())
+const notesGetMock = vi.hoisted(() => vi.fn())
 const resolvePodcastAssetUrlMock = vi.hoisted(() =>
   vi.fn(async (path?: string | null) => (path ? `https://cdn.test${path}` : undefined))
 )
@@ -24,6 +27,20 @@ vi.mock('@/lib/api/podcasts', () => ({
   resolvePodcastAssetUrl: (path?: string | null) => resolvePodcastAssetUrlMock(path),
 }))
 
+vi.mock('@/lib/api/sources', () => ({
+  sourcesApi: { get: (...args: unknown[]) => sourcesGetMock(...args) },
+}))
+
+vi.mock('@/lib/api/notes', () => ({
+  notesApi: { get: (...args: unknown[]) => notesGetMock(...args) },
+}))
+
+vi.mock('@/components/deeper-notebook/source-gallery/SourceCover', () => ({
+  SourceCover: ({ source }: { source: { id?: string | null } }) => (
+    <div data-testid="source-cover">{source?.id}</div>
+  ),
+}))
+
 vi.mock('@/lib/stores/audio-player-store', () => ({
   useAudioPlayerStore: (selector: (state: { setEpisode: typeof setEpisodeMock }) => unknown) =>
     selector({ setEpisode: setEpisodeMock }),
@@ -38,14 +55,22 @@ import MindMapNodePreview from './MindMapNodePreview'
 function mockQueries(opts: {
   artifact?: Record<string, unknown> | null
   episodes?: Array<Record<string, unknown>>
+  source?: Record<string, unknown> | null
+  note?: Record<string, unknown> | null
 }) {
   useQueryMock.mockImplementation((config: { queryKey: unknown[] }) => {
-    const [scope] = config.queryKey
+    const [scope, kind] = config.queryKey
     if (scope === 'studio') {
       return { data: opts.artifact ?? null, isLoading: false }
     }
     if (scope === 'podcasts') {
       return { data: opts.episodes ?? [], isLoading: false }
+    }
+    if (scope === 'mindmap' && kind === 'source') {
+      return { data: opts.source ?? null, isLoading: false }
+    }
+    if (scope === 'mindmap' && kind === 'note') {
+      return { data: opts.note ?? null, isLoading: false }
     }
     return { data: undefined, isLoading: false }
   })
@@ -72,11 +97,14 @@ describe('MindMapNodePreview', () => {
     render(
       <MindMapNodePreview
         notebookId="nb1"
-        artifactId="a1"
+        nodeType="studio_artifact"
+        nodeId="a1"
         artifactType="podcast_audio"
         anchor={{ x: 10, y: 10 }}
         onClose={vi.fn()}
         onOpenArtifact={vi.fn()}
+        onOpenSource={vi.fn()}
+        onOpenNote={vi.fn()}
       />
     )
 
@@ -105,11 +133,14 @@ describe('MindMapNodePreview', () => {
     render(
       <MindMapNodePreview
         notebookId="nb1"
-        artifactId="a1"
+        nodeType="studio_artifact"
+        nodeId="a1"
         artifactType="podcast_audio"
         anchor={{ x: 10, y: 10 }}
         onClose={vi.fn()}
         onOpenArtifact={vi.fn()}
+        onOpenSource={vi.fn()}
+        onOpenNote={vi.fn()}
       />
     )
 
@@ -132,11 +163,14 @@ describe('MindMapNodePreview', () => {
     render(
       <MindMapNodePreview
         notebookId="nb1"
-        artifactId="a2"
+        nodeType="studio_artifact"
+        nodeId="a2"
         artifactType="slide_deck"
         anchor={{ x: 10, y: 10 }}
         onClose={vi.fn()}
         onOpenArtifact={vi.fn()}
+        onOpenSource={vi.fn()}
+        onOpenNote={vi.fn()}
       />
     )
 
@@ -154,11 +188,14 @@ describe('MindMapNodePreview', () => {
     render(
       <MindMapNodePreview
         notebookId="nb1"
-        artifactId="a3"
+        nodeType="studio_artifact"
+        nodeId="a3"
         artifactType="report"
         anchor={{ x: 10, y: 10 }}
         onClose={onClose}
         onOpenArtifact={vi.fn()}
+        onOpenSource={vi.fn()}
+        onOpenNote={vi.fn()}
       />
     )
 
@@ -173,15 +210,85 @@ describe('MindMapNodePreview', () => {
     render(
       <MindMapNodePreview
         notebookId="nb1"
-        artifactId="a3"
+        nodeType="studio_artifact"
+        nodeId="a3"
         artifactType="report"
         anchor={{ x: 10, y: 10 }}
         onClose={vi.fn()}
         onOpenArtifact={onOpenArtifact}
+        onOpenSource={vi.fn()}
+        onOpenNote={vi.fn()}
       />
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open in Studio' }))
     expect(onOpenArtifact).toHaveBeenCalledWith('a3')
+  })
+
+  // v0.8.125 — source node preview.
+  it('renders a source title + excerpt and calls onOpenSource on Open', () => {
+    mockQueries({
+      source: {
+        id: 's1',
+        title: 'A Long Source',
+        embedded: true,
+        embedded_chunks: 3,
+        insights_count: 1,
+        full_text: 'x'.repeat(300),
+      },
+    })
+    const onOpenSource = vi.fn()
+
+    render(
+      <MindMapNodePreview
+        notebookId="nb1"
+        nodeType="source"
+        nodeId="s1"
+        anchor={{ x: 10, y: 10 }}
+        onClose={vi.fn()}
+        onOpenArtifact={vi.fn()}
+        onOpenSource={onOpenSource}
+        onOpenNote={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('A Long Source')).toBeInTheDocument()
+    expect(screen.getByText(`${'x'.repeat(240)}…`)).toBeInTheDocument()
+    expect(screen.getByTestId('source-cover')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open source' }))
+    expect(onOpenSource).toHaveBeenCalledWith('s1')
+  })
+
+  // v0.8.125 — note node preview.
+  it('renders a note title + excerpt and calls onOpenNote on Open', () => {
+    mockQueries({
+      note: {
+        id: 'n1',
+        title: 'My Note',
+        content: 'y'.repeat(300),
+      },
+    })
+    const onOpenNote = vi.fn()
+
+    render(
+      <MindMapNodePreview
+        notebookId="nb1"
+        nodeType="note"
+        nodeId="n1"
+        anchor={{ x: 10, y: 10 }}
+        onClose={vi.fn()}
+        onOpenArtifact={vi.fn()}
+        onOpenSource={vi.fn()}
+        onOpenNote={onOpenNote}
+      />
+    )
+
+    expect(screen.getByText('My Note')).toBeInTheDocument()
+    expect(screen.getByText(`${'y'.repeat(240)}…`)).toBeInTheDocument()
+    expect(screen.queryByTestId('source-cover')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open note' }))
+    expect(onOpenNote).toHaveBeenCalledWith('n1')
   })
 })

@@ -8,12 +8,20 @@
 // v0.8.124 — canvas search/dim, cluster-by-type layout, and a media preview
 // popover for podcast_audio/slide_deck studio_artifact nodes (improvement
 // roadmap).
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
+// v0.8.125 — source/note node preview on a plain click (Shift-click keeps the
+// direct navigation), search-to-focus (Enter fits matches, arrow keys step
+// through them), and per-notebook canvas state persisted via
+// lib/stores/mind-map-store.ts (improvement roadmap). useReactFlow() needs a
+// ReactFlowProvider ancestor, so the exported component now wraps the canvas
+// in one and keeps the actual implementation in an inner component.
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
+  useReactFlow,
   type Node,
   type Edge,
 } from '@xyflow/react'
@@ -23,7 +31,8 @@ import { Loader2 } from 'lucide-react'
 import { useNotebookGraph } from '@/lib/hooks/use-notebook-graph'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
-import MindMapNodePreview, { type MindMapNodePreviewAnchor } from './MindMapNodePreview'
+import { useMindMapStore, DEFAULT_MIND_MAP_NOTEBOOK_STATE, type MindMapFilterType } from '@/lib/stores/mind-map-store'
+import MindMapNodePreview, { type MindMapNodePreviewAnchor, type MindMapNodeType } from './MindMapNodePreview'
 
 interface MindMapProps {
   notebookId: string
@@ -34,7 +43,7 @@ interface MindMapProps {
   onSelectArtifact?: (artifactId: string) => void
 }
 
-type FilterType = 'all' | 'source' | 'note' | 'studio_artifact'
+type FilterType = MindMapFilterType
 
 const NODE_BG: Record<string, string> = {
   notebook: 'var(--dn-graph-fallback)',
@@ -73,7 +82,15 @@ function Centered({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function MindMap({
+export default function MindMap(props: MindMapProps) {
+  return (
+    <ReactFlowProvider>
+      <MindMapCanvas {...props} />
+    </ReactFlowProvider>
+  )
+}
+
+function MindMapCanvas({
   notebookId,
   open = true,
   onSelectSource,
@@ -81,11 +98,39 @@ export default function MindMap({
   onSelectArtifact,
 }: MindMapProps) {
   const { t } = useTranslation()
-  const [filter, setFilter] = useState<FilterType>('all')
-  const [query, setQuery] = useState('')
-  const [clusterByType, setClusterByType] = useState(false)
+  const { fitView } = useReactFlow()
+
+  // v0.8.125 — per-notebook canvas state (filter/query/clusterByType) is the
+  // store, not local state, so it survives dialog close/reopen and app
+  // restarts without a hydration race: the store starts empty and every
+  // reader falls back to DEFAULT_MIND_MAP_NOTEBOOK_STATE until a value is
+  // written for this notebookId.
+  const notebookState = useMindMapStore(
+    (state) => state.byNotebook[notebookId] ?? DEFAULT_MIND_MAP_NOTEBOOK_STATE
+  )
+  const setStoredState = useMindMapStore((state) => state.setState)
+  const { filter, query, clusterByType } = notebookState
+
+  const setFilter = useCallback(
+    (value: FilterType) => setStoredState(notebookId, { filter: value }),
+    [notebookId, setStoredState]
+  )
+  const setQuery = useCallback(
+    (value: string) => setStoredState(notebookId, { query: value }),
+    [notebookId, setStoredState]
+  )
+  const setClusterByType = useCallback(
+    (updater: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof updater === 'function' ? updater(clusterByType) : updater
+      setStoredState(notebookId, { clusterByType: next })
+    },
+    [notebookId, setStoredState, clusterByType]
+  )
+
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null)
   const [preview, setPreview] = useState<{
     id: string
+    nodeType: MindMapNodeType
     artifactType?: string | null
     anchor: MindMapNodePreviewAnchor
   } | null>(null)
@@ -142,10 +187,14 @@ export default function MindMap({
     [normalizedQuery]
   )
 
-  const matchCount = useMemo(() => {
-    if (!normalizedQuery) return spokes.length
-    return spokes.filter((n) => matchesQuery(n.label)).length
+  // v0.8.125 — matched node ids, in spoke order, for search-to-focus
+  // (Enter fits them all; arrow keys step through them one at a time).
+  const matchedNodeIds = useMemo(() => {
+    if (!normalizedQuery) return []
+    return spokes.filter((n) => matchesQuery(n.label)).map((n) => n.id)
   }, [spokes, normalizedQuery, matchesQuery])
+
+  const matchCount = normalizedQuery ? matchedNodeIds.length : spokes.length
 
   const { nodes, edges } = useMemo(() => {
     if (!data) return { nodes: [] as Node[], edges: [] as Edge[] }
@@ -208,7 +257,7 @@ export default function MindMap({
       if (matches) matchedIds.add(n.id)
       const searchStyle: CSSProperties = normalizedQuery
         ? matches
-          ? { border: '2px solid var(--dn-graph-edge)' }
+          ? { border: n.id === activeMatchId ? '3px solid var(--dn-graph-edge)' : '2px solid var(--dn-graph-edge)' }
           : { opacity: 0.25 }
         : {}
       rfNodes.push({
@@ -235,21 +284,38 @@ export default function MindMap({
         }
       })
     return { nodes: rfNodes, edges: rfEdges }
-  }, [data, spokes, clusterByType, normalizedQuery, matchesQuery])
+  }, [data, spokes, clusterByType, normalizedQuery, matchesQuery, activeMatchId])
 
-  // v0.8.124 — a plain click on a podcast_audio/slide_deck studio_artifact
-  // node opens the inline preview instead of navigating away; Shift-click
-  // (or the preview's Open button) still navigates via onSelectArtifact.
-  // Every other node type keeps its exact prior behavior.
+  // v0.8.125 — a plain click on a source/note node opens the inline preview
+  // instead of navigating away; Shift-click still deep-links directly, same
+  // as the studio_artifact preview added in v0.8.124.
   const onNodeClick = useCallback(
     (event: MouseEvent, node: Node) => {
       const type = typeById.get(node.id)
       if (type === 'source') {
-        onSelectSource?.(node.id)
+        if (event.shiftKey) {
+          onSelectSource?.(node.id)
+          return
+        }
+        const rect = canvasRef.current?.getBoundingClientRect()
+        const anchor = {
+          x: rect ? event.clientX - rect.left : 0,
+          y: rect ? event.clientY - rect.top : 0,
+        }
+        setPreview({ id: node.id, nodeType: 'source', anchor })
         return
       }
       if (type === 'note') {
-        onSelectNote?.(node.id)
+        if (event.shiftKey) {
+          onSelectNote?.(node.id)
+          return
+        }
+        const rect = canvasRef.current?.getBoundingClientRect()
+        const anchor = {
+          x: rect ? event.clientX - rect.left : 0,
+          y: rect ? event.clientY - rect.top : 0,
+        }
+        setPreview({ id: node.id, nodeType: 'note', anchor })
         return
       }
       if (type === 'studio_artifact') {
@@ -261,13 +327,43 @@ export default function MindMap({
             x: rect ? event.clientX - rect.left : 0,
             y: rect ? event.clientY - rect.top : 0,
           }
-          setPreview({ id: node.id, artifactType, anchor })
+          setPreview({ id: node.id, nodeType: 'studio_artifact', artifactType, anchor })
           return
         }
         onSelectArtifact?.(node.id)
       }
     },
     [typeById, artifactTypeById, onSelectSource, onSelectNote, onSelectArtifact]
+  )
+
+  // v0.8.125 — search-to-focus: Enter fits the view to every current match;
+  // Arrow Up/Down step the active match (wrapping around) and move DOM focus
+  // to it, the same nearest-node-by-id model VaultGraph.tsx uses; Escape
+  // clears the query entirely.
+  const handleSearchKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        if (matchedNodeIds.length === 0) return
+        fitView({ nodes: matchedNodeIds.map((id) => ({ id })), padding: 0.3, duration: 300 })
+        return
+      }
+      if (event.key === 'Escape') {
+        setQuery('')
+        setActiveMatchId(null)
+        return
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (matchedNodeIds.length === 0) return
+        event.preventDefault()
+        const currentIndex = activeMatchId ? matchedNodeIds.indexOf(activeMatchId) : -1
+        const delta = event.key === 'ArrowDown' ? 1 : -1
+        const nextIndex = (currentIndex + delta + matchedNodeIds.length) % matchedNodeIds.length
+        const nextId = matchedNodeIds[nextIndex]
+        setActiveMatchId(nextId)
+        canvasRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(nextId)}"]`)?.focus()
+      }
+    },
+    [matchedNodeIds, activeMatchId, fitView, setQuery]
   )
 
   const minimapNodeColor = useCallback(
@@ -297,6 +393,8 @@ export default function MindMap({
       </Centered>
     )
   }
+
+  const activeMatchIndex = activeMatchId ? matchedNodeIds.indexOf(activeMatchId) : -1
 
   return (
     <div ref={canvasRef} className="relative h-full w-full">
@@ -356,14 +454,26 @@ export default function MindMap({
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setActiveMatchId(null)
+          }}
+          onKeyDown={handleSearchKeyDown}
           aria-label={t('mindMap.searchLabel', { defaultValue: 'Search nodes' })}
           placeholder={t('mindMap.searchPlaceholder', { defaultValue: 'Search…' })}
+          title={t('mindMap.focusHint', { defaultValue: 'Enter to focus matches, arrows to step' })}
           className="h-[26px] w-32 rounded-md border bg-background px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         {normalizedQuery && (
           <span className="text-xs text-muted-foreground">
             {t('mindMap.matches', { defaultValue: '{count} matches' }).replace('{count}', String(matchCount))}
+          </span>
+        )}
+        {activeMatchIndex >= 0 && (
+          <span className="text-xs text-muted-foreground">
+            {t('mindMap.matchPosition', { defaultValue: '{index} of {count}' })
+              .replace('{index}', String(activeMatchIndex + 1))
+              .replace('{count}', String(matchCount))}
           </span>
         )}
         <button
@@ -396,10 +506,19 @@ export default function MindMap({
       {preview && (
         <MindMapNodePreview
           notebookId={notebookId}
-          artifactId={preview.id}
+          nodeType={preview.nodeType}
+          nodeId={preview.id}
           artifactType={preview.artifactType}
           anchor={preview.anchor}
           onClose={() => setPreview(null)}
+          onOpenSource={(id) => {
+            setPreview(null)
+            onSelectSource?.(id)
+          }}
+          onOpenNote={(id) => {
+            setPreview(null)
+            onSelectNote?.(id)
+          }}
           onOpenArtifact={(id) => {
             setPreview(null)
             onSelectArtifact?.(id)
@@ -409,4 +528,3 @@ export default function MindMap({
     </div>
   )
 }
-

@@ -922,6 +922,23 @@ export const deDE = {
     notConfigured: "Nicht konfiguriert",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Studio-Aufbewahrung",
+      description: "Zeigt, was der Aufbewahrungsjob für Studio-Artefakte bereinigen würde, ohne ihn zu aktivieren.",
+      enabled: "Aktiviert",
+      disabled: "Deaktiviert",
+      intervalHours: "Alle {hours} Std.",
+      keepRevisions: "{count} Revisionen pro Artefakt behalten",
+      staleDays: "Veraltete Exporte älter als {days} Tage entfernen",
+      lastRun: "Letzter Lauf {when}",
+      neverRun: "Noch nie ausgeführt",
+      dryRun: "Jetzt Testlauf",
+      dryRunning: "Testlauf wird ausgeführt…",
+      wouldRemoveRevisions: "{count} Revisionen würden entfernt",
+      wouldRemoveExports: "{count} Exportdateien würden entfernt ({bytes})",
+      enableHint: "DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS setzen, um zu aktivieren",
+    },
     contentProcessing: "Inhaltsverarbeitung",
     contentProcessingDesc: "Konfiguriere, wie Dokumente und URLs verarbeitet werden",
     docEngine: "Engine für Dokumentverarbeitung",
@@ -1316,6 +1333,7 @@ export const deDE = {
       bundleTitle: "Alle Artefakte exportieren",
       bundleDescription: "Bündelt jedes abgeschlossene Artefakt in diesem Notizbuch in einer einzigen ZIP-Datei.",
       regenerateStale: "Veraltete Exporte zuerst aktualisieren",
+      includeMedia: "Podcast-Audio und -Video einschließen",
       bundleSuccess: "{count} Artefakte nach {destination} exportiert",
       bundleEmpty: "Keine abgeschlossenen Artefakte zum Exportieren",
     },
@@ -1455,6 +1473,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Abspielen",
   previewLoading: "Wird geladen…",
   previewUnavailable: "Vorschau nicht verfügbar.",
+  previewOpenSource: "Quelle öffnen",
+  previewOpenNote: "Notiz öffnen",
+  matchPosition: "{index} von {count}",
+  focusHint: "Eingabetaste zum Fokussieren der Treffer, Pfeiltasten zum Durchblättern",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

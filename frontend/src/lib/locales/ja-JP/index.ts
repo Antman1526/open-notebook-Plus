@@ -918,6 +918,23 @@ export const jaJP = {
     notConfigured: "未設定",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "スタジオの保持",
+      description: "有効化せずに、スタジオ成果物の保持ジョブが何を削除するかを確認します。",
+      enabled: "有効",
+      disabled: "無効",
+      intervalHours: "{hours} 時間ごと",
+      keepRevisions: "成果物ごとに {count} 件のリビジョンを保持",
+      staleDays: "{days} 日より古い古いエクスポートを削除",
+      lastRun: "前回の実行 {when}",
+      neverRun: "未実行",
+      dryRun: "今すぐドライランを実行",
+      dryRunning: "ドライラン実行中…",
+      wouldRemoveRevisions: "{count} 件のリビジョンが削除されます",
+      wouldRemoveExports: "{count} 件のエクスポートファイルが削除されます ({bytes})",
+      enableHint: "有効にするには DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS を設定してください",
+    },
     contentProcessing: "コンテンツ処理",
     contentProcessingDesc: "ドキュメントとURLの処理方法を設定",
     docEngine: "ドキュメント処理エンジン",
@@ -1315,6 +1332,7 @@ export const jaJP = {
       bundleTitle: "すべての成果物をエクスポート",
       bundleDescription: "このノートブック内の完了した成果物をすべて1つのZIPファイルにまとめます。",
       regenerateStale: "まず古いエクスポートを再生成",
+      includeMedia: "ポッドキャストの音声と動画を含める",
       bundleSuccess: "{count} 件の成果物を {destination} にエクスポートしました",
       bundleEmpty: "エクスポートできる完了済みの成果物がありません",
     },
@@ -1454,6 +1472,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "再生",
   previewLoading: "読み込み中…",
   previewUnavailable: "プレビューは利用できません。",
+  previewOpenSource: "ソースを開く",
+  previewOpenNote: "ノートを開く",
+  matchPosition: "{count} 件中 {index} 件目",
+  focusHint: "Enterで一致箇所にフォーカス、矢印キーで移動",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

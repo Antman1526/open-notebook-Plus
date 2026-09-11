@@ -918,6 +918,23 @@ export const ruRU = {
     notConfigured: "Не настроено",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Хранение данных Studio",
+      description: "Посмотрите, что удалила бы задача хранения артефактов Studio, не включая её.",
+      enabled: "Включено",
+      disabled: "Отключено",
+      intervalHours: "Каждые {hours} ч",
+      keepRevisions: "Хранить {count} ревизий на артефакт",
+      staleDays: "Удалять устаревшие экспорты старше {days} дней",
+      lastRun: "Последний запуск {when}",
+      neverRun: "Ещё не запускалось",
+      dryRun: "Запустить пробный прогон",
+      dryRunning: "Выполняется пробный прогон…",
+      wouldRemoveRevisions: "Будет удалено ревизий: {count}",
+      wouldRemoveExports: "Будет удалено файлов экспорта: {count} ({bytes})",
+      enableHint: "Установите DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS, чтобы включить",
+    },
     contentProcessing: "Обработка контента",
     contentProcessingDesc: "Настройте обработку документов и URL",
     docEngine: "Движок обработки документов",
@@ -1315,6 +1332,7 @@ export const ruRU = {
       bundleTitle: "Экспортировать все артефакты",
       bundleDescription: "Объединяет все завершённые артефакты в этом блокноте в один zip-файл.",
       regenerateStale: "Сначала обновить устаревшие экспорты",
+      includeMedia: "Включить аудио и видео подкаста",
       bundleSuccess: "Экспортировано {count} артефактов в {destination}",
       bundleEmpty: "Нет завершённых артефактов для экспорта",
     },
@@ -1454,6 +1472,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Воспроизвести",
   previewLoading: "Загрузка…",
   previewUnavailable: "Предпросмотр недоступен.",
+  previewOpenSource: "Открыть источник",
+  previewOpenNote: "Открыть заметку",
+  matchPosition: "{index} из {count}",
+  focusHint: "Enter — сфокусироваться на совпадениях, стрелки — переключаться между ними",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

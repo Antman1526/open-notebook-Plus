@@ -920,6 +920,23 @@ export const itIT = {
     notConfigured: "Non configurato",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Conservazione Studio",
+      description: "Visualizza cosa eliminerebbe il job di conservazione degli artefatti Studio, senza attivarlo.",
+      enabled: "Attivo",
+      disabled: "Disattivo",
+      intervalHours: "Ogni {hours} h",
+      keepRevisions: "Mantieni {count} revisioni per artefatto",
+      staleDays: "Rimuovi le esportazioni obsolete più vecchie di {days} giorni",
+      lastRun: "Ultima esecuzione {when}",
+      neverRun: "Mai eseguito",
+      dryRun: "Esegui simulazione ora",
+      dryRunning: "Simulazione in corso…",
+      wouldRemoveRevisions: "Verrebbero rimosse {count} revisioni",
+      wouldRemoveExports: "Verrebbero rimossi {count} file di esportazione ({bytes})",
+      enableHint: "Imposta DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS per attivare",
+    },
     contentProcessing: "Elaborazione contenuti",
     contentProcessingDesc: "Configura come vengono elaborati documenti e URL",
     docEngine: "Motore elaborazione documenti",
@@ -1315,6 +1332,7 @@ export const itIT = {
       bundleTitle: "Esporta tutti gli artefatti",
       bundleDescription: "Raggruppa ogni artefatto completato in questo notebook in un unico file zip.",
       regenerateStale: "Rigenera prima le esportazioni obsolete",
+      includeMedia: "Includi audio e video del podcast",
       bundleSuccess: "Esportati {count} artefatti in {destination}",
       bundleEmpty: "Nessun artefatto completato da esportare",
     },
@@ -1454,6 +1472,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Riproduci",
   previewLoading: "Caricamento…",
   previewUnavailable: "Anteprima non disponibile.",
+  previewOpenSource: "Apri fonte",
+  previewOpenNote: "Apri nota",
+  matchPosition: "{index} di {count}",
+  focusHint: "Invio per centrare i risultati, frecce per scorrerli",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

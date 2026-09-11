@@ -922,6 +922,23 @@ export const plPL = {
     notConfigured: "Nieskonfigurowane",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Przechowywanie Studio",
+      description: "Zobacz, co usunęłoby zadanie przechowywania artefaktów Studio, bez jego włączania.",
+      enabled: "Włączone",
+      disabled: "Wyłączone",
+      intervalHours: "Co {hours} godz.",
+      keepRevisions: "Zachowaj {count} wersji na artefakt",
+      staleDays: "Usuń nieaktualne eksporty starsze niż {days} dni",
+      lastRun: "Ostatnie uruchomienie {when}",
+      neverRun: "Nigdy nie uruchomiono",
+      dryRun: "Uruchom test teraz",
+      dryRunning: "Trwa test…",
+      wouldRemoveRevisions: "Zostałoby usuniętych {count} wersji",
+      wouldRemoveExports: "Zostałoby usuniętych {count} plików eksportu ({bytes})",
+      enableHint: "Ustaw DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS, aby włączyć",
+    },
     contentProcessing: "Przetwarzanie treści",
     contentProcessingDesc: "Skonfiguruj sposób przetwarzania dokumentów i adresów URL",
     docEngine: "Silnik przetwarzania dokumentów",
@@ -1316,6 +1333,7 @@ export const plPL = {
       bundleTitle: "Eksportuj wszystkie artefakty",
       bundleDescription: "Grupuje każdy ukończony artefakt w tym notatniku w jeden plik zip.",
       regenerateStale: "Najpierw odśwież nieaktualne eksporty",
+      includeMedia: "Dołącz dźwięk i wideo podcastu",
       bundleSuccess: "Wyeksportowano {count} artefaktów do {destination}",
       bundleEmpty: "Brak ukończonych artefaktów do wyeksportowania",
     },
@@ -1455,6 +1473,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Odtwórz",
   previewLoading: "Wczytywanie…",
   previewUnavailable: "Podgląd niedostępny.",
+  previewOpenSource: "Otwórz źródło",
+  previewOpenNote: "Otwórz notatkę",
+  matchPosition: "{index} z {count}",
+  focusHint: "Enter, aby wyśrodkować dopasowania, strzałki, aby je przechodzić",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

@@ -923,6 +923,23 @@ export const caES = {
     notConfigured: "No configurat",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Retenció de l'Studio",
+      description: "Vegeu què eliminaria la feina de retenció d'artefactes de l'Studio, sense activar-la.",
+      enabled: "Activat",
+      disabled: "Desactivat",
+      intervalHours: "Cada {hours} h",
+      keepRevisions: "Mantenir {count} revisions per artefacte",
+      staleDays: "Elimina les exportacions obsoletes de més de {days} dies",
+      lastRun: "Última execució {when}",
+      neverRun: "Mai executat",
+      dryRun: "Executa una simulació ara",
+      dryRunning: "Executant la simulació…",
+      wouldRemoveRevisions: "S'eliminarien {count} revisions",
+      wouldRemoveExports: "S'eliminarien {count} fitxers d'exportació ({bytes})",
+      enableHint: "Configureu DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS per activar-ho",
+    },
     contentProcessing: "Processament de contingut",
     contentProcessingDesc: "Configura com es processen els documents i les URL",
     docEngine: "Motor de processament de documents",
@@ -1317,6 +1334,7 @@ export const caES = {
       bundleTitle: "Exporta tots els artefactes",
       bundleDescription: "Agrupa cada artefacte completat d'aquest quadern en un únic fitxer zip.",
       regenerateStale: "Regenera primer les exportacions obsoletes",
+      includeMedia: "Inclou àudio i vídeo del pòdcast",
       bundleSuccess: "S'han exportat {count} artefactes a {destination}",
       bundleEmpty: "No hi ha artefactes completats per exportar",
     },
@@ -1456,6 +1474,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Reprodueix",
   previewLoading: "Carregant…",
   previewUnavailable: "Vista prèvia no disponible.",
+  previewOpenSource: "Obre la font",
+  previewOpenNote: "Obre la nota",
+  matchPosition: "{index} de {count}",
+  focusHint: "Retorn per centrar les coincidències, fletxes per navegar-hi",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

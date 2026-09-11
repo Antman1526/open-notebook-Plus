@@ -1,10 +1,13 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { useMindMapStore } from '@/lib/stores/mind-map-store'
 
 const reactFlowProps = vi.hoisted(() => vi.fn())
 const miniMapProps = vi.hoisted(() => vi.fn())
 const useNotebookGraph = vi.hoisted(() => vi.fn())
+const fitViewMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
@@ -13,6 +16,8 @@ vi.mock('@xyflow/react', () => ({
     miniMapProps(props)
     return null
   },
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReactFlow: () => ({ fitView: fitViewMock }),
   ReactFlow: (props: { children?: React.ReactNode } & Record<string, unknown>) => {
     reactFlowProps(props)
     return <div data-testid="react-flow">{props.children}</div>
@@ -45,6 +50,11 @@ describe('MindMap semantic theme roles', () => {
       { source: 'notebook:one', target: 'artifact:one' },
     ],
   }
+
+  beforeEach(() => {
+    localStorage.clear()
+    useMindMapStore.setState({ byNotebook: {} })
+  })
 
   it('forwards semantic graph roles to notebook, source, note, and edge styles', () => {
     useNotebookGraph.mockReturnValue({

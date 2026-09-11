@@ -921,6 +921,23 @@ export const trTR = {
     notConfigured: "Yapılandırılmadı",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Studio Saklama",
+      description: "Studio yapıt saklama işinin, etkinleştirmeden neleri temizleyeceğini görün.",
+      enabled: "Etkin",
+      disabled: "Devre dışı",
+      intervalHours: "Her {hours} saatte bir",
+      keepRevisions: "Yapıt başına {count} revizyon sakla",
+      staleDays: "{days} günden eski güncel olmayan dışa aktarımları kaldır",
+      lastRun: "Son çalıştırma {when}",
+      neverRun: "Hiç çalıştırılmadı",
+      dryRun: "Şimdi deneme çalıştır",
+      dryRunning: "Deneme çalıştırılıyor…",
+      wouldRemoveRevisions: "{count} revizyon kaldırılacak",
+      wouldRemoveExports: "{count} dışa aktarma dosyası kaldırılacak ({bytes})",
+      enableHint: "Etkinleştirmek için DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS ayarlayın",
+    },
     contentProcessing: "İçerik İşleme",
     contentProcessingDesc: "Belgeler ve URL'lerin nasıl işleneceğini yapılandırın",
     docEngine: "Belge İşleme Motoru",
@@ -1315,6 +1332,7 @@ export const trTR = {
       bundleTitle: "Tüm eserleri dışa aktar",
       bundleDescription: "Bu defterdeki tamamlanmış her eseri tek bir zip dosyasında birleştirir.",
       regenerateStale: "Önce güncel olmayan dışa aktarmaları yenile",
+      includeMedia: "Podcast sesini ve videosunu dahil et",
       bundleSuccess: "{count} eser {destination} konumuna aktarıldı",
       bundleEmpty: "Dışa aktarılacak tamamlanmış eser yok",
     },
@@ -1454,6 +1472,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Oynat",
   previewLoading: "Yükleniyor…",
   previewUnavailable: "Önizleme kullanılamıyor.",
+  previewOpenSource: "Kaynağı aç",
+  previewOpenNote: "Notu aç",
+  matchPosition: "{count} içinden {index}",
+  focusHint: "Eşleşmelere odaklanmak için Enter, adımlamak için oklar",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

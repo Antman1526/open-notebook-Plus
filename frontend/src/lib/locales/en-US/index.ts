@@ -934,6 +934,23 @@ export const enUS = {
     notConfigured: "Not configured",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Studio Retention",
+      description: "See what the Studio artifact retention job would clean up, without enabling it.",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      intervalHours: "Every {hours} h",
+      keepRevisions: "Keep {count} revisions per artifact",
+      staleDays: "Remove stale exports older than {days} days",
+      lastRun: "Last run {when}",
+      neverRun: "Never run",
+      dryRun: "Dry run now",
+      dryRunning: "Running dry run…",
+      wouldRemoveRevisions: "{count} revisions would be removed",
+      wouldRemoveExports: "{count} export files would be removed ({bytes})",
+      enableHint: "Set DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS to enable",
+    },
     contentProcessing: "Content Processing",
     contentProcessingDesc: "Configure how documents and URLs are processed",
     docEngine: "Document Processing Engine",
@@ -1337,6 +1354,8 @@ export const enUS = {
       bundleTitle: "Export all artifacts",
       bundleDescription: "Bundle every completed artifact in this notebook into a single zip file.",
       regenerateStale: "Regenerate outdated exports first",
+      // v0.8.125 — "Include podcast audio and video" checkbox.
+      includeMedia: "Include podcast audio and video",
       bundleSuccess: "Exported {count} artifacts to {destination}",
       bundleEmpty: "No completed artifacts to export",
     },
@@ -1476,6 +1495,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "Play",
   previewLoading: "Loading…",
   previewUnavailable: "Preview unavailable.",
+  previewOpenSource: "Open source",
+  previewOpenNote: "Open note",
+  matchPosition: "{index} of {count}",
+  focusHint: "Enter to focus matches, arrows to step",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

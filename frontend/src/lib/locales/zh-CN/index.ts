@@ -918,6 +918,23 @@ export const zhCN = {
     notConfigured: "未配置",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "Studio 保留策略",
+      description: "查看 Studio 产物保留任务在不启用的情况下会清理哪些内容。",
+      enabled: "已启用",
+      disabled: "已禁用",
+      intervalHours: "每 {hours} 小时",
+      keepRevisions: "每个产物保留 {count} 个修订版本",
+      staleDays: "删除超过 {days} 天的过期导出",
+      lastRun: "上次运行 {when}",
+      neverRun: "从未运行",
+      dryRun: "立即试运行",
+      dryRunning: "正在试运行…",
+      wouldRemoveRevisions: "将删除 {count} 个修订版本",
+      wouldRemoveExports: "将删除 {count} 个导出文件（{bytes}）",
+      enableHint: "设置 DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS 以启用",
+    },
     contentProcessing: "内容处理",
     contentProcessingDesc: "配置文档和 URL 的处理方式",
     docEngine: "文档处理引擎",
@@ -1315,6 +1332,7 @@ export const zhCN = {
       bundleTitle: "导出全部产物",
       bundleDescription: "将此笔记本中所有已完成的产物打包为一个 zip 文件。",
       regenerateStale: "先重新生成过期的导出",
+      includeMedia: "包含播客音频和视频",
       bundleSuccess: "已将 {count} 个产物导出到 {destination}",
       bundleEmpty: "没有可导出的已完成产物",
     },
@@ -1454,6 +1472,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "播放",
   previewLoading: "加载中…",
   previewUnavailable: "预览不可用。",
+  previewOpenSource: "打开来源",
+  previewOpenNote: "打开笔记",
+  matchPosition: "第 {index} 项，共 {count} 项",
+  focusHint: "按 Enter 聚焦匹配项，方向键逐个切换",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {

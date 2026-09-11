@@ -919,6 +919,23 @@ export const bnIN = {
     notConfigured: "কনফিগার করা হয়নি",
   },
   settings: {
+    // v0.8.125 — Studio artifact retention: Settings status + dry-run card.
+    retention: {
+      title: "স্টুডিও ধারণ",
+      description: "সক্রিয় না করেই স্টুডিও আর্টিফ্যাক্ট ধারণ কাজটি কী মুছে ফেলবে তা দেখুন।",
+      enabled: "সক্ষম",
+      disabled: "নিষ্ক্রিয়",
+      intervalHours: "প্রতি {hours} ঘণ্টায়",
+      keepRevisions: "প্রতি আর্টিফ্যাক্টে {count}টি সংশোধনী রাখুন",
+      staleDays: "{days} দিনের বেশি পুরনো অপ্রচলিত এক্সপোর্ট সরান",
+      lastRun: "সর্বশেষ চালানো হয়েছে {when}",
+      neverRun: "কখনও চালানো হয়নি",
+      dryRun: "এখনই ড্রাই রান চালান",
+      dryRunning: "ড্রাই রান চলছে…",
+      wouldRemoveRevisions: "{count}টি সংশোধনী সরানো হবে",
+      wouldRemoveExports: "{count}টি এক্সপোর্ট ফাইল সরানো হবে ({bytes})",
+      enableHint: "সক্ষম করতে DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS সেট করুন",
+    },
     contentProcessing: "কন্টেন্ট প্রক্রিয়াকরণ",
     contentProcessingDesc: "ডকুমেন্ট এবং URL কিভাবে প্রক্রিয়া করা হবে তা কনফিগার করুন",
     docEngine: "ডকুমেন্ট প্রক্রিয়াকরণ ইঞ্জিন",
@@ -1316,6 +1333,7 @@ export const bnIN = {
       bundleTitle: "সমস্ত আর্টিফ্যাক্ট রপ্তানি করুন",
       bundleDescription: "এই নোটবুকের প্রতিটি সম্পন্ন আর্টিফ্যাক্ট একটি একক জিপ ফাইলে একত্র করুন।",
       regenerateStale: "প্রথমে পুরনো এক্সপোর্টগুলি পুনরায় তৈরি করুন",
+      includeMedia: "পডকাস্ট অডিও এবং ভিডিও অন্তর্ভুক্ত করুন",
       bundleSuccess: "{count}টি আর্টিফ্যাক্ট {destination}-এ রপ্তানি করা হয়েছে",
       bundleEmpty: "রপ্তানি করার জন্য কোনো সম্পন্ন আর্টিফ্যাক্ট নেই",
     },
@@ -1455,6 +1473,10 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   previewPlay: "চালান",
   previewLoading: "লোড হচ্ছে…",
   previewUnavailable: "প্রিভিউ উপলব্ধ নয়।",
+  previewOpenSource: "উৎস খুলুন",
+  previewOpenNote: "নোট খুলুন",
+  matchPosition: "{count}টির মধ্যে {index}",
+  focusHint: "মিলগুলিতে ফোকাস করতে এন্টার চাপুন, ধাপে ধাপে যেতে তীর চিহ্ন ব্যবহার করুন",
 });
 
 Object.assign(ensureSection(rootNode, 'sources'), {
