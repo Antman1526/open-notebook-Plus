@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Optional
+
 from mcp.server.fastmcp import FastMCP
-from deeper_notebook.database.repository import repo_query, ensure_record_id
+
+from deeper_notebook.database.repository import ensure_record_id, repo_query
 
 mcp = FastMCP("DeeperNotebook")
 

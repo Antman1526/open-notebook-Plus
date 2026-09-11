@@ -4,11 +4,6 @@ from typing import Any, AsyncGenerator, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from api.utils.stream_keepalive import (
-    SSE_HEARTBEAT_FRAME,
-    idle_timeout_message,
-    with_keepalive,
-)
 from loguru import logger
 
 from api.models import (
@@ -20,6 +15,11 @@ from api.models import (
     SearchResponse,
 )
 from api.source_visual_projection import project_search_source_visuals
+from api.utils.stream_keepalive import (
+    SSE_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from deeper_notebook.ai.models import Model, model_manager
 from deeper_notebook.database.repository import ensure_record_id, repo_query
 from deeper_notebook.domain.notebook import text_search, vector_search

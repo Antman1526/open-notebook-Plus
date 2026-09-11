@@ -8,8 +8,9 @@ results are returned unchanged.
 
 from __future__ import annotations
 
-from typing import Any
 import os
+from typing import Any
+
 import httpx
 from loguru import logger
 

@@ -7,16 +7,16 @@ from typing import Any, AsyncGenerator, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from api.utils.stream_keepalive import (
-    NDJSON_HEARTBEAT_FRAME,
-    idle_timeout_message,
-    with_keepalive,
-)
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from api.utils.iso import iso  # v0.7.181 — Safari-safe datetime serialization
+from api.utils.stream_keepalive import (
+    NDJSON_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from deeper_notebook.database.repository import ensure_record_id, repo_query
 from deeper_notebook.domain.notebook import ChatSession, Note, Notebook, Source
 from deeper_notebook.environment import resolve_env

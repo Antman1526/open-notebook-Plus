@@ -406,7 +406,9 @@ _EXECUTIVE_SYNTHESIS_SYSTEM = (
 async def generate_notebook_synthesis(notebook_id: str):
     """Generate an executive cross-source synthesis uncovering themes, tensions, and next steps."""
     import asyncio
+
     from langchain_core.messages import HumanMessage, SystemMessage
+
     from deeper_notebook.ai.provision import provision_langchain_model
     from deeper_notebook.utils import clean_thinking_content
     from deeper_notebook.utils.text_utils import extract_text_content

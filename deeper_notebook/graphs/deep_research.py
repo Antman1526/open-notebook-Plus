@@ -17,12 +17,12 @@ import json
 import os
 import re
 from typing import Any, List, Optional
-from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import TypedDict
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import TypedDict
 
 from deeper_notebook.ai.models import model_manager
 from deeper_notebook.ai.provision import provision_langchain_model
@@ -32,7 +32,10 @@ from deeper_notebook.graphs.agent_fsm import AgentState
 from deeper_notebook.search.fusion import reciprocal_rank_fusion
 from deeper_notebook.search.reranker import rerank_results
 from deeper_notebook.utils.error_classifier import classify_error
-from deeper_notebook.utils.text_utils import clean_thinking_content, extract_text_content
+from deeper_notebook.utils.text_utils import (
+    clean_thinking_content,
+    extract_text_content,
+)
 
 _DEFAULT_RESEARCH_TIMEOUT_SEC = 120.0
 

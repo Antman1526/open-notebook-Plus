@@ -7,8 +7,9 @@ using the active local Whisper or configured SpeechToTextModel.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import httpx
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from loguru import logger

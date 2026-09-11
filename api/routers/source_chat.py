@@ -4,17 +4,17 @@ from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, HTTPException, Path, Request
 from fastapi.responses import StreamingResponse
-from api.utils.stream_keepalive import (
-    SSE_HEARTBEAT_FRAME,
-    idle_timeout_message,
-    with_keepalive,
-)
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from api.utils.iso import iso  # v0.7.182 — Safari-safe datetime serialization
+from api.utils.stream_keepalive import (
+    SSE_HEARTBEAT_FRAME,
+    idle_timeout_message,
+    with_keepalive,
+)
 from deeper_notebook.database.repository import ensure_record_id, repo_query
 from deeper_notebook.domain.notebook import ChatSession, Source
 from deeper_notebook.exceptions import (

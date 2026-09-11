@@ -257,7 +257,7 @@ async def _open_session(
     from mcp.client.session import ClientSession
 
     if transport == "stdio" or (isinstance(url, str) and url.startswith("stdio://")):
-        from mcp.client.stdio import stdio_client, StdioServerParameters
+        from mcp.client.stdio import StdioServerParameters, stdio_client
 
         cmd = command or url.removeprefix("stdio://").strip()
         cmd_args = args or []
@@ -269,6 +269,7 @@ async def _open_session(
         return
 
     from mcp.client.streamable_http import streamablehttp_client
+
     from deeper_notebook.security.mcp_transport import (
         build_mcp_httpx_client_factory,
         validate_mcp_url,
