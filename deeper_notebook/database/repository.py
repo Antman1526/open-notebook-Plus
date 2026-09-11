@@ -544,6 +544,13 @@ async def repo_create(table: str, data: dict[str, Any]) -> dict[str, Any]:
             # SurrealDB may return a string error message instead of the expected record
             if isinstance(result, str):
                 raise RuntimeError(result)
+            # v0.8.126 — found live: the 2.x driver returns a one-element list
+            # from insert(); callers index the annotated dict (`created["id"]`)
+            # and got TypeError. Honour the `-> dict` annotation here, once.
+            if isinstance(result, list):
+                if not result:
+                    raise RuntimeError("Failed to create record: empty result")
+                return result[0]
             return result
     except RuntimeError as e:
         logger.error(str(e))

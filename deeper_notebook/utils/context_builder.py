@@ -306,10 +306,11 @@ class ContextBuilder:
             )
             note_context = note.get_context(context_size=context_size)
             if note.canonical_external and note.vault_file_id and note.vault_id:
+                # v0.8.126 — `position` must be projected for ORDER BY on SurrealDB 2.x.
                 provenance_rows = await repo_query(
                     """
                     SELECT relative_path, source_hash, embedding_state,
-                        (SELECT source_start, source_end FROM note_block
+                        (SELECT source_start, source_end, position FROM note_block
                          WHERE vault_file_id = $vault_file_id
                          ORDER BY position LIMIT 1)[0] AS selected_block
                     FROM vault_file

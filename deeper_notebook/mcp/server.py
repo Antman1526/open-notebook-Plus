@@ -20,7 +20,8 @@ mcp = FastMCP("DeeperNotebook")
 @mcp.tool()
 async def list_notebooks() -> list[dict[str, Any]]:
     """List all available notebooks in Deeper Notebook with their ids and names."""
-    rows = await repo_query("SELECT id, name, description, created FROM notebook ORDER BY updated DESC")
+    # v0.8.126 — SurrealDB 2.x requires the ORDER BY field in the projection.
+    rows = await repo_query("SELECT id, name, description, created, updated FROM notebook ORDER BY updated DESC")
     return [
         {
             "id": str(r.get("id", "")),

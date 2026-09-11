@@ -133,7 +133,10 @@ class SurrealCaptureRepository:
 
     async def list_roots(self) -> list[str]:
         rows = await repo_query(
-            "SELECT path FROM capture_inbox_root ORDER BY created ASC"
+            # v0.8.126 — found live: SurrealDB 2.x rejects ORDER BY on a field
+            # that is not in the projection ("Missing order idiom `created`"),
+            # which 500'd GET /capture/roots on every visit to the Capture page.
+            "SELECT path, created FROM capture_inbox_root ORDER BY created ASC"
         )
         return [str(row["path"]) for row in rows if row.get("path")]
 
