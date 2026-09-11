@@ -1364,6 +1364,10 @@ export const zhTW = {
       embedding_model: "嵌入模型",
       chat_model: "聊天模型",
       command_registry: "指令登錄",
+      worker: "背景工作處理程序",
+    },
+    fixes: {
+      worker: "啟動工作處理程序：uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

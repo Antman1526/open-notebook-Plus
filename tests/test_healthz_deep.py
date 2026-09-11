@@ -63,6 +63,23 @@ def _patch_all_healthy(monkeypatch):
         _has_chat,
     )
 
+    # v0.8.127 — worker heartbeat. Default to "online" so pre-existing
+    # tests (written before the worker subsystem existed) keep asserting
+    # an all-healthy response; tests below override this to exercise the
+    # offline/degraded path specifically.
+    async def _worker_online():
+        return {
+            "online": True,
+            "last_seen": "2026-09-11T00:00:00+00:00",
+            "age_seconds": 5.0,
+            "pid": 4242,
+            "hostname": "test-host",
+        }
+
+    from deeper_notebook import worker_heartbeat
+
+    monkeypatch.setattr(worker_heartbeat, "read_worker_status", _worker_online)
+
 
 def test_deep_healthy_when_all_subsystems_up(client, monkeypatch):
     _patch_all_healthy(monkeypatch)
@@ -76,6 +93,7 @@ def test_deep_healthy_when_all_subsystems_up(client, monkeypatch):
         "embedding_model",
         "chat_model",
         "command_registry",
+        "worker",
     ):
         assert body["checks"][name]["ok"] is True, body["checks"][name]
 
@@ -237,3 +255,87 @@ def test_api_alias_passes_probe_providers_query(client, monkeypatch):
     assert ("upstream_providers" in r_root.json()["checks"]) == (
         "upstream_providers" in r_api.json()["checks"]
     )
+
+
+# --------------------------------------------------------------------- #
+# v0.8.127 — worker heartbeat subsystem
+# --------------------------------------------------------------------- #
+
+
+def test_deep_degraded_200_when_worker_heartbeat_missing(client, monkeypatch):
+    """A missing/stale worker heartbeat is a degraded state, NOT
+    not_ready — chat, search, and notes all work fine with no worker
+    running; only async jobs (podcasts, embeddings, imports) don't."""
+    _patch_all_healthy(monkeypatch)
+
+    async def _worker_offline():
+        return {
+            "online": False,
+            "last_seen": None,
+            "age_seconds": None,
+            "pid": None,
+            "hostname": None,
+        }
+
+    from deeper_notebook import worker_heartbeat
+
+    monkeypatch.setattr(worker_heartbeat, "read_worker_status", _worker_offline)
+
+    r = client.get("/healthz/deep")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "degraded"
+    assert body["checks"]["worker"]["ok"] is False
+    assert "worker" in body["checks"]["worker"]["error"].lower()
+    # Must-have subsystems are unaffected by the worker being down.
+    assert body["checks"]["database"]["ok"] is True
+    assert body["checks"]["migrations"]["ok"] is True
+
+
+def test_deep_worker_offline_does_not_change_overall_vs_other_optionals(
+    client, monkeypatch
+):
+    """Overall status with only the worker down must be identical to
+    overall status with only the embedding model down — both are a
+    single missing optional subsystem, so both must land on
+    'degraded'/200, not something worse."""
+    _patch_all_healthy(monkeypatch)
+
+    async def _worker_offline():
+        return {
+            "online": False,
+            "last_seen": None,
+            "age_seconds": None,
+            "pid": None,
+            "hostname": None,
+        }
+
+    from deeper_notebook import worker_heartbeat
+
+    monkeypatch.setattr(worker_heartbeat, "read_worker_status", _worker_offline)
+
+    r_worker_down = client.get("/healthz/deep")
+
+    # Reset and instead break embedding_model only, for comparison.
+    _patch_all_healthy(monkeypatch)
+
+    async def _no_emb():
+        return None
+
+    from deeper_notebook.ai.models import model_manager
+
+    monkeypatch.setattr(model_manager, "get_embedding_model", _no_emb)
+
+    r_emb_down = client.get("/healthz/deep")
+
+    assert r_worker_down.status_code == r_emb_down.status_code == 200
+    assert r_worker_down.json()["status"] == r_emb_down.json()["status"] == "degraded"
+
+
+def test_deep_worker_online_reports_age(client, monkeypatch):
+    _patch_all_healthy(monkeypatch)
+    r = client.get("/healthz/deep")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["checks"]["worker"]["ok"] is True
+    assert body["checks"]["worker"]["age_seconds"] == 5.0

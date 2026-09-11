@@ -1364,6 +1364,10 @@ export const jaJP = {
       embedding_model: "埋め込みモデル",
       chat_model: "チャットモデル",
       command_registry: "コマンドレジストリ",
+      worker: "バックグラウンドワーカー",
+    },
+    fixes: {
+      worker: "ワーカーを起動してください: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

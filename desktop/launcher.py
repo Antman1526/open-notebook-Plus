@@ -1383,7 +1383,18 @@ class Supervisor:
             "--max-tasks",
             str(max_tasks),
         ]
-        self._spawn(args, cwd=self.upstream_root, name="worker")
+        # v0.8.127 — DEEPER_NOTEBOOK_WORKER_PROCESS=1 lets
+        # deeper_notebook.worker_heartbeat.is_worker_process() detect this
+        # child without relying on argv alone (a frozen/bundled entrypoint
+        # could rewrite argv[0]). The API process spawned by _spawn_api
+        # imports the same `commands` package but does NOT get this flag,
+        # so it never starts a heartbeat thread of its own.
+        self._spawn(
+            args,
+            cwd=self.upstream_root,
+            name="worker",
+            extra_env={"DEEPER_NOTEBOOK_WORKER_PROCESS": "1"},
+        )
 
     def _maybe_repair_db_on_boot(self) -> None:
         """v0.8.67l — If a prior worker crash flagged live-query corruption,

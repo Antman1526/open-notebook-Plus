@@ -1364,6 +1364,10 @@ export const trTR = {
       embedding_model: "Gömme modeli",
       chat_model: "Sohbet modeli",
       command_registry: "Komut kaydı",
+      worker: "Arka plan işçisi",
+    },
+    fixes: {
+      worker: "İşçiyi başlatın: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

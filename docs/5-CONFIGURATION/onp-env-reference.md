@@ -350,6 +350,24 @@ aliases.
 
 ---
 
+## Background worker heartbeat (v0.8.127)
+
+Queued work (podcasts, embeddings, async source processing, Studio
+generation) only runs while a `surreal-commands-worker` process is
+alive. `commands/__init__.py` starts a daemon thread — only inside the
+actual worker process, never the API process, which also imports
+`commands` — that upserts a `worker_heartbeat:primary` row roughly once
+a minute. `/healthz/deep` reports a `worker` subsystem from that row:
+`degraded` (never `not_ready`) when the heartbeat is missing or stale,
+since chat/search/notes all work without a worker.
+
+| Env var | Default | Purpose |
+|---|---:|---|
+| `DEEPER_NOTEBOOK_WORKER_PROCESS` | _(unset)_ | Set to `1` on the worker's own process env so `is_worker_process()` detects it without relying on argv alone. Set automatically by the Makefile `worker`/`start-all` targets and the desktop launcher's worker spawn — not something operators normally set by hand. |
+| `DEEPER_NOTEBOOK_WORKER_HEARTBEAT_STALE_SEC` | 180 | Age (seconds) past which the last heartbeat is considered stale and `/healthz/deep`'s `worker` check reports `offline` |
+
+---
+
 ## Version history of caps
 
 | Version | What changed |
@@ -382,3 +400,4 @@ aliases.
 | v0.7.116 | Per-provider `ONP_CONNECTION_TEST_TIMEOUT_SEC_<PROVIDER>` |
 | v0.8.116 | `ONP_STREAM_HEARTBEAT_SEC`, `ONP_STREAM_IDLE_TIMEOUT_SEC` |
 | v0.8.126 | `ONP_SOURCE_SYNC_TIMEOUT_SEC`; `API_GRACEFUL_SHUTDOWN_SEC` and `API_RELOAD` documented |
+| v0.8.127 | `DN_WORKER_PROCESS`, `DN_WORKER_HEARTBEAT_STALE_SEC` |

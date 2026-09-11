@@ -1723,6 +1723,7 @@ async def healthz_deep(probe_providers: bool = False):
           "embedding_model": {...},
           "chat_model": {...},
           "command_registry": {...},
+          "worker": {...},              ← v0.8.127 background worker heartbeat
           "upstream_providers": {...}   ← only when ?probe_providers=true
         }
       }
@@ -1875,6 +1876,45 @@ async def healthz_deep(probe_providers: bool = False):
             ),
         }
 
+    # OPTIONAL: Background worker heartbeat (v0.8.127). Podcasts,
+    # embeddings, and async source/studio jobs are all submitted as
+    # surreal-commands and only run if a `surreal-commands-worker`
+    # process is alive. Without this check, a missing worker was
+    # invisible here — jobs just sat `queued` until the stale-command
+    # reaper eventually failed them. Degraded, never not_ready: chat,
+    # search, and notes all work fine with no worker running.
+    try:
+        from deeper_notebook.worker_heartbeat import read_worker_status
+
+        worker_status = await read_worker_status()
+        online = bool(worker_status.get("online"))
+        if online:
+            checks["worker"] = {
+                "status": "online",
+                "ok": True,
+                "error": None,
+                "age_seconds": worker_status.get("age_seconds"),
+            }
+        else:
+            stale_after = resolve_env(
+                "DEEPER_NOTEBOOK_WORKER_HEARTBEAT_STALE_SEC", "180"
+            )
+            checks["worker"] = {
+                "status": "offline",
+                "ok": False,
+                "error": (
+                    f"No background worker heartbeat in the last "
+                    f"{stale_after} s — queued jobs (podcasts, "
+                    "embeddings, async imports) will not run."
+                ),
+            }
+    except Exception as exc:
+        checks["worker"] = {
+            "status": "error",
+            "ok": False,
+            "error": f"Failed to read worker heartbeat status: {exc}",
+        }
+
     # v0.7.132 — Optional: probe upstream providers (Area for Review
     # #12). Only runs when caller passes ?probe_providers=true, since
     # this burns one API call per credential. Each probe is its own
@@ -1889,6 +1929,9 @@ async def healthz_deep(probe_providers: bool = False):
     # provider knocks the overall to 'degraded' but doesn't flip to
     # 'not_ready'; an operator may have intentionally configured a
     # provider that's currently down (e.g., scheduled maintenance).
+    # v0.8.127 — `worker` joins the same informational treatment: it's
+    # deliberately excluded from `must_have_ok` above, so a missing
+    # worker heartbeat can only ever produce 'degraded', never 503.
     all_ok = all(c["ok"] for c in checks.values())
     if not must_have_ok:
         overall = "not_ready"

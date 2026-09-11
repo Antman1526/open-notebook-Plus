@@ -1364,6 +1364,10 @@ export const zhCN = {
       embedding_model: "嵌入模型",
       chat_model: "聊天模型",
       command_registry: "命令注册表",
+      worker: "后台工作进程",
+    },
+    fixes: {
+      worker: "启动工作进程：uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

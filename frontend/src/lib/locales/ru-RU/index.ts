@@ -1364,6 +1364,10 @@ export const ruRU = {
       embedding_model: "Модель эмбеддинга",
       chat_model: "Чат-модель",
       command_registry: "Реестр команд",
+      worker: "Фоновый воркер",
+    },
+    fixes: {
+      worker: "Запустите воркер: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

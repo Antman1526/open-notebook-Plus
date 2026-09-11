@@ -46,6 +46,7 @@ const SUBSYSTEM_ORDER: SubsystemKey[] = [
   'embedding_model',
   'chat_model',
   'command_registry',
+  'worker',
 ]
 
 // Where each fixable subsystem should send the user. database +
@@ -62,12 +63,20 @@ const FIX_PATHS: Partial<Record<SubsystemKey, string>> = {
 // because the locale-parity test scans the source for literal key
 // references; the dynamic form would leave the keys orphaned and the
 // "unused key" detection would scream.
+//
 const SUBSYSTEM_LABEL_KEYS: Record<SubsystemKey, string> = {
   database: 'setupWizard.subsystems.database',
   migrations: 'setupWizard.subsystems.migrations',
   embedding_model: 'setupWizard.subsystems.embedding_model',
   chat_model: 'setupWizard.subsystems.chat_model',
   command_registry: 'setupWizard.subsystems.command_registry',
+  worker: 'setupWizard.subsystems.worker',
+}
+
+// v0.8.127 — subsystems with no in-app fix page get a copy-paste hint
+// rendered under the row instead of a deep-link button.
+const FIX_HINT_KEYS: Partial<Record<SubsystemKey, string>> = {
+  worker: 'setupWizard.fixes.worker',
 }
 
 const WIZARD_COMPLETED_KEY = 'wizard_completed'
@@ -113,12 +122,14 @@ function SubsystemRow({
   label,
   fixPath,
   fixLabel,
+  fixHint,
 }: {
   name: SubsystemKey
   check: SubsystemCheck
   label: string
   fixPath?: string
   fixLabel: string
+  fixHint?: string
 }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b last:border-b-0">
@@ -137,6 +148,14 @@ function SubsystemRow({
               data-testid={`subsystem-error-${name}`}
             >
               {check.error}
+            </p>
+          ) : null}
+          {!check.ok && fixHint ? (
+            <p
+              className="text-xs text-muted-foreground mt-1 font-mono break-all"
+              data-testid={`subsystem-hint-${name}`}
+            >
+              {fixHint}
             </p>
           ) : null}
         </div>
@@ -261,6 +280,7 @@ export default function SetupWizardPage() {
                       check={data.checks[name]}
                       label={t(SUBSYSTEM_LABEL_KEYS[name])}
                       fixPath={FIX_PATHS[name]}
+                      fixHint={FIX_HINT_KEYS[name] ? t(FIX_HINT_KEYS[name]) : undefined}
                       fixLabel={t('setupWizard.fixButton')}
                     />
                   ))}

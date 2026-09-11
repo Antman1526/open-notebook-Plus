@@ -19,6 +19,8 @@ export type SubsystemKey =
   | 'embedding_model'
   | 'chat_model'
   | 'command_registry'
+  // v0.8.127 — background worker heartbeat (degraded when absent, never not_ready)
+  | 'worker'
 
 export interface SubsystemCheck {
   status: string
@@ -41,6 +43,7 @@ const SYNTHESIZED_NOT_READY: DeepHealthResponse = {
     embedding_model: { status: 'missing', ok: false, error: 'API unreachable' },
     chat_model: { status: 'missing', ok: false, error: 'API unreachable' },
     command_registry: { status: 'error', ok: false, error: 'API unreachable' },
+    worker: { status: 'offline', ok: false, error: 'API unreachable' },
   },
 }
 

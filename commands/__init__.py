@@ -38,6 +38,24 @@ except Exception:
     # the worker must still start so we don't lose job processing.
     pass
 
+# v0.8.127 — Start the worker heartbeat, but ONLY in the actual worker
+# process. This module is also imported by the API process ("Commands
+# imported in API process" — see api/main.py's command_registry
+# healthz check), so `is_worker_process()` gates the thread start on
+# an explicit env flag / argv signal rather than firing on every
+# import. See deeper_notebook/worker_heartbeat.py for detection + the
+# heartbeat itself; /healthz/deep reads it back to report a `worker`
+# subsystem.
+try:
+    from deeper_notebook.worker_heartbeat import is_worker_process, start_heartbeat
+
+    if is_worker_process():
+        start_heartbeat()
+except Exception:
+    # Best-effort, same rationale as the logging setup above — a
+    # heartbeat failure must never prevent the worker from booting.
+    pass
+
 from .embedding_commands import (
     embed_insight_command,
     embed_note_command,

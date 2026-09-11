@@ -238,7 +238,7 @@ worker: worker-start
 
 worker-start:
 	@echo "Starting surreal-commands worker..."
-	uv run --env-file .env surreal-commands-worker --import-modules commands
+	DEEPER_NOTEBOOK_WORKER_PROCESS=1 uv run --env-file .env surreal-commands-worker --import-modules commands
 
 worker-stop:
 	@echo "Stopping surreal-commands worker..."
@@ -280,7 +280,7 @@ start-all:
 	@uv run --env-file .env run_api.py &
 	@sleep 3
 	@echo "⚙️ Starting background worker..."
-	@uv run --env-file .env surreal-commands-worker --import-modules commands &
+	@DEEPER_NOTEBOOK_WORKER_PROCESS=1 uv run --env-file .env surreal-commands-worker --import-modules commands &
 	@sleep 2
 	@echo "🌐 Starting Next.js frontend..."
 	@echo "✅ All services started!"

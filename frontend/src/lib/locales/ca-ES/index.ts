@@ -1366,6 +1366,10 @@ export const caES = {
       embedding_model: "Model d'incrustació",
       chat_model: "Model de xat",
       command_registry: "Registre d'ordres",
+      worker: "Treballador en segon pla",
+    },
+    fixes: {
+      worker: "Inicia el treballador: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

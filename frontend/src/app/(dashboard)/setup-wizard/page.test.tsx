@@ -56,6 +56,7 @@ const HEALTHY = {
     embedding_model: { status: 'configured', ok: true, error: null },
     chat_model: { status: 'configured', ok: true, error: null },
     command_registry: { status: 'loaded', ok: true, error: null },
+    worker: { status: 'online', ok: true, error: null },
   },
 }
 
@@ -71,6 +72,7 @@ const DEGRADED = {
     },
     chat_model: { status: 'configured', ok: true, error: null },
     command_registry: { status: 'loaded', ok: true, error: null },
+    worker: { status: 'online', ok: true, error: null },
   },
 }
 
@@ -86,6 +88,7 @@ const NOT_READY = {
     embedding_model: { status: 'missing', ok: false, error: null },
     chat_model: { status: 'missing', ok: false, error: null },
     command_registry: { status: 'error', ok: false, error: null },
+    worker: { status: 'offline', ok: false, error: 'No background worker heartbeat' },
   },
 }
 
@@ -142,6 +145,28 @@ describe('SetupWizardPage', () => {
     expect(fixLink).toHaveAttribute('href', '/settings/api-keys')
 
     expect(screen.getByTestId('continue-button')).not.toBeDisabled()
+  })
+
+  it('renders the worker row with a copy-paste hint when the worker is offline (v0.8.127)', () => {
+    vi.mocked(useDeepHealth).mockReturnValue({
+      data: {
+        status: 'degraded',
+        checks: {
+          database: { status: 'online', ok: true, error: null },
+          migrations: { status: 'applied', ok: true, error: null },
+          embedding_model: { status: 'configured', ok: true, error: null },
+          chat_model: { status: 'configured', ok: true, error: null },
+          command_registry: { status: 'loaded', ok: true, error: null },
+          worker: { status: 'offline', ok: false, error: 'No background worker heartbeat in the last 180 s' },
+        },
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    } as never)
+    render(<SetupWizardPage />)
+    expect(screen.getByTestId('subsystem-error-worker')).toHaveTextContent('No background worker heartbeat')
+    // useTranslation is mocked to echo keys in this file.
+    expect(screen.getByTestId('subsystem-hint-worker')).toHaveTextContent('setupWizard.fixes.worker')
   })
 
   it('disables Continue when status is not_ready', () => {

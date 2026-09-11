@@ -1365,6 +1365,10 @@ export const plPL = {
       embedding_model: "Model osadzania",
       chat_model: "Model czatu",
       command_registry: "Rejestr poleceń",
+      worker: "Proces roboczy w tle",
+    },
+    fixes: {
+      worker: "Uruchom proces roboczy: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

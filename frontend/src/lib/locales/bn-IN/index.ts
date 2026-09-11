@@ -1365,6 +1365,10 @@ export const bnIN = {
       embedding_model: "এমবেডিং মডেল",
       chat_model: "চ্যাট মডেল",
       command_registry: "কমান্ড রেজিস্ট্রি",
+      worker: "ব্যাকগ্রাউন্ড ওয়ার্কার",
+    },
+    fixes: {
+      worker: "ওয়ার্কার শুরু করুন: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

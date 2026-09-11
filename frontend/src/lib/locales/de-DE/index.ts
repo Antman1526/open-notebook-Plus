@@ -1365,6 +1365,10 @@ export const deDE = {
       embedding_model: "Embedding-Modell",
       chat_model: "Chat-Modell",
       command_registry: "Befehlsregister",
+      worker: "Hintergrund-Worker",
+    },
+    fixes: {
+      worker: "Starte den Worker: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

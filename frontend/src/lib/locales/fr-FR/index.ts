@@ -1366,6 +1366,10 @@ export const frFR = {
       embedding_model: "Modèle d'embedding",
       chat_model: "Modèle de chat",
       command_registry: "Registre de commandes",
+      worker: "Worker en arrière-plan",
+    },
+    fixes: {
+      worker: "Démarrez le worker : uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }

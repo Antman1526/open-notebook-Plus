@@ -221,7 +221,10 @@ _SHORT_SUFFIXES = (
     "WEB_SEARCH_PROVIDER",
     "WEB_SEARCH_TIMEOUT_SEC",
     "WEB_SEARCH_TOTAL_BUDGET_SEC",
+    # v0.8.127 — background worker heartbeat (deeper_notebook/worker_heartbeat.py)
+    "WORKER_HEARTBEAT_STALE_SEC",
     "WORKER_MAX_TASKS",
+    "WORKER_PROCESS",
     *(
         f"CONNECTION_TEST_TIMEOUT_SEC_{provider}"
         for provider in CONNECTION_TIMEOUT_PROVIDERS

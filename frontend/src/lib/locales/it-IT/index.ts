@@ -1364,6 +1364,10 @@ export const itIT = {
       embedding_model: "Modello di embedding",
       chat_model: "Modello di chat",
       command_registry: "Registro dei comandi",
+      worker: "Worker in background",
+    },
+    fixes: {
+      worker: "Avvia il worker: uv run --env-file .env surreal-commands-worker --import-modules commands",
     },
   },
 }
