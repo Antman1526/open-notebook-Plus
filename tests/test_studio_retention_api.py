@@ -40,6 +40,15 @@ def _evidence_studio_enabled(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _reset_retention_state(monkeypatch):
+    # v0.8.125 — the loop tests in test_studio_retention.py leave a last
+    # report behind in module state; isolate so the status shape test is
+    # order-independent when the files run in one session.
+    monkeypatch.setattr(retention_service, "_LAST_REPORT", None, raising=False)
+    monkeypatch.setattr(retention_service, "_LAST_RUN_AT", None, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _clear_retention_env(monkeypatch):
     for name in (
         "DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS",
