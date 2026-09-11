@@ -25,6 +25,70 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.125 — 2026-09-11 — The v0.8.124 areas, then the app run for real
+
+This release closed the five areas left by v0.8.124 and then launched the
+stack (SurrealDB, API without reload, commands worker, Next dev server),
+seeded a notebook with two sources, a note and a structured course pack,
+and drove every new feature in the browser. Two bugs no unit test had
+caught fell out of that pass.
+
+🐛 **Notebook source list returned 500 when any source had no extracted
+text.** A source whose processing never ran (worker down, command reaped on
+restart) has `full_text = NONE`, and both list queries computed
+`string::len(full_text)`, which SurrealDB rejects. One such row broke
+`GET /api/sources` for the whole notebook. Coalesced to an empty string;
+verified against the live database and the route; regression tests on
+both queries.
+
+🐛 **First "Export all artifacts" failed with a 400 the dialog never
+showed.** The default destination is `~/DeeperNotebook-Exports`, which does
+not exist on a fresh machine, and the zip routes deliberately refuse to
+create parents. The dialog now creates the parent through the existing fs
+mkdir mutation before bundling and renders the API error inline with
+`role="alert"`. The older notebook export dialog has the same gap; recorded
+below rather than widened into this change.
+
+🐛 **Artifact delete returned 500 after deleting, and orphaned revisions.**
+The driver returns the deleted `RecordID` from `delete()`; the domain
+method passed it through and the route echoed it into JSON, which pydantic
+cannot serialise, so the client saw a 500 for a delete that had worked.
+Separately, the update endpoint's revision snapshot was left behind (row
+and export file) when its parent was deleted. `base.delete()` now returns
+a real bool, the route coerces again, and a top-level artifact deletes its
+revisions first.
+
+✨ **Retention job visible in Settings.** `GET /studio/retention/status`
+and `POST /studio/retention/dry-run` (never a real prune), plus a
+`RetentionCard` showing the enabled state, the three knobs, last run and
+last report, a "Dry run now" button with inline counters, and the env var
+to enable it. Note: the router imports the retention module qualified;
+importing the function by name makes it one of the legacy facade's synced
+symbols, reset before every request.
+
+✨ **Bundle export media flag.** `include_media` (default on) gates podcast
+audio (when episodes are notebook-scoped — they are not today, so zero
+episodes are bundled and the code says so) and the video-overview files the
+bundle already carried, so the dialog checkbox has a real effect now.
+
+✨ **Mind map: source and note previews, search-to-focus, persisted
+state.** A plain click on a source or note node opens the in-canvas
+preview (Shift-click still navigates); Enter fits the view to the search
+matches and Up/Down step through them with focus; filter, query and the
+cluster toggle persist per notebook and were confirmed restored on reopen.
+
+🛠 **Test isolation.** The retention API status test read a last report
+left behind by the loop tests when both files ran in one session; reset
+fixture added.
+
+**Live-run facts for the next reader.** The API's dev reload watches the
+tree, so concurrent edits reload it mid-request and wedge the port
+(`API_RELOAD=false` for verification). The "synchronous" source path
+submits to the SurrealDB command queue and waits up to 300 s for the
+`surreal-commands-worker`; without the worker every source create hangs.
+The setup wizard auto-advances once any notebook exists. Studio routes
+require the full `studio_artifact:` id in the path.
+
 ## v0.8.124 — 2026-09-11 — The v0.8.123 strategic areas, plus housekeeping on the inherited commits
 
 🛠 **Housekeeping first.** The twelve v0.8.120–v0.8.123 commits were local

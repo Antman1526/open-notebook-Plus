@@ -1,13 +1,15 @@
 # Project Handoff: Deeper Notebook (for Claude)
 
-**Date**: September 11, 2026  
+**Date**: September 11, 2026 (v0.8.125)  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits & Additions** (v0.8.115 – v0.8.124):
-- `80d67390`: `feat(studio): one-click export of every completed artifact as a single zip` (v0.8.124)
-- `711aee12`: `feat(notebooks): mind map media preview, canvas search, and cluster-by-type layout` (v0.8.124)
-- `8108d1c1`: `feat(studio): retention job for old revisions and stale exports, disabled by default` (v0.8.124)
-- `639a2b6e`: `chore: sort import blocks flagged by ruff I001` (v0.8.124)
+**Latest Commits & Additions** (v0.8.115 – v0.8.125):
+- `0942cfcb`: `fix(studio): artifact delete returns a real bool and cascades to its revisions` (v0.8.125, found live)
+- `a5c50a36`: `fix(studio): export-all dialog creates the destination folder and shows API errors inline` (v0.8.125, found live)
+- `d8fb2759`: `fix(sources): notebook source list no longer 500s when a source has no extracted text` (v0.8.125, found live)
+- `8610c6a7` / `b9d110d3` / `a7a9fa96`: media checkbox, retention Settings card, mind map previews + search-to-focus + persisted state (v0.8.125)
+- `6078cc54` / `23fc1609`: bundle media flag, retention status + dry-run endpoints (v0.8.125)
+- `80d67390` / `711aee12` / `8108d1c1`: bundle export, mind map preview/search/cluster, retention job (v0.8.124)
 - `8b48a72e`: `feat(studio): mind map deep-linking, semantic minimap, bundle cleanup & canvas filter chips` (v0.8.123)
 - `976f37b6`: `feat(studio): video overview disk safety, mind map note editing, graph artifact grounding & i18n polish` (v0.8.122)
 - `7228baf3`: `fix(studio): preserve content in exports and synthesis, clean up orphaned export files` (v0.8.121)
@@ -145,24 +147,26 @@ All gates are currently passing 100%:
 
 ## 5. Completed Items & Next Areas to Explore
 
-### Recently Completed in v0.8.124
-- [x] **Inherited commits verified and pushed.** v0.8.120–v0.8.123 were local only; gates re-run, twelve ruff import-order findings and one stale rebrand pin fixed, then pushed.
-- [x] **Studio retention job, OFF by default** (`deeper_notebook/studio/retention.py`, lifespan-wired like the checkpoint pruner). Keeps newest N revisions per artifact, unlinks exports that are both content-stale and older than a day threshold. Enable with `DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS > 0`; `..._DRY_RUN=true` counts without touching anything.
-- [x] **Export all artifacts as one zip.** `POST /studio/notebooks/{id}/exports/bundle`, `{slug}/{format}/{filename}` + `manifest.json`, same destination/overwrite guards as the notebook export; "Export all artifacts" button in the Studio rail header with a trimmed dialog.
-- [x] **Mind map media preview, search, cluster-by-type.** Slide-deck nodes with a video overview open an in-canvas preview (Shift-click still navigates); search dims non-matching nodes and edges with a live count; a cluster toggle lays each type on its own sub-circle. `NotebookGraphNode.artifact_type` added on the frontend.
+### Recently Completed in v0.8.125
+- [x] All five v0.8.124 areas (retention in Settings, bundle media flag, source/note previews, search-to-focus, persisted canvas state).
+- [x] **Live verification pass.** Stack launched (SurrealDB via Docker Compose, API with `API_RELOAD=false`, `surreal-commands-worker`, Next dev), a notebook seeded with sources, a note and a structured course pack, and every new feature driven in the browser. Verified live: 12 export formats written, EPUB structure, PDF with embedded TrueType and CJK CID fonts, on-demand regeneration, bundle zip (13 entries + manifest) from both API and dialog, retention dry run from API and Settings card, mind map search/focus/step, cluster layout, source preview popover, per-notebook persistence, artifact deep-link.
+- [x] Three bugs found only by running the app (see v0.8.125 changelog): source list 500 on `full_text = NONE`; export-all first-use 400 with no visible error; artifact delete 500 after success plus orphaned revisions.
 
-### Facts learned this cycle (verify before relying on)
-- Nothing creates a `podcast_audio` StudioArtifact today; the studio generation registry rejects that type. The mind map preview's audio branch is defensive only.
-- `StudioArtifact` revisions chain through `revision_of_id`; `get_revisions` already orders newest first.
-- Periodic work is an `asyncio` loop inside the FastAPI lifespan (`_track_task`), never APScheduler or `surreal_commands`. The desktop launcher has a separate `threading` timer for auto-export only.
-- A `compatibility_alias` rebrand pin that drifts onto active text fails the audit at **load time** with a `ValueError`, not as a "stale" report. `scripts/repair_rebrand_pins.py` still fixes it.
+### Running the stack locally (verified 2026-09-11)
+- SurrealDB: `docker compose -f docker-compose.yml up -d surrealdb` (health at `:8000/health`).
+- API: `API_RELOAD=false uv run --env-file .env run_api.py` — **disable reload while others edit the tree**; a reload mid-request wedges the port.
+- Worker: `uv run --env-file .env surreal-commands-worker --import-modules commands` — **required**; the "sync" source path waits up to 300 s on the command queue.
+- Frontend: `cd frontend && npm run dev`. The setup wizard auto-advances once any notebook exists.
+- Seeding a completed course pack without an LLM: create the artifact, then `PATCH /studio/artifacts/{full id}` with `output_payload = build_structured_payload(parse_artifact_document("course_pack", {...}), markdown)`; exports persist on that PATCH. Studio routes need the full `studio_artifact:` id.
 
 ### Next Recommended Areas to Explore
-1. **Retention job: surface it in Settings.** It ships disabled and env-only. A Settings card showing the last `RetentionReport` (with a "dry run now" button hitting a small `POST /studio/retention/dry-run`) would let users see what it would remove before enabling it.
-2. **Bundle export: include media.** The zip carries export files only. Podcast audio and video-overview MP4/VTT under `DATA_FOLDER/video-overviews` are not bundled; add them under `{slug}/media/` with the same containment guard `_cleanup_export_files` uses.
-3. **Mind map preview for sources and notes.** The popover exists only for previewable artifacts. A source node could show its cover and first excerpt via the existing `SourceCover`/evidence peek; a note node its first lines.
-4. **Search-to-focus.** Canvas search dims non-matches; add Enter to `fitView` on the matching set and arrow keys to step between matches, reusing the keyboard model from `VaultGraph.tsx`.
-5. **Cluster layout persistence.** The cluster toggle and search query reset on reopen; persist both in the existing notebook-scoped UI store alongside the filter chip.
+1. **Notebook export dialog first-use gap.** `ExportNotebookDialog.tsx` has the same missing-parent 400 with no inline error that v0.8.125 fixed in the export-all dialog. Apply the same mkdir-then-export and `role="alert"` pattern.
+2. **Unprefixed artifact ids.** `GET/PATCH /studio/artifacts/{id}` 404s for `ls8yo…` without the `studio_artifact:` prefix while other routers accept both. Normalise in one place in the studio facade.
+3. **Mind map polish, seen live.** "1 matches" needs pluralisation; the preview popover renders at the canvas edge and clips (anchor it inside the viewport); the MiniMap renders as a blank white box in the dark theme (its `nodeColor` CSS variables do not resolve inside the minimap SVG).
+4. **Podcast episodes are not notebook-scoped**, so the bundle's podcast branch bundles nothing. Persist `notebook_id` on `PodcastEpisode` at generation time (it is already known there) and the existing writer starts working unchanged.
+5. **Export path re-allocation leaves orphans.** Re-persisting an export allocates a new stem suffix (`…-2.md`) instead of overwriting, so the previous file stays on disk unreferenced. Either overwrite in place or unlink the old path when `export_paths` changes.
+6. **Notebook delete unlinks rather than deletes sources** ("3 unlinked sources" in the log) and leaves revision-less orphan rows when artifacts were deleted first. Decide the intended policy and test it.
+7. **Degraded-mode noise.** With no models configured, several endpoints log "Model provisioning failed … default for type=transformation" as 500s during normal browsing. Gate those calls on model availability or return 200 with an empty result.
 
 ---
 
