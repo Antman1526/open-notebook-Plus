@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Поиск узлов",
   searchPlaceholder: "Поиск…",
   matches: "{count} совпадений",
+  matchesOne: "1 совпадение",
   clusterByType: "Группировать по типу",
   previewOpen: "Открыть в Studio",
   previewPlay: "Воспроизвести",

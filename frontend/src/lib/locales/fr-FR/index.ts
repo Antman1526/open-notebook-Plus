@@ -1469,6 +1469,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Rechercher des nœuds",
   searchPlaceholder: "Rechercher…",
   matches: "{count} résultats",
+  matchesOne: "1 résultat",
   clusterByType: "Regrouper par type",
   previewOpen: "Ouvrir dans Studio",
   previewPlay: "Lire",

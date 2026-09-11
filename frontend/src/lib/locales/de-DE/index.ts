@@ -1468,6 +1468,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Knoten durchsuchen",
   searchPlaceholder: "Suchen…",
   matches: "{count} Treffer",
+  matchesOne: "1 Treffer",
   clusterByType: "Nach Typ gruppieren",
   previewOpen: "Im Studio öffnen",
   previewPlay: "Abspielen",

@@ -27,7 +27,7 @@
 // best-effort only: it looks for a plausible episode id on the artifact's
 // output_payload and falls back to the "unavailable" copy when it can't
 // resolve one.
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, Play, X } from 'lucide-react'
 
@@ -55,10 +55,45 @@ interface MindMapNodePreviewProps {
   nodeId: string
   artifactType?: string | null
   anchor: MindMapNodePreviewAnchor | null
+  // v0.8.126 — the canvas wrapper the anchor's x/y are relative to (MindMap's
+  // canvasRef). Used to clamp the popover so it can't render off-screen when
+  // the source node clicked is near the canvas edge.
+  containerRef?: RefObject<HTMLDivElement | null>
   onClose: () => void
   onOpenArtifact: (artifactId: string) => void
   onOpenSource: (sourceId: string) => void
   onOpenNote: (noteId: string) => void
+}
+
+// v0.8.126 — popover clipping fix. The card is `w-64` (256px) with a
+// variable height depending on content (excerpt text vs. a 16:9 video), so
+// rather than measure the rendered card (which would need a layout-effect
+// render pass, and can't measure the video/image state ahead of load), clamp
+// against a fixed max footprint plus the fixed 12px translateY offset the
+// `style.transform` below applies.
+const POPOVER_WIDTH = 256
+const POPOVER_MAX_HEIGHT = 320
+const POPOVER_MARGIN = 12
+const POPOVER_Y_OFFSET = 12
+
+function clampAnchor(
+  anchor: MindMapNodePreviewAnchor,
+  container: { width: number; height: number } | null
+): { left: number; top: number } {
+  if (!container) return { left: anchor.x, top: anchor.y }
+
+  const halfWidth = POPOVER_WIDTH / 2
+  const minLeft = POPOVER_MARGIN + halfWidth
+  const maxLeft = Math.max(minLeft, container.width - POPOVER_MARGIN - halfWidth)
+  const left = Math.min(Math.max(anchor.x, minLeft), maxLeft)
+
+  const maxTop = Math.max(
+    POPOVER_MARGIN,
+    container.height - POPOVER_MARGIN - POPOVER_MAX_HEIGHT - POPOVER_Y_OFFSET
+  )
+  const top = Math.min(Math.max(anchor.y, POPOVER_MARGIN), maxTop)
+
+  return { left, top }
 }
 
 // Copied from ArtifactRail.tsx's videoOverviewPayload() — deliberately not
@@ -104,6 +139,7 @@ export default function MindMapNodePreview({
   nodeId,
   artifactType,
   anchor,
+  containerRef,
   onClose,
   onOpenArtifact,
   onOpenSource,
@@ -113,6 +149,22 @@ export default function MindMapNodePreview({
   const cardRef = useRef<HTMLDivElement>(null)
   const setEpisode = useAudioPlayerStore((state) => state.setEpisode)
   const [videoUrls, setVideoUrls] = useState<{ media: string; captions: string } | null>(null)
+
+  // v0.8.126 — clamp against the canvas wrapper (MindMap's canvasRef, passed
+  // down as containerRef) so the popover can't render off-screen when the
+  // clicked node is near the canvas edge. containerRef belongs to an
+  // ancestor component, so reading `.current` has to happen in an effect,
+  // not inline during render (react-hooks/refs); useLayoutEffect keeps the
+  // correction synchronous, before paint.
+  const [clampedPos, setClampedPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!anchor) {
+      setClampedPos(null)
+      return
+    }
+    const containerRect = containerRef?.current?.getBoundingClientRect() ?? null
+    setClampedPos(clampAnchor(anchor, containerRect))
+  }, [anchor, containerRef])
 
   const open = Boolean(anchor)
   const isSourceNode = nodeType === 'source'
@@ -198,9 +250,10 @@ export default function MindMapNodePreview({
 
   if (!anchor) return null
 
+  const { left, top } = clampedPos ?? { left: anchor.x, top: anchor.y }
   const style: CSSProperties = {
-    left: anchor.x,
-    top: anchor.y,
+    left,
+    top,
     transform: 'translate(-50%, 12px)',
   }
 

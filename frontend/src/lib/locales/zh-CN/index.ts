@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "搜索节点",
   searchPlaceholder: "搜索…",
   matches: "{count} 个匹配项",
+  matchesOne: "1 个匹配项",
   clusterByType: "按类型聚类",
   previewOpen: "在工作室中打开",
   previewPlay: "播放",

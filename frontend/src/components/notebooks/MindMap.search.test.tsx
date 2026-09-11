@@ -128,6 +128,17 @@ describe('MindMap canvas search and clustering', () => {
     expect(screen.getByText('2 matches')).toBeInTheDocument()
   })
 
+  // v0.8.126 — "1 matches" read wrong; a single match uses the singular key.
+  it('uses the singular match count copy for exactly one match', () => {
+    setup()
+
+    const input = screen.getByLabelText('Search nodes')
+    fireEvent.change(input, { target: { value: 'Beta' } })
+
+    expect(screen.getByText('1 match')).toBeInTheDocument()
+    expect(screen.queryByText('1 matches')).not.toBeInTheDocument()
+  })
+
   it('clusters same-type nodes closer together than to other types when toggled on', () => {
     setup()
 

@@ -14,7 +14,7 @@
 // lib/stores/mind-map-store.ts (improvement roadmap). useReactFlow() needs a
 // ReactFlowProvider ancestor, so the exported component now wraps the canvas
 // in one and keeps the actual implementation in an inner component.
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -72,6 +72,21 @@ function nodeStyle(type: string): CSSProperties {
     textAlign: 'center',
     cursor: type === 'notebook' ? 'default' : 'pointer',
   }
+}
+
+// v0.8.126 — found live: MiniMap paints node fills and the mask background
+// through CSS custom properties (see @xyflow/react's MiniMapNode / base.css),
+// and an unresolved `var(--dn-graph-source)`-style string renders as a blank
+// white box in the dark theme. Resolve one level of var(name[, fallback])
+// via getComputedStyle so the minimap always gets a concrete color.
+function resolveCssVar(value: string, computed: CSSStyleDeclaration): string {
+  const trimmed = value.trim()
+  const match = trimmed.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/)
+  if (!match) return trimmed
+  const [, name, fallback] = match
+  const resolved = computed.getPropertyValue(name).trim()
+  if (resolved) return resolved
+  return fallback ? resolveCssVar(fallback, computed) : ''
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
@@ -366,13 +381,31 @@ function MindMapCanvas({
     [matchedNodeIds, activeMatchId, fitView, setQuery]
   )
 
+  // v0.8.126 — resolve the semantic var(...) to a concrete color; see
+  // resolveCssVar() above. Falls back to a neutral gray if nothing resolves
+  // (e.g. jsdom, where getComputedStyle never returns custom properties).
   const minimapNodeColor = useCallback(
     (node: Node) => {
       const type = typeById.get(node.id) ?? 'notebook'
-      return NODE_BG[type] ?? 'var(--dn-graph-fallback)'
+      const raw = NODE_BG[type] ?? 'var(--dn-graph-fallback)'
+      const computed = getComputedStyle(canvasRef.current ?? document.documentElement)
+      return resolveCssVar(raw, computed) || '#94a3b8'
     },
     [typeById]
   )
+
+  // v0.8.126 — a translucent version of the canvas background so the
+  // viewport rectangle the mask cuts out stays visible against a dark
+  // background instead of defaulting to react-flow's light-mode mask color.
+  // Reading canvasRef.current has to happen in an effect, not inline during
+  // render (react-hooks/refs) — canvasRef is on this component's own JSX
+  // output, so it's already attached by the time this effect runs.
+  const [minimapMaskColor, setMinimapMaskColor] = useState('rgba(15, 23, 42, 0.6)')
+  useEffect(() => {
+    const computed = getComputedStyle(canvasRef.current ?? document.documentElement)
+    const bg = resolveCssVar('var(--background)', computed)
+    setMinimapMaskColor(bg ? `color-mix(in oklab, ${bg} 55%, transparent)` : 'rgba(15, 23, 42, 0.6)')
+  }, [])
 
   if (isLoading) {
     return (
@@ -466,7 +499,10 @@ function MindMapCanvas({
         />
         {normalizedQuery && (
           <span className="text-xs text-muted-foreground">
-            {t('mindMap.matches', { defaultValue: '{count} matches' }).replace('{count}', String(matchCount))}
+            {/* v0.8.126 — "1 matches" read wrong; matchesOne covers the singular. */}
+            {matchCount === 1
+              ? t('mindMap.matchesOne', { defaultValue: '1 match' })
+              : t('mindMap.matches', { defaultValue: '{count} matches' }).replace('{count}', String(matchCount))}
           </span>
         )}
         {activeMatchIndex >= 0 && (
@@ -501,7 +537,7 @@ function MindMapCanvas({
       >
         <Background gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeColor={minimapNodeColor} />
+        <MiniMap pannable zoomable nodeColor={minimapNodeColor} maskColor={minimapMaskColor} />
       </ReactFlow>
       {preview && (
         <MindMapNodePreview
@@ -510,6 +546,7 @@ function MindMapCanvas({
           nodeId={preview.id}
           artifactType={preview.artifactType}
           anchor={preview.anchor}
+          containerRef={canvasRef}
           onClose={() => setPreview(null)}
           onOpenSource={(id) => {
             setPreview(null)

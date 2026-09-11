@@ -1468,6 +1468,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Szukaj węzłów",
   searchPlaceholder: "Szukaj…",
   matches: "{count} dopasowań",
+  matchesOne: "1 dopasowanie",
   clusterByType: "Grupuj według typu",
   previewOpen: "Otwórz w Studio",
   previewPlay: "Odtwórz",

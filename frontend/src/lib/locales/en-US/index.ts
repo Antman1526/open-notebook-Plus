@@ -1490,6 +1490,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Search nodes",
   searchPlaceholder: "Search…",
   matches: "{count} matches",
+  matchesOne: "1 match",
   clusterByType: "Cluster by type",
   previewOpen: "Open in Studio",
   previewPlay: "Play",

@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Düğümlerde ara",
   searchPlaceholder: "Ara…",
   matches: "{count} eşleşme",
+  matchesOne: "1 eşleşme",
   clusterByType: "Türe göre kümele",
   previewOpen: "Stüdyoda aç",
   previewPlay: "Oynat",

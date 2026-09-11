@@ -1469,6 +1469,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Cerca nodes",
   searchPlaceholder: "Cerca…",
   matches: "{count} coincidències",
+  matchesOne: "1 coincidència",
   clusterByType: "Agrupa per tipus",
   previewOpen: "Obre a l'Estudi",
   previewPlay: "Reprodueix",

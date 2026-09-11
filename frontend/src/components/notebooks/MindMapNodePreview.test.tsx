@@ -1,6 +1,6 @@
 // v0.8.124 — mind-map node preview popover tests (improvement roadmap).
 // v0.8.125 — source/note node preview tests (improvement roadmap).
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
@@ -290,5 +290,71 @@ describe('MindMapNodePreview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open note' }))
     expect(onOpenNote).toHaveBeenCalledWith('n1')
+  })
+
+  // v0.8.126 — popover clipping fix: with an anchor near the container's
+  // bottom-right edge, the popover must be shifted left/up to stay inside
+  // (12px margin), not rendered off-screen at the raw anchor coordinates.
+  it('clamps the popover position inside the container when the anchor is near the bottom-right edge', () => {
+    mockQueries({ note: { id: 'n1', title: 'Edge Note', content: 'hi' } })
+
+    const rectSpy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 800,
+      height: 600,
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    } as DOMRect)
+
+    // Mirrors MindMap.tsx's real usage: the canvas wrapper (canvasRef) is
+    // already mounted, unconditionally, well before the preview ever
+    // appears (it's only rendered after a node click). So mount the
+    // container first, then reveal the preview on a follow-up render —
+    // matching that timing instead of mounting both in the same commit.
+    function Wrapper() {
+      const containerRef = useRef<HTMLDivElement>(null)
+      const [show, setShow] = useState(false)
+      useEffect(() => {
+        setShow(true)
+      }, [])
+      return (
+        <div ref={containerRef}>
+          {show && (
+            <MindMapNodePreview
+              notebookId="nb1"
+              nodeType="note"
+              nodeId="n1"
+              anchor={{ x: 790, y: 590 }}
+              containerRef={containerRef}
+              onClose={vi.fn()}
+              onOpenArtifact={vi.fn()}
+              onOpenSource={vi.fn()}
+              onOpenNote={vi.fn()}
+            />
+          )}
+        </div>
+      )
+    }
+
+    render(<Wrapper />)
+
+    const dialog = screen.getByRole('dialog')
+    const left = parseFloat(dialog.style.left)
+    const top = parseFloat(dialog.style.top)
+
+    // Popover is w-64 (256px) with a 320px max-height budget and a 12px
+    // margin/offset — see MindMapNodePreview.tsx's clampAnchor().
+    expect(left).toBe(660) // 800 - 12 - 128
+    expect(top).toBe(256) // 600 - 12 - 320 - 12
+    expect(left).toBeLessThan(790)
+    expect(top).toBeLessThan(590)
+    expect(left).toBeGreaterThanOrEqual(12)
+    expect(top).toBeGreaterThanOrEqual(12)
+
+    rectSpy.mockRestore()
   })
 })

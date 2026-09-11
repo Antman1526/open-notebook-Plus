@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "搜尋節點",
   searchPlaceholder: "搜尋…",
   matches: "{count} 個相符項目",
+  matchesOne: "1 個相符項目",
   clusterByType: "依類型分組",
   previewOpen: "在工作室中開啟",
   previewPlay: "播放",

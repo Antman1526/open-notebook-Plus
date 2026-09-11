@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "ノードを検索",
   searchPlaceholder: "検索…",
   matches: "{count} 件一致",
+  matchesOne: "1 件一致",
   clusterByType: "種類でクラスタ化",
   previewOpen: "Studioで開く",
   previewPlay: "再生",

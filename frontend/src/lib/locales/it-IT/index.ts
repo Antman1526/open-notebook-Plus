@@ -1467,6 +1467,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Cerca nodi",
   searchPlaceholder: "Cerca…",
   matches: "{count} risultati",
+  matchesOne: "1 risultato",
   clusterByType: "Raggruppa per tipo",
   previewOpen: "Apri in Studio",
   previewPlay: "Riproduci",

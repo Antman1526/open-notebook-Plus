@@ -1468,6 +1468,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "নোড অনুসন্ধান করুন",
   searchPlaceholder: "অনুসন্ধান করুন…",
   matches: "{count}টি মিল",
+  matchesOne: "১টি মিল",
   clusterByType: "ধরন অনুযায়ী ক্লাস্টার করুন",
   previewOpen: "স্টুডিওতে খুলুন",
   previewPlay: "চালান",

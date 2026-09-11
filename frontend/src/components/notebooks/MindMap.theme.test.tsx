@@ -88,15 +88,44 @@ describe('MindMap semantic theme roles', () => {
     expect(props.edges).toHaveLength(3)
     expect(props.edges.every(edge => edge.style.stroke === 'var(--dn-graph-edge)')).toBe(true)
 
-    // Verify MiniMap nodeColor mapping
+    // v0.8.126 — MiniMap paints via CSS custom properties that don't resolve
+    // an unevaluated `var(...)` string (blank/white minimap in dark theme),
+    // so nodeColor now resolves through getComputedStyle. jsdom's
+    // getComputedStyle never returns a value for custom properties, so this
+    // only checks that the result is never left as a raw var(...) reference.
+    const mProps = miniMapProps.mock.calls.at(-1)?.[0] as {
+      nodeColor?: (node: { id: string }) => string
+      maskColor?: string
+    }
+    expect(mProps.nodeColor).toBeDefined()
+    for (const id of ['notebook:one', 'source:one', 'note:one', 'artifact:one']) {
+      const color = mProps.nodeColor?.({ id })
+      expect(color).toBeTruthy()
+      expect(color).not.toMatch(/^var\(/)
+    }
+    expect(mProps.maskColor).toBeTruthy()
+    expect(mProps.maskColor).not.toMatch(/^var\(/)
+  })
+
+  it('resolves the CSS custom property via getComputedStyle when one is available', () => {
+    useNotebookGraph.mockReturnValue({
+      data: sampleData,
+      isLoading: false,
+      isError: false,
+    })
+
+    const getComputedStyleSpy = vi
+      .spyOn(window, 'getComputedStyle')
+      .mockReturnValue({ getPropertyValue: () => '#123456' } as unknown as CSSStyleDeclaration)
+
+    render(<MindMap notebookId="notebook:one" />)
+
     const mProps = miniMapProps.mock.calls.at(-1)?.[0] as {
       nodeColor?: (node: { id: string }) => string
     }
-    expect(mProps.nodeColor).toBeDefined()
-    expect(mProps.nodeColor?.({ id: 'notebook:one' })).toBe('var(--dn-graph-fallback)')
-    expect(mProps.nodeColor?.({ id: 'source:one' })).toBe('var(--dn-graph-source)')
-    expect(mProps.nodeColor?.({ id: 'note:one' })).toBe('var(--dn-graph-note)')
-    expect(mProps.nodeColor?.({ id: 'artifact:one' })).toBe('var(--dn-graph-artifact, var(--dn-graph-note))')
+    expect(mProps.nodeColor?.({ id: 'source:one' })).toBe('#123456')
+
+    getComputedStyleSpy.mockRestore()
   })
 
   it('renders filter chips and filters nodes/edges by selected type', () => {

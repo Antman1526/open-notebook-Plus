@@ -32,7 +32,8 @@ import {
 import { FolderOpen } from 'lucide-react'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useExportNotebook } from '@/lib/hooks/use-export'
-import { useFsHome } from '@/lib/hooks/use-fs'
+import { useFsHome, useFsMkdir } from '@/lib/hooks/use-fs'
+import { getApiErrorMessage } from '@/lib/utils/error-handler'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { DirectoryPicker } from '@/components/notebooks/DirectoryPicker'
 import { ExportCompression, ExportFormat } from '@/lib/types/api'
@@ -55,6 +56,22 @@ function slugify(text: string, fallback = 'notebook'): string {
 
 function joinPath(dir: string, leaf: string): string {
   return `${dir.replace(/\/+$/, '')}/${leaf}`
+}
+
+// v0.8.126 — found live: the default destination folder doesn't exist on a
+// fresh machine and the folder/zip export routes deliberately refuse to
+// create parents, so the first export failed with a 400 the dialog never
+// showed. Mirrors the fix already applied to ExportAllArtifactsDialog.tsx
+// (v0.8.125): create the destination directory (folder formats) or its
+// parent (zip/single-file formats) before submitting, and surface any API
+// error inline.
+function parentDir(path: string): string {
+  const i = path.lastIndexOf('/')
+  return i > 0 ? path.slice(0, i) : path
+}
+
+function isDirectoryFormat(format: ExportFormat): boolean {
+  return format === 'folder' || format === 'html_folder' || format === 'obsidian_folder'
 }
 
 // v0.7.119 — Match the destination shape to the chosen format:
@@ -139,6 +156,8 @@ export function ExportNotebookDialog({
 }: ExportNotebookDialogProps) {
   const { t } = useTranslation()
   const exportNotebook = useExportNotebook()
+  const mkdir = useFsMkdir()
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const homeQuery = useFsHome(open)
 
   const [format, setFormat] = useState<ExportFormat>('folder')
@@ -170,6 +189,7 @@ export function ExportNotebookDialog({
       setOverwrite(false)
       setCompression('deflated')
       setPickerOpen(false)
+      setSubmitError(null)
     }
   }, [open])
 
@@ -179,12 +199,18 @@ export function ExportNotebookDialog({
   }
 
   const handleSubmit = async () => {
-    if (!destination.trim()) return
+    const target = destination.trim()
+    if (!target) return
+    setSubmitError(null)
     try {
+      // v0.8.126 — see parentDir()/isDirectoryFormat() above: create the
+      // destination first so a fresh machine doesn't 400 on a missing
+      // parent directory.
+      await mkdir.mutateAsync(isDirectoryFormat(format) ? target : parentDir(target))
       await exportNotebook.mutateAsync({
         id: notebookId,
         data: {
-          destination: destination.trim(),
+          destination: target,
           format,
           // v0.7.119 — only send include_sources when the format honors
           // it; otherwise the backend silently ignores it but we'd
@@ -198,12 +224,13 @@ export function ExportNotebookDialog({
         },
       })
       onOpenChange(false)
-    } catch {
-      // Toast is handled by the mutation hook.
+    } catch (error) {
+      // The mutation hook also toasts; keep the reason visible in the dialog.
+      setSubmitError(getApiErrorMessage(error, (key) => t(key), 'apiErrors.genericError'))
     }
   }
 
-  const isPending = exportNotebook.isPending
+  const isPending = exportNotebook.isPending || mkdir.isPending
   const showIncludeSources = supportsIncludeSources(format)
   const showCompression = isZipFormat(format)
 
@@ -336,6 +363,11 @@ export function ExportNotebookDialog({
             </div>
           </div>
 
+          {submitError ? (
+            <p role="alert" className="text-sm text-destructive" data-testid="export-error">
+              {submitError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
               {t('filesystem.cancel')}

@@ -1470,6 +1470,7 @@ Object.assign(ensureSection(rootNode, 'mindMap'), {
   searchLabel: "Buscar nodos",
   searchPlaceholder: "Buscar…",
   matches: "{count} coincidencias",
+  matchesOne: "1 coincidencia",
   clusterByType: "Agrupar por tipo",
   previewOpen: "Abrir en Studio",
   previewPlay: "Reproducir",
