@@ -81,8 +81,8 @@ def test_get_source_endpoint_computes_insights_count():
     src = _read_source("api/routers/sources.py")
     # Find the get_source handler.
     idx = src.find("async def get_source(source_id: str):")
-    assert idx != -1
-    region = src[idx : idx + 3000]
+    next_fn = src.find("\ndef ", idx + 1)
+    region = src[idx : next_fn] if next_fn != -1 else src[idx : idx + 5000]
 
     # The aggregate query is present.
     assert "FROM source_insight" in region, (

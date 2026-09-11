@@ -268,9 +268,18 @@ async def process_source_command(
                     "source %s after permanent extract failure",
                     input_data.source_id,
                 )
+            elif orphan:
+                # v0.8.128 — persist explicit failed status so partial text
+                # does not cause derived status to report "completed".
+                orphan.provenance = {
+                    **(getattr(orphan, "provenance", None) or {}),
+                    "processing_status": "failed",
+                    "processing_error": str(e),
+                }
+                await orphan.save()
         except Exception as cleanup_exc:
             logger.warning(
-                "v0.7.209 orphan-cleanup: failed to delete "
+                "v0.7.209 orphan-cleanup: failed to delete/update "
                 "placeholder source %s after extract failure "
                 "(leaving in place): %s",
                 input_data.source_id,

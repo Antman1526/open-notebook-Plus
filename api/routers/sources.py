@@ -624,8 +624,13 @@ async def get_sources(
             # v0.8.127 — a source processed in-process (v0.8.126 sync path) or
             # one predating command tracking has no command row. If text was
             # extracted, it is complete; report that instead of no status.
-            if status is None and (extracted_char_count or 0) > 0:
-                status = "completed"
+            # v0.8.128 — explicit processing_status takes precedence over proxy.
+            explicit_status = (row_provenance or {}).get("processing_status")
+            if status is None:
+                if explicit_status in ("completed", "failed"):
+                    status = explicit_status
+                elif (extracted_char_count or 0) > 0:
+                    status = "completed"
             embedded_chunks = int(row.get("embedded_chunks") or 0)
 
             response_list.append(
@@ -998,7 +1003,15 @@ async def create_source(
                         # `except Exception` doesn't clobber them to 500.
                         raise
                     except Exception:
-                        pass
+                        try:
+                            source.provenance = {
+                                **(getattr(source, "provenance", None) or {}),
+                                "processing_status": "failed",
+                                "processing_error": processing_error_message,
+                            }
+                            await source.save()
+                        except Exception:
+                            pass
                     # Clean up uploaded file if we created it
                     if file_path and upload_file:
                         try:
@@ -1033,6 +1046,16 @@ async def create_source(
                     raise HTTPException(
                         status_code=500, detail="Processed source not found"
                     )
+
+                if (getattr(processed_source, "provenance", None) or {}).get("processing_status") != "completed":
+                    prov = dict(getattr(processed_source, "provenance", None) or {})
+                    prov["processing_status"] = "completed"
+                    processed_source.provenance = prov
+                    save_fn = getattr(processed_source, "save", None)
+                    if callable(save_fn):
+                        res = save_fn()
+                        if asyncio.iscoroutine(res):
+                            await res
 
                 embedded_chunks = await processed_source.get_embedded_chunks()
                 return SourceResponse(
@@ -1255,10 +1278,15 @@ async def get_source(source_id: str):
             except Exception as e:
                 logger.warning(f"Failed to get status for source {source_id}: {e}")
                 status = "unknown"
-        elif getattr(source, "full_text", None):
-            # v0.8.127 — same derivation as the list: extracted text with no
-            # command row means processing completed (sync path / legacy).
-            status = "completed"
+        if status is None:
+            source_prov = getattr(source, "provenance", None) or {}
+            explicit_status = source_prov.get("processing_status")
+            if explicit_status in ("completed", "failed"):
+                status = explicit_status
+            elif getattr(source, "full_text", None):
+                # v0.8.127 — same derivation as the list: extracted text with no
+                # command row means processing completed (sync path / legacy).
+                status = "completed"
 
         embedded_chunks = await source.get_embedded_chunks()
 
@@ -1421,8 +1449,24 @@ async def get_source_status(source_id: str):
         if not source:
             raise HTTPException(status_code=404, detail="Source not found")
 
-        # Check if this is a legacy source (no command)
+        # Check if this is a legacy source (no command) or completed/failed in-process
         if not source.command:
+            source_prov = getattr(source, "provenance", None) or {}
+            explicit_status = source_prov.get("processing_status")
+            if explicit_status == "completed":
+                return SourceStatusResponse(
+                    status="completed",
+                    message="Source processing completed successfully",
+                    processing_info=None,
+                    command_id=None,
+                )
+            if explicit_status == "failed":
+                return SourceStatusResponse(
+                    status="failed",
+                    message="Source processing failed",
+                    processing_info=None,
+                    command_id=None,
+                )
             return SourceStatusResponse(
                 status=None,
                 message="Legacy source (completed before async processing)",

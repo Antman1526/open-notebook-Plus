@@ -378,6 +378,118 @@ class TestSourceListingDerivedStatus:
         assert by_id["source:sync"]["status"] == "completed"
         assert by_id["source:pending"]["status"] is None
 
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    def test_list_explicit_failed_status_overrides_extracted_chars(
+        self, mock_repo_query, client
+    ):
+        """v0.8.128 — a failed source with partial extracted text must report
+        failed, not completed, because explicit processing_status takes precedence."""
+        mock_repo_query.return_value = [
+            {
+                "id": "source:failed_partial",
+                "title": "Partial failed source",
+                "topics": [],
+                "provenance": {
+                    "processing_status": "failed",
+                    "processing_error": "boom",
+                },
+                "asset": None,
+                "created": "2026-09-11T10:00:00Z",
+                "updated": "2026-09-11T10:00:00Z",
+                "command": None,
+                "extracted_char_count": 150,
+                "insights_count": 0,
+                "notebook_count": 1,
+                "embedded_chunks": 0,
+            },
+            {
+                "id": "source:explicit_completed",
+                "title": "Explicit completed source",
+                "topics": [],
+                "provenance": {"processing_status": "completed"},
+                "asset": None,
+                "created": "2026-09-11T10:00:00Z",
+                "updated": "2026-09-11T10:00:00Z",
+                "command": None,
+                "extracted_char_count": 200,
+                "insights_count": 0,
+                "notebook_count": 1,
+                "embedded_chunks": 0,
+            },
+        ]
+
+        response = client.get("/api/sources")
+        assert response.status_code == 200
+        by_id = {row["id"]: row for row in response.json()}
+        assert by_id["source:failed_partial"]["status"] == "failed"
+        assert by_id["source:explicit_completed"]["status"] == "completed"
+
+
+class TestSourceExplicitProcessingStatusDetailAndStatus:
+    """v0.8.128 — Tests for explicit processing_status in GET /sources/{id} and
+    GET /sources/{id}/status endpoints."""
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    @patch("api.routers.sources.Source.get", new_callable=AsyncMock)
+    async def test_get_source_detail_prefers_explicit_processing_status(
+        self, mock_source_get, mock_repo_query, client
+    ):
+        mock_repo_query.return_value = []
+        source = MagicMock()
+        source.id = "source:failed1"
+        source.title = "Failed Source"
+        source.topics = []
+        source.provenance = {"processing_status": "failed"}
+        source.source_type = "text"
+        source.asset = None
+        source.full_text = "Some partial text that was extracted before failure"
+        source.created = "2026-09-11T10:00:00Z"
+        source.updated = "2026-09-11T10:00:00Z"
+        source.command = None
+        source.get_embedded_chunks = AsyncMock(return_value=0)
+        mock_source_get.return_value = source
+
+        response = client.get("/api/sources/source:failed1")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "failed"
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.Source.get", new_callable=AsyncMock)
+    async def test_get_source_status_with_explicit_processing_status(
+        self, mock_source_get, client
+    ):
+        source_completed = MagicMock()
+        source_completed.command = None
+        source_completed.provenance = {"processing_status": "completed"}
+
+        mock_source_get.return_value = source_completed
+        res_comp = client.get("/api/sources/source:comp/status")
+        assert res_comp.status_code == 200
+        assert res_comp.json()["status"] == "completed"
+        assert res_comp.json()["message"] == "Source processing completed successfully"
+
+        source_failed = MagicMock()
+        source_failed.command = None
+        source_failed.provenance = {"processing_status": "failed"}
+
+        mock_source_get.return_value = source_failed
+        res_fail = client.get("/api/sources/source:fail/status")
+        assert res_fail.status_code == 200
+        assert res_fail.json()["status"] == "failed"
+        assert res_fail.json()["message"] == "Source processing failed"
+
+        source_legacy = MagicMock()
+        source_legacy.command = None
+        source_legacy.provenance = {}
+
+        mock_source_get.return_value = source_legacy
+        res_leg = client.get("/api/sources/source:leg/status")
+        assert res_leg.status_code == 200
+        assert res_leg.json()["status"] is None
+        assert "Legacy source" in res_leg.json()["message"]
+
 
 class TestSourceListingNullSafety:
     """v0.8.125 — found live: a source whose processing never ran (worker
