@@ -195,6 +195,23 @@ AI suggestions). Every LLM and file-extraction call is timeout-bounded.
 | `DEEPER_NOTEBOOK_STUDIO_PAGE_TIMEOUT_SEC` | 180 | Per-page LLM call (also covers legacy single-note fallback) |
 | `DEEPER_NOTEBOOK_STUDIO_EXTRACT_TIMEOUT_SEC` | 60 | `content_core.extract_content()` per file |
 
+## Studio artifact retention (v0.8.124)
+
+Background job that prunes old Studio artifact revisions and unlinks
+stale-and-old export files. **Disabled by default** — see
+`deeper_notebook/studio/retention.py` for the rationale (Studio content
+is user-facing, unlike LangGraph checkpoint rows, so this job requires
+an explicit opt-in rather than defaulting to "on"). To try it safely
+before enabling deletion, set the interval and `STUDIO_RETENTION_DRY_RUN=true`
+first and check the logs / `onp_studio_retention_runs_total` metric.
+
+| Env var | Default | What it controls |
+|---|---:|---|
+| `DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS` | `0` (disabled) | How often the retention job runs. `0` = job never runs. Set > 0 to opt in. |
+| `DEEPER_NOTEBOOK_STUDIO_REVISION_KEEP_PER_ARTIFACT` | `10` | Per top-level artifact, how many of its newest revisions to keep; older revisions are deleted (which also removes their export files). `<= 0` disables revision pruning. |
+| `DEEPER_NOTEBOOK_STUDIO_EXPORT_STALE_DAYS` | `30` | An export file is only unlinked if it is BOTH stale (content hash no longer matches, or the recorded path/hash is missing) AND older than this many days on disk. `<= 0` disables stale-export pruning. |
+| `DEEPER_NOTEBOOK_STUDIO_RETENTION_DRY_RUN` | `false` | Accepts `true`/`1`/`yes`. When true, the job counts everything it would delete/unlink but changes nothing — use this to preview a run before enabling deletion. |
+
 ## LLM-call timeouts (v0.7.93, v0.7.95, v0.7.99)
 
 | Env var | Default | What it bounds |

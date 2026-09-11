@@ -823,6 +823,32 @@ async def lifespan(app: FastAPI):
             f"Failed to start checkpoint-prune task (non-fatal): {e}",
         )
 
+    # v0.8.124 — Studio artifact retention (revision pruning + stale-export
+    # cleanup). Ships OFF by default — see
+    # deeper_notebook/studio/retention.py for why (unlike checkpoint rows,
+    # Studio artifacts/exports are user-facing content; an operator opts in
+    # by setting DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS > 0).
+    # Non-fatal if it fails to start — Studio still works, retention is
+    # just deferred to the next interval/restart.
+    studio_retention_stop_event: asyncio.Event = asyncio.Event()
+    studio_retention_task: asyncio.Task | None = None
+    try:
+        from deeper_notebook.studio.retention import (
+            run_retention_loop as _studio_retention_loop,
+        )
+
+        studio_retention_task = _track_task(
+            asyncio.create_task(
+                _studio_retention_loop(studio_retention_stop_event),
+                name="onp-studio-retention",
+            )
+        )
+        logger.info("Studio retention task started")
+    except Exception as e:
+        logger.warning(
+            f"Failed to start Studio retention task (non-fatal): {e}",
+        )
+
     # v0.7.157 — Pre-warm the GmailIntegration TTL cache. The frontend
     # polls /api/onp/gmail/status on mount; first cold call against the
     # singleton SurrealDB record takes 4-8s (slow-query warnings on
@@ -932,6 +958,22 @@ async def lifespan(app: FastAPI):
             checkpoint_prune_task.cancel()
             try:
                 await checkpoint_prune_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+    # v0.8.124 — Stop the Studio retention task. Same wait_for(timeout=10)
+    # + cancel fallback pattern as the checkpoint pruner above.
+    if studio_retention_task is not None:
+        logger.info("Signalling Studio retention task to stop...")
+        studio_retention_stop_event.set()
+        try:
+            await asyncio.wait_for(studio_retention_task, timeout=10)
+            logger.info("Studio retention task stopped cleanly")
+        except asyncio.TimeoutError:
+            logger.warning("Studio retention task did not stop in 10s — cancelling")
+            studio_retention_task.cancel()
+            try:
+                await studio_retention_task
             except (asyncio.CancelledError, Exception):
                 pass
 

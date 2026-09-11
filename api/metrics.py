@@ -143,6 +143,19 @@ checkpoint_prune_rows_deleted_total = Counter(
 
 
 # -------------------------------------------------------------------- #
+# v0.8.124 — Studio artifact retention (revisions + stale exports)
+# -------------------------------------------------------------------- #
+
+studio_retention_runs_total = Counter(
+    "onp_studio_retention_runs_total",
+    "Number of times the Studio retention task (revision pruning + "
+    "stale-export cleanup) has executed. Ships disabled by default "
+    "(DEEPER_NOTEBOOK_STUDIO_RETENTION_INTERVAL_HOURS=0); stays at 0 "
+    "until an operator opts in.",
+)
+
+
+# -------------------------------------------------------------------- #
 # v0.7.130 — Studio generation observability
 #
 # Three counters that together answer the Area for Review question
