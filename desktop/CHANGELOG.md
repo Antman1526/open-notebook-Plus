@@ -25,6 +25,46 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.128 — 2026-09-11 — The five v0.8.127 open items, plus the first full backend run
+
+Four workers were dispatched for these and all were killed by a usage
+limit mid-edit; their partial work was audited file by file, unrelated and
+generated edits were reverted, and the coherent parts were finished by
+hand.
+
+✨ **Quick podcast dialog carries the notebook id** from source cards and
+source detail views, so those episodes are scoped and bundle with the
+notebook.
+
+🐛 **Explicit processing outcome on sources.** The sync path records
+`provenance.processing_status` ("completed"/"failed" with the error) and
+the worker records "failed" on an orphan; status precedence is command →
+explicit outcome → text proxy (legacy) → none. No migration.
+
+✨ **Per-worker heartbeat rows, shutdown cleanup, worker status in
+Settings.** One row per worker process; a graceful stop (atexit / SIGTERM)
+deletes the process's own row; day-old rows are pruned on read; the
+observability card shows online/offline, the count, and the start-command
+hint.
+
+🛠 **Runtime ORDER BY projection guard in `repo_query`.** Always warns on
+a literal unprojected order field; `DEEPER_NOTEBOOK_STRICT_QUERY_GUARD=1`
+raises before the database is touched. The test suite runs strict; the
+first full backend run found zero violations across the whole suite.
+
+🛠 **First full backend run, and what it found.** Twenty-two failures, all
+present at the previous commit too: MCP test doubles that never learned
+the client's `transport` argument (fixed), two routers missing the
+`except HTTPException: raise` guard the meta test enforces (fixed), the
+desktop `__version__` stuck at 0.8.123 while the changelog moved on
+(bumped), rebrand pins (repaired), and six logging/encryption tests that
+pass alone but fail in suite order. Cause: `api.main` and `commands`
+mirror canonical settings into their legacy alias names at import
+(`apply_product_environment`), so once an earlier test imports either, a
+`delenv` on the canonical name alone leaves the mirror visible to
+`resolve_env`. A `unset_setting` conftest fixture now clears every alias
+of a setting; the six tests use it.
+
 ## v0.8.127 — 2026-09-11 — The five v0.8.126 open items
 
 ✨ **Background worker heartbeat.** The worker upserts

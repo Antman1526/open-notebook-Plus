@@ -85,18 +85,12 @@ def test_v0828_fernet_logs_warning_on_construction_failure(monkeypatch):
     )
 
 
-def test_v0828_fernet_silent_when_key_unset(monkeypatch):
+def test_v0828_fernet_silent_when_key_unset(unset_setting):
     """The unset-env-var path is INTENTIONAL — no log needed because
     the downstream behavior (return None → caller raises clear
     RuntimeError) is correct. We're only logging the Fernet-raises
     case, not the no-key case."""
-    for name in (
-        "DEEPER_NOTEBOOK_ENCRYPTION_KEY",
-        "DEEPER_NOTEBOOK_ENCRYPTION_KEY_FILE",
-        "DEEPER_NOTEBOOK_ENCRYPTION_KEY",
-        "DEEPER_NOTEBOOK_ENCRYPTION_KEY_FILE",
-    ):
-        monkeypatch.delenv(name, raising=False)
+    unset_setting("DEEPER_NOTEBOOK_ENCRYPTION_KEYS", "DEEPER_NOTEBOOK_ENCRYPTION_KEY")
 
     from deeper_notebook.domain import gmail as gmail_mod
 

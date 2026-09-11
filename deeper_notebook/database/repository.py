@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TypeVar, Union
@@ -423,6 +424,53 @@ def _is_retriable_conn_error(exc: BaseException) -> bool:
         )
     )
 
+_ORDERED_CLAUSE = re.compile(
+    r"SELECT\s+(?!\*)(?!VALUE\b)([^;\"()]*?)\s+FROM\s+[A-Za-z_][\w:]*[^;\"()]*?\bORDER\s+BY\s+([A-Za-z_][\w.]*)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _extract_projected_names(projection: str) -> set[str]:
+    names: set[str] = set()
+    for part in projection.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        alias = re.split(r"\s+AS\s+", part, flags=re.IGNORECASE)
+        names.add(alias[-1].strip().lower())
+        names.add(alias[0].strip().lower())
+    return names
+
+
+def check_query_ordered_projection(query_str: str) -> str | None:
+    """v0.8.128 — Runtime guard against SurrealDB 2.x 'Missing order idiom' rejections.
+
+    SurrealDB 2.x rejects queries where an `ORDER BY field` is not in the
+    SELECT projection. Returns a warning message if an unprojected ORDER BY
+    field is detected, or None if valid.
+    """
+    if "SELECT" not in query_str.upper() or "ORDER" not in query_str.upper():
+        return None
+
+    for m in _ORDERED_CLAUSE.finditer(query_str):
+        projection, order_field = m.group(1), m.group(2)
+        # Skip aggregates or template braces
+        if "count()" in projection.lower() or "{" in projection or "__" in projection:
+            continue
+        projected = _extract_projected_names(projection)
+        order_lower = order_field.lower()
+        # ORDER BY RAND() / count after GROUP BY are not projection lookups.
+        if order_lower in ("rand", "count") or "group by" in query_str.lower():
+            continue
+        order_key = order_lower.split(".")[-1]
+        order_root = order_lower.split(".")[0]
+        if order_lower not in projected and order_key not in projected and order_root not in projected:
+            return (
+                f"repo_query: ORDER BY `{order_field}` is not in SELECT projection "
+                f"`{projection.strip()[:80]}`. SurrealDB 2.x rejects unprojected order fields."
+            )
+    return None
+
 
 async def repo_query(
     query_str: str,
@@ -447,7 +495,20 @@ async def repo_query(
     can pass an explicit per-query budget so a single stuck pool
     connection doesn't pin the whole route handler — same defensive
     pattern the v0.7.52 pool-warmup uses.
+
+    v0.8.128 — Runtime guard against SurrealDB 2.x unprojected ORDER BY fields.
     """
+    guard_warning = check_query_ordered_projection(query_str)
+    if guard_warning:
+        logger.warning(guard_warning)
+        if resolve_env("DEEPER_NOTEBOOK_STRICT_QUERY_GUARD", "").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        ):
+            raise ValueError(guard_warning)
+
     import os
     import time
 

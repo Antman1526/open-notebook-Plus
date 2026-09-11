@@ -66,12 +66,9 @@ def test_plural_strips_whitespace_and_drops_empty(monkeypatch):
     ]
 
 
-def test_no_keys_configured_raises(monkeypatch):
-    monkeypatch.delenv("DEEPER_NOTEBOOK_ENCRYPTION_KEYS", raising=False)
-    monkeypatch.delenv("DEEPER_NOTEBOOK_ENCRYPTION_KEY", raising=False)
-    # Also clear *_FILE variants
-    monkeypatch.delenv("DEEPER_NOTEBOOK_ENCRYPTION_KEYS_FILE", raising=False)
-    monkeypatch.delenv("DEEPER_NOTEBOOK_ENCRYPTION_KEY_FILE", raising=False)
+def test_no_keys_configured_raises(unset_setting):
+    # Clears the canonical names, their legacy aliases and *_FILE variants.
+    unset_setting("DEEPER_NOTEBOOK_ENCRYPTION_KEYS", "DEEPER_NOTEBOOK_ENCRYPTION_KEY")
     with pytest.raises(ValueError, match="Neither.*KEYS.*nor.*KEY"):
         encryption._get_encryption_keys_from_env()
 

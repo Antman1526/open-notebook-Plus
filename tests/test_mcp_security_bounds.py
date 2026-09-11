@@ -41,7 +41,7 @@ async def test_mcp_discovery_projects_only_bounded_valid_tool_specs(monkeypatch)
             )()
 
     @asynccontextmanager
-    async def _open_session(url, headers=None):
+    async def _open_session(url, headers=None, **_kwargs):  # accepts transport= (fa6a7213)
         yield _Session()
 
     monkeypatch.setattr(client_module, "_open_session", _open_session)
@@ -85,7 +85,7 @@ async def test_mcp_result_projection_bounds_text_binary_and_block_count(monkeypa
             return _Result()
 
     @asynccontextmanager
-    async def _open_session(url, headers=None):
+    async def _open_session(url, headers=None, **_kwargs):  # accepts transport= (fa6a7213)
         yield _Session()
 
     monkeypatch.setattr(client_module, "_open_session", _open_session)
@@ -143,7 +143,7 @@ async def test_mcp_bounds_do_not_materialize_hostile_lazy_iterables(monkeypatch)
             return _Result()
 
     @asynccontextmanager
-    async def _open_session(url, headers=None):
+    async def _open_session(url, headers=None, **_kwargs):  # accepts transport= (fa6a7213)
         yield _Session()
 
     monkeypatch.setattr(client_module, "_open_session", _open_session)
@@ -171,7 +171,7 @@ async def test_mcp_discovery_skips_individually_broken_tool_mapping(monkeypatch)
             return type("Result", (), {"tools": [_BrokenTool(), _GoodTool()]})()
 
     @asynccontextmanager
-    async def _open_session(url, headers=None):
+    async def _open_session(url, headers=None, **_kwargs):  # accepts transport= (fa6a7213)
         yield _Session()
 
     monkeypatch.setattr(client_module, "_open_session", _open_session)
@@ -203,7 +203,7 @@ async def test_mcp_result_projection_has_total_text_and_binary_budgets(monkeypat
             return _Result()
 
     @asynccontextmanager
-    async def _open_session(url, headers=None):
+    async def _open_session(url, headers=None, **_kwargs):  # accepts transport= (fa6a7213)
         yield _Session()
 
     monkeypatch.setattr(client_module, "_open_session", _open_session)

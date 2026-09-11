@@ -47,7 +47,7 @@ async def test_rpc_timeout_bounds_a_hung_server(monkeypatch):
     monkeypatch.setenv("DEEPER_NOTEBOOK_MCP_RPC_TIMEOUT_SEC", "0.2")
 
     @asynccontextmanager
-    async def _hung_session(url, headers=None):
+    async def _hung_session(url, headers=None, **_kwargs):
         await asyncio.sleep(10)  # never returns within the timeout
         yield None  # pragma: no cover
 
@@ -65,7 +65,7 @@ async def test_headers_threaded_to_session(monkeypatch):
     seen = {}
 
     @asynccontextmanager
-    async def _capture(url, headers=None):
+    async def _capture(url, headers=None, **_kwargs):
         seen["headers"] = headers
 
         class _S:

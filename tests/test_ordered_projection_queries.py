@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCAN_DIRS = ("deeper_notebook", "api", "commands")
 
@@ -66,3 +68,49 @@ def test_scanner_catches_the_live_shape():
     m = _ORDERED.search(sample)
     assert m is not None
     assert m.group(2) not in _projected_names(m.group(1))
+
+
+def test_runtime_guard_catches_unprojected_order_by():
+    from deeper_notebook.database.repository import check_query_ordered_projection
+
+    bad_query = "SELECT title, content FROM source ORDER BY created DESC"
+    warning = check_query_ordered_projection(bad_query)
+    assert warning is not None
+    assert "ORDER BY `created` is not in SELECT projection" in warning
+
+
+def test_runtime_guard_allows_projected_order_by():
+    from deeper_notebook.database.repository import check_query_ordered_projection
+
+    good_query = "SELECT title, created FROM source ORDER BY created DESC"
+    assert check_query_ordered_projection(good_query) is None
+
+
+def test_runtime_guard_allows_aliased_projection():
+    from deeper_notebook.database.repository import check_query_ordered_projection
+
+    aliased_query = (
+        "SELECT title, time::now() AS created_at FROM source ORDER BY created_at"
+    )
+    assert check_query_ordered_projection(aliased_query) is None
+
+
+def test_runtime_guard_allows_wildcards_and_values():
+    from deeper_notebook.database.repository import check_query_ordered_projection
+
+    assert check_query_ordered_projection("SELECT * FROM source ORDER BY created") is None
+    assert (
+        check_query_ordered_projection("SELECT VALUE id FROM source ORDER BY created")
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_repo_query_strict_mode_raises(monkeypatch):
+    from deeper_notebook.database.repository import repo_query
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_STRICT_QUERY_GUARD", "1")
+    with pytest.raises(
+        ValueError, match="ORDER BY `created` is not in SELECT projection"
+    ):
+        await repo_query("SELECT id FROM source ORDER BY created")

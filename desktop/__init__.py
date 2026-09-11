@@ -19,4 +19,4 @@ docs/superpowers/specs/2026-05-09-open-notebook-plus-desktop-design.md.
 # the macOS bundle CFBundleShortVersionString). It is a separate track from
 # pyproject.toml's `version`, which versions the upstream/Docker image — see
 # the note there. Don't conflate them.
-__version__ = "0.8.123"
+__version__ = "0.8.128"

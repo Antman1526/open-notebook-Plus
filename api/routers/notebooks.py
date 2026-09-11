@@ -477,6 +477,8 @@ async def generate_notebook_synthesis(notebook_id: str):
         )
         raw_text = clean_thinking_content(extract_text_content(response.content))
         synthesis_text = raw_text.strip()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"synthesis: generation failed for {notebook_id}: {e}")
         raise HTTPException(

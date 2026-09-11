@@ -24,6 +24,9 @@ import tempfile  # noqa: E402
 
 _TEST_LOG_DIR = tempfile.mkdtemp(prefix="deeper-notebook-test-logs-")
 os.environ.setdefault("DEEPER_NOTEBOOK_LOG_DIR", _TEST_LOG_DIR)
+# v0.8.128 — run the whole suite with the ORDER BY projection guard strict, so a
+# templated query that reaches the real repo_query fails loudly here, not live.
+os.environ.setdefault("DEEPER_NOTEBOOK_STRICT_QUERY_GUARD", "1")
 
 # Load environment variables from .env file
 # This must be done BEFORE any imports that depend on environment variables
@@ -66,6 +69,28 @@ def _isolate_web_search_env(monkeypatch):
     for name in _WEB_SEARCH_ENV_VARS:
         monkeypatch.delenv(name, raising=False)
     yield
+
+
+@pytest.fixture
+def unset_setting(monkeypatch):
+    """Delete every registered alias (and ``*_FILE`` variant) of a setting.
+
+    v0.8.128 — ``api.main`` and ``commands`` call
+    ``apply_product_environment(os.environ)`` at import, which mirrors each
+    canonical value into its legacy alias names (the deprecated spellings
+    in ``SETTINGS``). Once either module has been imported earlier in the session,
+    ``monkeypatch.delenv`` on the canonical name alone leaves the mirror
+    visible to ``resolve_env`` — the tests pass alone and fail in suite order.
+    """
+    from deeper_notebook.environment import _setting_for
+
+    def _unset(*canonicals: str) -> None:
+        for canonical in canonicals:
+            for name in _setting_for(canonical).precedence:
+                monkeypatch.delenv(name, raising=False)
+                monkeypatch.delenv(f"{name}_FILE", raising=False)
+
+    return _unset
 
 
 @pytest.fixture(autouse=True)

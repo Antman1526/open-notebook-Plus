@@ -124,6 +124,8 @@ async def get_hardware_profile_endpoint():
         from desktop.hardware_profiler import get_hardware_profile
 
         return get_hardware_profile()
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=500,

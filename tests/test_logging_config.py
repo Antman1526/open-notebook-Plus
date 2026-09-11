@@ -19,9 +19,9 @@ from loguru import logger
 from deeper_notebook import logging as notebook_logging
 
 
-def test_default_log_dir_uses_home(monkeypatch, tmp_path):
+def test_default_log_dir_uses_home(monkeypatch, tmp_path, unset_setting):
     """Default location is ~/.deeper-notebook/logs without a log-dir override."""
-    monkeypatch.delenv("DEEPER_NOTEBOOK_LOG_DIR", raising=False)
+    unset_setting("DEEPER_NOTEBOOK_LOG_DIR")
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.delenv("USERPROFILE", raising=False)
     assert notebook_logging.default_log_dir() == tmp_path / ".deeper-notebook" / "logs"
@@ -39,9 +39,11 @@ def test_default_log_dir_respects_env(monkeypatch, tmp_path):
 def test_canonical_log_dir_wins_and_deprecated_alias_is_fallback(
     monkeypatch,
     tmp_path,
+    unset_setting,
 ):
     canonical = tmp_path / "canonical"
     legacy = tmp_path / "legacy"
+    unset_setting("DEEPER_NOTEBOOK_LOG_DIR")
     monkeypatch.setenv("DEEPER_NOTEBOOK_LOG_DIR", str(canonical))
     monkeypatch.setenv("ONP_LOG_DIR", str(legacy))
     assert notebook_logging.default_log_dir() == canonical
@@ -147,14 +149,16 @@ def test_log_level_respects_env(monkeypatch, tmp_path):
     assert "info-message-should-be-filtered" not in text
 
 
-def test_missing_home_falls_back_to_container_path(monkeypatch, tmp_path):
+def test_missing_home_falls_back_to_container_path(
+    monkeypatch, tmp_path, unset_setting
+):
     """v0.7.24 — when neither HOME nor USERPROFILE is set (typical
     inside distroless/scratch containers), fall back to the
     conventional Linux container log location `/var/log/<app>`
     rather than cwd/.logs. The previous behavior put logs at
     /app/.logs in a Docker workdir — invisible to host volume mounts
     unless the operator bind-mounted exactly that path."""
-    monkeypatch.delenv("DEEPER_NOTEBOOK_LOG_DIR", raising=False)
+    unset_setting("DEEPER_NOTEBOOK_LOG_DIR")
     monkeypatch.delenv("HOME", raising=False)
     monkeypatch.delenv("USERPROFILE", raising=False)
     monkeypatch.chdir(tmp_path)  # cwd should NOT be used
@@ -166,6 +170,7 @@ def test_missing_home_falls_back_to_container_path(monkeypatch, tmp_path):
 def test_existing_legacy_container_log_dir_is_deprecated_fallback(
     monkeypatch,
     tmp_path,
+    unset_setting,
 ):
     canonical = tmp_path / "deeper-notebook"
     legacy = tmp_path / "open-notebook-plus"
@@ -182,7 +187,7 @@ def test_existing_legacy_container_log_dir_is_deprecated_fallback(
     )
     monkeypatch.delenv("HOME", raising=False)
     monkeypatch.delenv("USERPROFILE", raising=False)
-    monkeypatch.delenv("DEEPER_NOTEBOOK_LOG_DIR", raising=False)
+    unset_setting("DEEPER_NOTEBOOK_LOG_DIR")
 
     with pytest.warns(
         notebook_logging.LegacyEnvironmentWarning,
