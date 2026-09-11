@@ -356,4 +356,60 @@ describe('PodcastStudio', () => {
     expect(screen.getByRole('tab', { name: 'Outline Storyboard' })).toHaveAttribute('data-status', 'upcoming')
     expect(screen.getByRole('tab', { name: 'Script/Voice Job' })).toHaveAttribute('data-status', 'upcoming')
   })
+
+  // v0.8.127 — the Studio's `notebookId` prop (sourced from the store) must
+  // reach the submit call so the resulting episode is notebook-scoped.
+  describe('notebookId', () => {
+    const readyReadiness: PodcastReadiness = {
+      preview: {
+        selectionFingerprint: 'd'.repeat(64), entries: [{
+          stableId: 'knowledge_engine_document:plan', title: 'Research plan', authorityKind: 'app_owned',
+          relativeLocator: null, revisionId: null, fingerprint: 'e'.repeat(64),
+          state: 'included', reason: 'included', estimatedCharacters: 120,
+        }], includedCharacters: 120, requiresBatchEngine: false,
+        currentWorkerEligible: true, blockedReasons: [],
+      }, stagePlans: [], ready: true, blockedReasons: [],
+    }
+
+    beforeEach(() => {
+      vi.mocked(podcastsApi.getPodcastReadiness).mockResolvedValue(readyReadiness)
+      vi.mocked(podcastsApi.listEpisodeProfiles).mockResolvedValue([{
+        id: 'episode_profile:local', name: 'Local Episode', description: '', speaker_config: 'Local Voice',
+        default_briefing: '', num_segments: 4,
+      }])
+      vi.mocked(podcastsApi.listSpeakerProfiles).mockResolvedValue([{
+        id: 'speaker_profile:local', name: 'Local Voice', description: '', speakers: [],
+      }])
+      vi.mocked(podcastsApi.submitStudioPodcast).mockResolvedValue({
+        jobId: 'command:notebook-scoped', status: 'submitted', message: 'accepted',
+        episodeProfile: 'Local Episode', episodeName: 'Research plan', mode: 'deep_dive',
+      })
+    })
+
+    it('submits with the notebookId prop when the Studio was opened from a notebook', async () => {
+      render(<PodcastStudio seedDocumentIds={['knowledge_engine_document:plan']} notebookId="notebook:research" />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Prepare production review' }))
+      await screen.findByText('Production profiles')
+      fireEvent.click(screen.getByRole('button', { name: 'Continue to confirmation' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm production' }))
+
+      await waitFor(() => expect(podcastsApi.submitStudioPodcast).toHaveBeenCalledWith(
+        expect.objectContaining({ notebookId: 'notebook:research' }),
+      ))
+    })
+
+    it('omits notebookId when the Studio was opened globally', async () => {
+      render(<PodcastStudio seedDocumentIds={['knowledge_engine_document:plan']} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Prepare production review' }))
+      await screen.findByText('Production profiles')
+      fireEvent.click(screen.getByRole('button', { name: 'Continue to confirmation' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm production' }))
+
+      await waitFor(() => expect(podcastsApi.submitStudioPodcast).toHaveBeenCalled())
+      const call = vi.mocked(podcastsApi.submitStudioPodcast).mock.calls[0][0]
+      expect(call.notebookId).toBeUndefined()
+    })
+  })
 })

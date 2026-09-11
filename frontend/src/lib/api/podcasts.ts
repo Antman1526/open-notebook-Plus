@@ -201,6 +201,10 @@ export const podcastsApi = {
     episodeProfile: string
     speakerProfile: string
     episodeName: string
+    // v0.8.127 — set when the Studio was opened from a notebook so the
+    // resulting episode is notebook-scoped, like the standard generation
+    // path (v0.8.126). Undefined when opened globally.
+    notebookId?: string
     mode?: PodcastOverviewMode
     customPrompt?: string | null
     episodeLength?: 'short' | 'medium' | 'long' | null
@@ -231,6 +235,7 @@ export const podcastsApi = {
       episode_profile: payload.episodeProfile,
       speaker_profile: payload.speakerProfile,
       episode_name: payload.episodeName,
+      notebook_id: payload.notebookId ?? null,
       mode: payload.mode ?? 'deep_dive',
       custom_prompt: payload.customPrompt ?? null,
       episode_length: payload.episodeLength ?? null,

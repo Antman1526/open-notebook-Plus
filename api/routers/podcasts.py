@@ -18,6 +18,11 @@ from api.podcast_service import (
     PodcastSubmissionNotCreatedError,
     PodcastSubmissionUncertainError,
 )
+
+# v0.8.127 — reuse the Studio router's existing bare-id normalization
+# helper (same convention as source_chat.py's source_id prefixing) instead
+# of duplicating it here.
+from api.routers.studio.common import normalize_notebook_id
 from api.schemas.podcast_studio import (
     PodcastModelPlanReceipt,
     PodcastReadinessRequest,
@@ -534,10 +539,20 @@ async def submit_podcast_studio(
                         detail={"code": "podcast_idempotency_conflict"},
                     )
                 return cached_response
+            # v0.8.127 — normalize a bare id the same way other routers do
+            # (see api/routers/studio/common.py::normalize_notebook_id) so
+            # the episode created here is notebook-scoped like the standard
+            # generation path (v0.8.126).
+            notebook_id = (
+                normalize_notebook_id(payload.notebook_id)
+                if payload.notebook_id
+                else None
+            )
             job_id = await PodcastService.submit_generation_job(
                 episode_profile_name=payload.episode_profile,
                 speaker_profile_name=payload.speaker_profile,
                 episode_name=payload.episode_name,
+                notebook_id=notebook_id,
                 content=preparation.content,
                 mode=payload.mode,
                 custom_prompt=payload.custom_prompt,

@@ -59,6 +59,46 @@ describe('podcast studio store', () => {
     })
   })
 
+  // v0.8.127 — notebookId lets the eventual Studio submit tag the episode,
+  // without every call site of `open()` threading it through explicitly.
+  it('derives notebookId from a notebook-kind selection', () => {
+    usePodcastStudioStore.getState().open(
+      [{ kind: 'notebook', notebookId: 'notebook:research' }],
+      'studio',
+    )
+
+    expect(usePodcastStudioStore.getState().notebookId).toBe('notebook:research')
+  })
+
+  it('leaves notebookId null when opened without a notebook selection', () => {
+    usePodcastStudioStore.getState().open([selection], 'studio')
+
+    expect(usePodcastStudioStore.getState().notebookId).toBeNull()
+  })
+
+  it('clears notebookId on dismiss', () => {
+    usePodcastStudioStore.getState().open(
+      [{ kind: 'notebook', notebookId: 'notebook:research' }],
+      'studio',
+    )
+    expect(usePodcastStudioStore.getState().notebookId).toBe('notebook:research')
+
+    usePodcastStudioStore.getState().dismiss()
+
+    expect(usePodcastStudioStore.getState().notebookId).toBeNull()
+  })
+
+  it('preserves notebookId across the Quick-to-Studio handoff', () => {
+    usePodcastStudioStore.getState().open(
+      [{ kind: 'notebook', notebookId: 'notebook:research' }],
+      'quick',
+    )
+
+    usePodcastStudioStore.getState().handoffToStudio()
+
+    expect(usePodcastStudioStore.getState().notebookId).toBe('notebook:research')
+  })
+
   it('restores the invoking action after the review surface closes', async () => {
     const invoker = document.createElement('button')
     const dialogControl = document.createElement('button')

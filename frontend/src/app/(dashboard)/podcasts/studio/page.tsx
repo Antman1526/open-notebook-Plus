@@ -11,6 +11,9 @@ import { usePodcastStudioStore } from '@/lib/stores/podcast-studio-store'
 export default function PodcastStudioPage() {
   const router = useRouter()
   const selections = usePodcastStudioStore((state) => state.selections)
+  // v0.8.127 — carries through to submitStudioPodcast so a Studio session
+  // opened from a notebook produces a notebook-scoped episode.
+  const notebookId = usePodcastStudioStore((state) => state.notebookId)
   const dismiss = usePodcastStudioStore((state) => state.dismiss)
   const seedDocumentIds = selections.flatMap(selection => (
     selection.kind === 'knowledge_document' ? [selection.documentId]
@@ -33,7 +36,7 @@ export default function PodcastStudioPage() {
             Close Studio without producing
           </Button>
         </div>
-        <PodcastStudio headingLevel={1} seedDocumentIds={[...new Set(seedDocumentIds)]} selections={selections} />
+        <PodcastStudio headingLevel={1} seedDocumentIds={[...new Set(seedDocumentIds)]} selections={selections} notebookId={notebookId} />
       </main>
     </AppShell>
   )

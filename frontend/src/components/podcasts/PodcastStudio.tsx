@@ -16,6 +16,11 @@ import { PodcastStudioFolio } from '@/components/deeper-notebook/studios/Podcast
 export interface PodcastStudioProps {
   seedDocumentIds: string[]
   selections?: PodcastSelection[]
+  // v0.8.127 — the notebook this Studio session was opened from, if any
+  // (see usePodcastStudioStore's `notebookId`). Passed straight through to
+  // the submit so the resulting episode is notebook-scoped. Undefined/null
+  // when the Studio was opened globally.
+  notebookId?: string | null
   headingLevel?: 1 | 2
   modelPlans?: Array<{
     label: string
@@ -143,7 +148,7 @@ function productionRoleForPlan(plan: PodcastModelPlanItem): PodcastProductionRol
  * exact controller; presentation components remain controlled and have no
  * network effects on mount.
  */
-export function PodcastStudio({ seedDocumentIds, selections, headingLevel = 2, modelPlans = [], initialState = 'selecting', onStateChange }: PodcastStudioProps) {
+export function PodcastStudio({ seedDocumentIds, selections, notebookId, headingLevel = 2, modelPlans = [], initialState = 'selecting', onStateChange }: PodcastStudioProps) {
   const resolvedSelections = useMemo(() => selections ?? selectionsFromSeeds(seedDocumentIds), [seedDocumentIds, selections])
   const [brief, setBrief] = useState<EditorialBriefValues>(defaultBrief)
   const [outline, setOutline] = useState<string[]>(outlineDefaults)
@@ -226,6 +231,7 @@ export function PodcastStudio({ seedDocumentIds, selections, headingLevel = 2, m
         episodeProfile: brief.episodeProfileName,
         speakerProfile: brief.speakerProfileName,
         episodeName: readiness.preview.entries[0]?.title ?? 'Deeper Notebook podcast',
+        notebookId: notebookId ?? undefined,
         mode: brief.format,
         reviewOutline: true,
         productionOverrides: modelOverrides,

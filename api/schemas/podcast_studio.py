@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -247,6 +247,12 @@ class PodcastStudioSubmitRequest(PodcastReadinessRequest):
     episode_length: Literal["short", "medium", "long"] | None = None
     review_outline: bool = True
     editorial_brief: PodcastEditorialBrief | None = None
+    # v0.8.127 — the Studio path had no notebook_id anywhere in its request
+    # chain, so episodes it created stayed unscoped and never appeared in a
+    # notebook's bundle export (unlike the standard generation path, which
+    # has persisted this since v0.8.126). Optional: a bare id is normalized
+    # to the `notebook:` table prefix in the router before use.
+    notebook_id: Optional[str] = Field(default=None, max_length=256)
 
     @field_validator("episode_profile", "speaker_profile", "episode_name")
     @classmethod
