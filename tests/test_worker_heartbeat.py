@@ -26,12 +26,12 @@ def _stop_heartbeat_after_each_test():
 
 
 def _clear_worker_process_env(monkeypatch):
-    for name in (
-        "DEEPER_NOTEBOOK_WORKER_PROCESS",
-        "DN_WORKER_PROCESS",
-        "OPEN_NOTEBOOK_WORKER_PROCESS",
-        "ONP_WORKER_PROCESS",
-    ):
+    # Every accepted spelling of the setting, taken from the environment
+    # registry so this test never names legacy prefixes itself (the rebrand
+    # audit forbids that in active code).
+    from deeper_notebook.environment import _setting_for
+
+    for name in _setting_for("DEEPER_NOTEBOOK_WORKER_PROCESS").precedence:
         monkeypatch.delenv(name, raising=False)
 
 
