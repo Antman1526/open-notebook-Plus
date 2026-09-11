@@ -174,6 +174,26 @@ export interface StudioWorkflowRun {
   updated?: string | null
 }
 
+// v0.8.124 — batch export: bundle every completed artifact in a notebook
+// into one zip.
+export type StudioBundleCompression = 'deflated' | 'stored' | 'bzip2' | 'lzma'
+
+export interface StudioArtifactBundleRequest {
+  destination: string
+  overwrite?: boolean
+  compression?: StudioBundleCompression
+  regenerate_stale?: boolean
+}
+
+export interface StudioArtifactBundleResponse {
+  destination: string
+  file_count: number
+  total_bytes: number
+  artifact_count: number
+  skipped: number
+  warnings: string[]
+}
+
 export interface StudioWorkflowRunCreate {
   title: string
   source_ids?: string[]
@@ -314,6 +334,18 @@ export const studioApi = {
   ): Promise<StudioArtifact> => {
     const response = await apiClient.post<StudioArtifact>(
       `/studio/artifacts/${encodeURIComponent(artifactId)}/exports/${encodeURIComponent(format)}`,
+    )
+    return response.data
+  },
+  // v0.8.124 — bundle every completed artifact in a notebook into one zip
+  // written to a host path.
+  exportNotebookBundle: async (
+    notebookId: string,
+    data: StudioArtifactBundleRequest,
+  ): Promise<StudioArtifactBundleResponse> => {
+    const response = await apiClient.post<StudioArtifactBundleResponse>(
+      `/studio/notebooks/${encodeURIComponent(notebookId)}/exports/bundle`,
+      data,
     )
     return response.data
   },

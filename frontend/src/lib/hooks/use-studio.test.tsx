@@ -30,13 +30,18 @@ vi.mock('@/lib/api/studio', () => ({
     listWorkflowRuns: vi.fn(),
     approveWorkflowRun: vi.fn(),
     regenerateExport: vi.fn(),
+    exportNotebookBundle: vi.fn(),
   },
 }))
 
 import { notebooksApi } from '@/lib/api/notebooks'
 import { sourcesApi } from '@/lib/api/sources'
 import { studioApi } from '@/lib/api/studio'
-import { useRegenerateStudioExport, useStudioCoursePack } from './use-studio'
+import {
+  useExportNotebookArtifactBundle,
+  useRegenerateStudioExport,
+  useStudioCoursePack,
+} from './use-studio'
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({
@@ -249,5 +254,35 @@ describe('useRegenerateStudioExport', () => {
     })
 
     expect(studioApi.regenerateExport).toHaveBeenCalledWith('artifact:1', 'pdf')
+  })
+})
+
+describe('useExportNotebookArtifactBundle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the bundle-export API with the notebook id and request body', async () => {
+    vi.mocked(studioApi.exportNotebookBundle).mockResolvedValue({
+      destination: '/home/user/notebook-artifacts.zip',
+      file_count: 5,
+      total_bytes: 1024,
+      artifact_count: 2,
+      skipped: 1,
+      warnings: [],
+    })
+
+    const { result } = renderHook(() => useExportNotebookArtifactBundle(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        notebookId: 'notebook:alpha',
+        data: { destination: '/home/user/notebook-artifacts.zip' },
+      })
+    })
+
+    expect(studioApi.exportNotebookBundle).toHaveBeenCalledWith('notebook:alpha', {
+      destination: '/home/user/notebook-artifacts.zip',
+    })
   })
 })

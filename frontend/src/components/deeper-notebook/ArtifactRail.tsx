@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, ArrowRight, BookOpenCheck, CheckCircle2, Clock3, Cpu, FileQuestion, GraduationCap, Layers3, ListChecks, Loader2, Map as MapIcon, Mic2, Newspaper, Play, Presentation, RefreshCw, Search, SlidersHorizontal, Table2, Trash2, Video } from 'lucide-react'
+import { AlertCircle, ArrowRight, BookOpenCheck, CheckCircle2, Clock3, Cpu, Download, FileQuestion, GraduationCap, Layers3, ListChecks, Loader2, Map as MapIcon, Mic2, Newspaper, Play, Presentation, RefreshCw, Search, SlidersHorizontal, Table2, Trash2, Video } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { CitationDrawer, citationEvidenceFromRecord, type CitationEvidence } from '@/components/deeper-notebook/CitationDrawer'
 import { CitationCoverageBadge } from '@/components/deeper-notebook/CitationCoverageBadge'
 import { ArtifactExportMenu } from '@/components/deeper-notebook/ArtifactExportMenu'
+import { ExportAllArtifactsDialog } from '@/components/deeper-notebook/ExportAllArtifactsDialog'
 import { EvidenceReview } from '@/components/evaluation/EvidenceReview'
 import {
   Dialog,
@@ -45,6 +46,7 @@ import {
 import { isEvidenceStudioEnabled } from '@/lib/features'
 import { useResearchRunsEnabled } from '@/lib/features-client'
 import { artifactMarkdown } from '@/lib/studio-artifacts'
+import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   useCreateStudioArtifact,
   useApproveStudioWorkflowRun,
@@ -237,7 +239,9 @@ export function ArtifactRail({
   const [selectedArtifact, setSelectedArtifact] = useState<StudioArtifact | null>(null)
   const [selectedCitation, setSelectedCitation] = useState<CitationEvidence | null>(null)
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([])
+  const { t } = useTranslation()
   const [videoDialogOpen, setVideoDialogOpen] = useState(false)
+  const [exportAllDialogOpen, setExportAllDialogOpen] = useState(false)
   const [selectedEpisodeId, setSelectedEpisodeId] = useState('')
   const [videoUrls, setVideoUrls] = useState<{ media: string; captions: string } | null>(null)
   const enabled = isEvidenceStudioEnabled()
@@ -486,6 +490,18 @@ export function ArtifactRail({
           <Badge variant="outline" className="bg-background/70 text-[0.72rem]">
             {stats.citations} {stats.citations === 1 ? 'citation' : 'citations'}
           </Badge>
+          {/* v0.8.124 — one-click export of every completed artifact as a zip. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={t('studio.export.exportAll')}
+            disabled={stats.completed === 0}
+            onClick={() => setExportAllDialogOpen(true)}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            {t('studio.export.exportAll')}
+          </Button>
         </div>
       </div>
 
@@ -1062,6 +1078,12 @@ export function ArtifactRail({
           )}
         </DialogContent>
       </Dialog>
+
+      <ExportAllArtifactsDialog
+        open={exportAllDialogOpen}
+        onOpenChange={setExportAllDialogOpen}
+        notebookId={notebookId}
+      />
     </section>
   )
 }

@@ -47,6 +47,15 @@ vi.mock('@/components/evaluation/EvidenceReview', () => ({
   },
 }))
 
+const exportAllDialogProps = vi.fn()
+
+vi.mock('@/components/deeper-notebook/ExportAllArtifactsDialog', () => ({
+  ExportAllArtifactsDialog: (props: Record<string, unknown>) => {
+    exportAllDialogProps(props)
+    return props.open ? <span data-testid="export-all-dialog" /> : null
+  },
+}))
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: [], isLoading: false }),
 }))
@@ -84,6 +93,7 @@ describe('ArtifactRail', () => {
     vi.clearAllMocks()
     resetRuntimeFeatures()
     evidenceReviewProps.mockClear()
+    exportAllDialogProps.mockClear()
     createArtifact.mockResolvedValue({ id: 'studio_artifact:new' })
     createWorkflowRun.mockResolvedValue({
       id: 'studio_workflow_run:new',
@@ -202,6 +212,64 @@ describe('ArtifactRail', () => {
     expect(screen.getAllByText('Evidence Studio').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Awaiting first artifact')).toBeInTheDocument()
     expect(screen.getByText('No saved research outputs in this notebook.')).toBeInTheDocument()
+  })
+
+  it('disables the export-all button when there are zero completed artifacts', () => {
+    isEvidenceStudioEnabled.mockReturnValue(true)
+    useStudioArtifacts.mockReturnValue({
+      data: [
+        {
+          id: 'studio_artifact:one',
+          notebook_id: 'notebook:alpha',
+          artifact_type: 'report',
+          title: 'Report',
+          status: 'pending',
+          source_ids: [],
+          output_payload: {},
+          citations: [],
+          export_paths: {},
+        },
+      ],
+      isLoading: false,
+    })
+
+    render(<ArtifactRail notebookId="notebook:alpha" />)
+
+    expect(screen.getByRole('button', { name: 'Export all artifacts' })).toBeDisabled()
+    expect(exportAllDialogProps).toHaveBeenCalledWith(
+      expect.objectContaining({ open: false, notebookId: 'notebook:alpha' }),
+    )
+  })
+
+  it('enables the export-all button and opens the dialog when a completed artifact exists', () => {
+    isEvidenceStudioEnabled.mockReturnValue(true)
+    useStudioArtifacts.mockReturnValue({
+      data: [
+        {
+          id: 'studio_artifact:one',
+          notebook_id: 'notebook:alpha',
+          artifact_type: 'report',
+          title: 'Report',
+          status: 'completed',
+          source_ids: [],
+          output_payload: {},
+          citations: [],
+          export_paths: {},
+        },
+      ],
+      isLoading: false,
+    })
+
+    render(<ArtifactRail notebookId="notebook:alpha" />)
+
+    const exportAllButton = screen.getByRole('button', { name: 'Export all artifacts' })
+    expect(exportAllButton).toBeEnabled()
+
+    fireEvent.click(exportAllButton)
+
+    expect(exportAllDialogProps).toHaveBeenCalledWith(
+      expect.objectContaining({ open: true, notebookId: 'notebook:alpha' }),
+    )
   })
 
   it('frames quick actions as App Mode templates', () => {

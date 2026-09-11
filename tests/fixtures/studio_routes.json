@@ -108,6 +108,15 @@
     "status_code": 200
   },
   {
+    "path": "/studio/notebooks/{notebook_id}/exports/bundle",
+    "methods": [
+      "POST"
+    ],
+    "endpoint_name": "export_studio_artifact_bundle",
+    "response_model": "api.routers.studio.exports.NotebookArtifactBundleResponse",
+    "status_code": 200
+  },
+  {
     "path": "/studio/artifacts/{artifact_id}/mind-map/branches/{node_path:path}/context",
     "methods": [
       "POST"

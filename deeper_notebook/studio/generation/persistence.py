@@ -9,6 +9,8 @@ import json
 import os
 import re
 import zipfile
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 
@@ -1490,3 +1492,98 @@ def _artifact_export_payload(artifact: StudioArtifact) -> dict[str, object]:
         "created": _iso(getattr(artifact, "created", None)),
         "updated": _iso(getattr(artifact, "updated", None)),
     }
+
+
+# v0.8.124 — single-zip bundle of every *completed* artifact's existing
+# export files, for POST /studio/notebooks/{notebook_id}/exports/bundle.
+@dataclass
+class BundleReport:
+    """Result of `write_notebook_artifact_bundle`."""
+
+    file_count: int
+    total_bytes: int
+    artifact_count: int
+    skipped: int
+    warnings: list[str] = field(default_factory=list)
+
+
+def write_notebook_artifact_bundle(
+    artifacts: list[StudioArtifact],
+    target_zip: Path,
+    compression: int,
+) -> BundleReport:
+    """Bundle every *completed* artifact's already-persisted export files
+    into one zip at `target_zip`.
+
+    Layout: ``{artifact_slug}/{format}/{filename}`` per export file, where
+    `artifact_slug` is `str(artifact.id).replace(":", "-")` — the same slug
+    `StudioArtifact._cleanup_export_files` uses — plus a top-level
+    ``manifest.json`` describing the notebook, each bundled artifact's
+    formats/sizes, and the ids of artifacts skipped for not being
+    'completed'.
+
+    Does NOT regenerate stale exports itself; callers that want fresh
+    output should call `persist_single_export` per stale format first.
+    An export path recorded on the artifact but missing on disk is warned
+    about and skipped rather than failing the whole bundle. Raises OSError
+    on write failure — callers should clean up a half-written `target_zip`
+    themselves (mirrors the notebook-export zip endpoints).
+    """
+    warnings: list[str] = []
+    completed = [a for a in artifacts if a.status == "completed"]
+    skipped_ids = [str(a.id) for a in artifacts if a.status != "completed"]
+    notebook_id = str(artifacts[0].notebook_id) if artifacts else None
+
+    manifest_artifacts: list[dict[str, object]] = []
+    file_count = 0
+    total_bytes = 0
+
+    with zipfile.ZipFile(target_zip, "w", compression=compression) as zf:
+        for artifact in completed:
+            slug = str(artifact.id).replace(":", "-")
+            export_paths = (
+                artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+            )
+            formats_entry: list[dict[str, object]] = []
+            for export_format, path_str in export_paths.items():
+                path = Path(path_str) if path_str else None
+                if not path or not path.is_file():
+                    warnings.append(
+                        f"Skipping missing export file for {artifact.id} "
+                        f"({export_format}): {path_str}"
+                    )
+                    continue
+                size = path.stat().st_size
+                zf.write(path, f"{slug}/{export_format}/{path.name}")
+                formats_entry.append(
+                    {"format": export_format, "filename": path.name, "bytes": size}
+                )
+                file_count += 1
+                total_bytes += size
+            manifest_artifacts.append(
+                {
+                    "id": str(artifact.id),
+                    "title": artifact.title,
+                    "artifact_type": artifact.artifact_type,
+                    "formats": formats_entry,
+                }
+            )
+
+        manifest = {
+            "notebook_id": notebook_id,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "artifacts": manifest_artifacts,
+            "skipped": skipped_ids,
+        }
+        manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
+        zf.writestr("manifest.json", manifest_bytes)
+        file_count += 1
+        total_bytes += len(manifest_bytes)
+
+    return BundleReport(
+        file_count=file_count,
+        total_bytes=total_bytes,
+        artifact_count=len(completed),
+        skipped=len(skipped_ids),
+        warnings=warnings,
+    )

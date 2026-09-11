@@ -22,6 +22,8 @@ import { sourcesApi } from '@/lib/api/sources'
 import {
   studioApi,
   StudioArtifact,
+  StudioArtifactBundleRequest,
+  StudioArtifactBundleResponse,
   StudioArtifactCreate,
   StudioArtifactExportFormat,
   StudioArtifactUpdate,
@@ -438,6 +440,43 @@ export function useRegenerateStudioExport() {
     onSuccess: (artifact) => {
       queryClient.invalidateQueries({ queryKey: ['studio', 'artifacts'] })
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.studioArtifactRevisions(artifact.id) })
+    },
+    onError: (error) => {
+      toast({
+        title: t('common.error'),
+        description: getApiErrorMessage(error, t),
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+// v0.8.124 — bundle every completed artifact in a notebook into one zip
+// written to a host path. ArtifactRail passes notebookId directly (no
+// invalidation needed on success — the bundle doesn't change artifact
+// state unless regenerate_stale refreshed exports, which the backend
+// already persists per-artifact).
+export function useExportNotebookArtifactBundle() {
+  const { toast } = useToast()
+  const { t } = useTranslation()
+  return useMutation<
+    StudioArtifactBundleResponse,
+    Error,
+    { notebookId: string; data: StudioArtifactBundleRequest }
+  >({
+    mutationFn: ({ notebookId, data }) => studioApi.exportNotebookBundle(notebookId, data),
+    onSuccess: (result) => {
+      // v0.8.124 — the export-all button is disabled at zero completed
+      // artifacts, but a race (artifacts changed status between render and
+      // submit) can still land here with nothing bundled.
+      toast({
+        title: t('common.success'),
+        description: result.artifact_count === 0
+          ? t('studio.export.bundleEmpty')
+          : t('studio.export.bundleSuccess')
+            .replace('{count}', String(result.artifact_count))
+            .replace('{destination}', result.destination),
+      })
     },
     onError: (error) => {
       toast({

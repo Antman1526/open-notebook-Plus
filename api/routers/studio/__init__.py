@@ -77,6 +77,8 @@ _ROUTE_ORDER = (
     "studio_generate",
     # v0.8.119 — single-format export regeneration.
     "regenerate_studio_artifact_export",
+    # v0.8.124 — batch export of every completed artifact as one zip.
+    "export_studio_artifact_bundle",
 )
 
 
