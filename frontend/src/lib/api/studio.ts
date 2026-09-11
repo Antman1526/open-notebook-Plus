@@ -183,6 +183,8 @@ export interface StudioArtifactBundleRequest {
   overwrite?: boolean
   compression?: StudioBundleCompression
   regenerate_stale?: boolean
+  // v0.8.125 — include podcast episode audio/transcript in the bundle.
+  include_media?: boolean
 }
 
 export interface StudioArtifactBundleResponse {
@@ -192,12 +194,47 @@ export interface StudioArtifactBundleResponse {
   artifact_count: number
   skipped: number
   warnings: string[]
+  // v0.8.125 — always present on real responses; optional here so fixtures
+  // predating this field (e.g. src/lib/hooks/use-studio.test.tsx) still
+  // type-check.
+  media_count?: number
 }
 
 export interface StudioWorkflowRunCreate {
   title: string
   source_ids?: string[]
   approval_required?: boolean
+}
+
+// v0.8.125 — Studio retention status + dry-run (Settings visibility only;
+// the retention job itself stays env-gated and is never enabled from here).
+export interface StudioRetentionReport {
+  revisions_examined: number
+  revisions_deleted: number
+  exports_examined: number
+  exports_removed: number
+  bytes_reclaimed: number
+  dry_run: boolean
+}
+
+export interface StudioRetentionStatus {
+  enabled: boolean
+  interval_hours: number
+  revision_keep_per_artifact: number
+  stale_export_max_age_days: number
+  dry_run_default: boolean
+  last_run_at: string | null
+  last_report: StudioRetentionReport | null
+}
+
+export interface StudioRetentionDryRunRequest {
+  revision_keep_per_artifact?: number
+  stale_export_max_age_days?: number
+}
+
+export interface StudioRetentionDryRunResponse extends StudioRetentionReport {
+  revision_keep_per_artifact: number
+  stale_export_max_age_days: number
 }
 
 export const studioApi = {
@@ -345,6 +382,22 @@ export const studioApi = {
   ): Promise<StudioArtifactBundleResponse> => {
     const response = await apiClient.post<StudioArtifactBundleResponse>(
       `/studio/notebooks/${encodeURIComponent(notebookId)}/exports/bundle`,
+      data,
+    )
+    return response.data
+  },
+  // v0.8.125 — retention status + dry-run visibility from Settings.
+  getRetentionStatus: async (): Promise<StudioRetentionStatus> => {
+    const response = await apiClient.get<StudioRetentionStatus>(
+      '/studio/retention/status',
+    )
+    return response.data
+  },
+  runRetentionDryRun: async (
+    data: StudioRetentionDryRunRequest = {},
+  ): Promise<StudioRetentionDryRunResponse> => {
+    const response = await apiClient.post<StudioRetentionDryRunResponse>(
+      '/studio/retention/dry-run',
       data,
     )
     return response.data

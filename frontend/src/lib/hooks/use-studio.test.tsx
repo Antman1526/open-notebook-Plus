@@ -31,6 +31,8 @@ vi.mock('@/lib/api/studio', () => ({
     approveWorkflowRun: vi.fn(),
     regenerateExport: vi.fn(),
     exportNotebookBundle: vi.fn(),
+    getRetentionStatus: vi.fn(),
+    runRetentionDryRun: vi.fn(),
   },
 }))
 
@@ -40,6 +42,8 @@ import { studioApi } from '@/lib/api/studio'
 import {
   useExportNotebookArtifactBundle,
   useRegenerateStudioExport,
+  useRetentionDryRun,
+  useRetentionStatus,
   useStudioCoursePack,
 } from './use-studio'
 
@@ -283,6 +287,88 @@ describe('useExportNotebookArtifactBundle', () => {
 
     expect(studioApi.exportNotebookBundle).toHaveBeenCalledWith('notebook:alpha', {
       destination: '/home/user/notebook-artifacts.zip',
+    })
+  })
+})
+
+// v0.8.125 — Settings retention status card.
+describe('useRetentionStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('fetches the retention status', async () => {
+    vi.mocked(studioApi.getRetentionStatus).mockResolvedValue({
+      enabled: false,
+      interval_hours: 0,
+      revision_keep_per_artifact: 10,
+      stale_export_max_age_days: 30,
+      dry_run_default: false,
+      last_run_at: null,
+      last_report: null,
+    })
+
+    const { result } = renderHook(() => useRetentionStatus(), { wrapper })
+
+    await vi.waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(studioApi.getRetentionStatus).toHaveBeenCalled()
+    expect(result.current.data?.enabled).toBe(false)
+  })
+})
+
+describe('useRetentionDryRun', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the dry-run API and returns the report', async () => {
+    vi.mocked(studioApi.runRetentionDryRun).mockResolvedValue({
+      revisions_examined: 12,
+      revisions_deleted: 2,
+      exports_examined: 5,
+      exports_removed: 3,
+      bytes_reclaimed: 4096,
+      dry_run: true,
+      revision_keep_per_artifact: 10,
+      stale_export_max_age_days: 30,
+    })
+
+    const { result } = renderHook(() => useRetentionDryRun(), { wrapper })
+    let response: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined
+
+    await act(async () => {
+      response = await result.current.mutateAsync(undefined)
+    })
+
+    expect(studioApi.runRetentionDryRun).toHaveBeenCalledWith({})
+    expect(response?.exports_removed).toBe(3)
+  })
+
+  it('forwards knob overrides to the API', async () => {
+    vi.mocked(studioApi.runRetentionDryRun).mockResolvedValue({
+      revisions_examined: 0,
+      revisions_deleted: 0,
+      exports_examined: 0,
+      exports_removed: 0,
+      bytes_reclaimed: 0,
+      dry_run: true,
+      revision_keep_per_artifact: 3,
+      stale_export_max_age_days: 7,
+    })
+
+    const { result } = renderHook(() => useRetentionDryRun(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        revision_keep_per_artifact: 3,
+        stale_export_max_age_days: 7,
+      })
+    })
+
+    expect(studioApi.runRetentionDryRun).toHaveBeenCalledWith({
+      revision_keep_per_artifact: 3,
+      stale_export_max_age_days: 7,
     })
   })
 })

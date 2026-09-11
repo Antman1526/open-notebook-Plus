@@ -8,6 +8,8 @@ import { SettingsForm } from './components/SettingsForm'
 // user-mutable from this UI.
 import { ObservabilityCard } from './components/ObservabilityCard'
 import { UpdatesCard } from './components/UpdatesCard'
+// v0.8.125 — Studio retention status + dry-run visibility card.
+import { RetentionCard } from './components/RetentionCard'
 import { useSettings } from '@/lib/hooks/use-settings'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, Sparkles } from 'lucide-react'
@@ -81,6 +83,7 @@ export default function SettingsPage() {
             />
             <BackupProvenancePanel snapshot={runtime.data ?? UNKNOWN_RUNTIME_SNAPSHOT} />
             <UpdatesCard />
+            <RetentionCard />
             <div className="flex items-center justify-between gap-4 rounded-lg border bg-card/50 px-4 py-3">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium">

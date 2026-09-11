@@ -31,6 +31,9 @@ import {
   StudioWorkflowRunCreate,
   StudioGenerateOptions,
   StudioGenerateResponse,
+  StudioRetentionDryRunRequest,
+  StudioRetentionDryRunResponse,
+  StudioRetentionStatus,
 } from '@/lib/api/studio'
 import type { NotebookResponse, SourceResponse } from '@/lib/types/api'
 
@@ -477,6 +480,39 @@ export function useExportNotebookArtifactBundle() {
             .replace('{count}', String(result.artifact_count))
             .replace('{destination}', result.destination),
       })
+    },
+    onError: (error) => {
+      toast({
+        title: t('common.error'),
+        description: getApiErrorMessage(error, t),
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+// v0.8.125 — Settings retention status card: read-only status + a
+// zero-mutation dry-run action. The job itself stays env-gated; nothing
+// here can turn it on.
+export function useRetentionStatus() {
+  return useQuery<StudioRetentionStatus, Error>({
+    queryKey: QUERY_KEYS.studioRetentionStatus,
+    queryFn: () => studioApi.getRetentionStatus(),
+  })
+}
+
+export function useRetentionDryRun() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  const { t } = useTranslation()
+  return useMutation<
+    StudioRetentionDryRunResponse,
+    Error,
+    StudioRetentionDryRunRequest | undefined
+  >({
+    mutationFn: (data) => studioApi.runRetentionDryRun(data ?? {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.studioRetentionStatus })
     },
     onError: (error) => {
       toast({

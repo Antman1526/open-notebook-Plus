@@ -49,6 +49,8 @@ export const QUERY_KEYS = {
   studioArtifacts: (notebookId: string) => ['studio', notebookId, 'artifacts'] as const,
   studioArtifactRevisions: (artifactId: string) => ['studio', 'artifacts', artifactId, 'revisions'] as const,
   studioWorkflowRuns: (artifactId: string) => ['studio', 'artifacts', artifactId, 'workflow-runs'] as const,
+  // v0.8.125 — Settings retention status card.
+  studioRetentionStatus: ['studio', 'retention', 'status'] as const,
   podcastEpisodes: ['podcasts', 'episodes'] as const,
   podcastEpisode: (episodeId: string) => ['podcasts', 'episodes', episodeId] as const,
   episodeProfiles: ['podcasts', 'episode-profiles'] as const,
