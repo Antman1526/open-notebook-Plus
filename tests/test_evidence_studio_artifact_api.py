@@ -1034,6 +1034,35 @@ def test_delete_artifact_deletes_record(monkeypatch):
     assert "studio_artifact:1" in _FakeArtifact.deleted
 
 
+def test_delete_artifact_response_serialises_when_driver_returns_record_id(monkeypatch):
+    """v0.8.125 — found live: the driver hands back a RecordID from delete(),
+    and echoing it into the JSON response 500'd after the row was gone."""
+    from surrealdb.data.types.record_id import RecordID
+
+    monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "1")
+    _install_fake_artifacts(monkeypatch)
+    _FakeArtifact.records = {
+        "studio_artifact:1": _FakeArtifact(
+            id="studio_artifact:1",
+            notebook_id="notebook:alpha",
+            artifact_type="report",
+            title="Report",
+        )
+    }
+
+    async def _delete_returning_record_id(self):
+        self.deleted.append(self.id)
+        self.records.pop(self.id, None)
+        return RecordID("studio_artifact", "1")
+
+    monkeypatch.setattr(_FakeArtifact, "delete", _delete_returning_record_id)
+
+    response = _client().delete("/api/studio/artifacts/studio_artifact:1")
+
+    assert response.status_code == 200
+    assert response.json() == {"deleted": True, "id": "studio_artifact:1"}
+
+
 def test_generate_artifact_is_hidden_when_feature_flag_disabled(monkeypatch):
     monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "0")
 

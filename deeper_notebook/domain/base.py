@@ -265,7 +265,10 @@ class ObjectModel(BaseModel):
             raise InvalidInputError("Cannot delete object without an ID")
         try:
             logger.debug(f"Deleting record with id {self.id}")
-            return await repo_delete(self.id)
+            # v0.8.125 — found live: the driver returns the deleted RecordID,
+            # which is not JSON-serialisable; a router that echoed it back
+            # 500'd AFTER the row was already gone. Honour the `-> bool`.
+            return bool(await repo_delete(self.id))
         except Exception as e:
             logger.error(
                 f"Error deleting {self.__class__.table_name} with id {self.id}: {str(e)}"

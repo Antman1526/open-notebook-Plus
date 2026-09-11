@@ -1965,7 +1965,23 @@ class StudioArtifact(ObjectModel):
                 )
 
     async def delete(self) -> bool:
-        """Unlink persisted export files on disk, then remove the database record."""
+        """Unlink persisted export files on disk, then remove the database record.
+
+        v0.8.125 — a top-level artifact also deletes its revisions first
+        (each revision removes its own export files). Found live: deleting a
+        parent left its revision row and export file orphaned.
+        """
+        if getattr(self, "revision_of_id", None) is None and self.id is not None:
+            try:
+                revisions = await StudioArtifact.get_revisions(str(self.id))
+            except Exception as exc:  # noqa: BLE001 — never block the parent delete
+                logger.warning(f"Could not list revisions for {self.id}: {exc}")
+                revisions = []
+            for revision in revisions:
+                try:
+                    await revision.delete()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"Failed to delete revision {revision.id} of {self.id}: {exc}")
         self._cleanup_export_files()
         return await super().delete()
 

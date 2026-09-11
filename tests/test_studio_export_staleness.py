@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import zipfile
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -280,6 +281,8 @@ async def test_studio_artifact_delete_cleans_up_export_files(
     artifact.export_paths["outside"] = str(outside_file)
 
     # Mock DB delete
+    # v0.8.125 — the parent delete now lists revisions; keep the test hermetic.
+    monkeypatch.setattr(StudioArtifact, "get_revisions", AsyncMock(return_value=[]))
     monkeypatch.setattr(
         "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
     )
@@ -323,6 +326,8 @@ async def test_studio_artifact_delete_cleans_up_video_overviews(
         "video_captions": str(vtt_file),
     }
 
+    # v0.8.125 — the parent delete now lists revisions; keep the test hermetic.
+    monkeypatch.setattr(StudioArtifact, "get_revisions", AsyncMock(return_value=[]))
     monkeypatch.setattr(
         "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
     )
@@ -368,6 +373,8 @@ async def test_studio_artifact_delete_cleans_up_bundle_directories(
         "xapi_package": str(tincan),
     }
 
+    # v0.8.125 — the parent delete now lists revisions; keep the test hermetic.
+    monkeypatch.setattr(StudioArtifact, "get_revisions", AsyncMock(return_value=[]))
     monkeypatch.setattr(
         "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
     )
@@ -383,4 +390,53 @@ async def test_studio_artifact_delete_cleans_up_bundle_directories(
     assert other_file.exists()
 
 
+async def test_studio_artifact_delete_cascades_to_revisions(monkeypatch: pytest.MonkeyPatch):
+    """v0.8.125 — found live: deleting a parent left its revision row and the
+    revision's export file orphaned. The parent delete removes revisions first
+    and returns a real bool even when the driver returns a RecordID."""
+    from surrealdb.data.types.record_id import RecordID
 
+    parent = StudioArtifact(
+        id="studio_artifact:parent",
+        notebook_id="notebook:alpha",
+        artifact_type="course_pack",
+        title="Parent",
+        status="completed",
+        output_payload={},
+    )
+    revision_delete = AsyncMock(return_value=True)
+
+    class _Revision:
+        id = "studio_artifact:rev1"
+
+        async def delete(self):
+            return await revision_delete()
+
+    monkeypatch.setattr(StudioArtifact, "get_revisions", AsyncMock(return_value=[_Revision()]))
+    monkeypatch.setattr(
+        "deeper_notebook.domain.base.repo_delete",
+        AsyncMock(return_value=RecordID("studio_artifact", "parent")),
+    )
+
+    deleted = await parent.delete()
+
+    assert deleted is True
+    revision_delete.assert_awaited_once()
+
+
+async def test_studio_artifact_revision_delete_does_not_recurse(monkeypatch: pytest.MonkeyPatch):
+    revision = StudioArtifact(
+        id="studio_artifact:rev1",
+        notebook_id="notebook:alpha",
+        artifact_type="course_pack",
+        title="Parent revision",
+        status="completed",
+        output_payload={},
+        revision_of_id="studio_artifact:parent",
+    )
+    get_revisions = AsyncMock(return_value=[])
+    monkeypatch.setattr(StudioArtifact, "get_revisions", get_revisions)
+    monkeypatch.setattr("deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True))
+
+    assert await revision.delete() is True
+    get_revisions.assert_not_awaited()

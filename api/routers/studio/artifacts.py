@@ -758,7 +758,9 @@ async def delete_studio_artifact(artifact_id: str) -> dict[str, object]:
             detail="Studio artifact not found",
         )
     deleted = await artifact.delete()
-    return {"deleted": deleted, "id": artifact_id}
+    # v0.8.125 — coerce: the domain layer now returns bool, but never echo a
+    # driver object into a JSON response again.
+    return {"deleted": bool(deleted), "id": artifact_id}
 
 
 # -----------------------------------------------------------------------------
