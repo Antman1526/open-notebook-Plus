@@ -751,6 +751,27 @@ def test_approve_workflow_run_submits_generation_command(monkeypatch):
     assert not studio_mod.provision_langchain_model.called
 
 
+def test_get_studio_artifact_accepts_bare_id(monkeypatch):
+    """v0.8.126 — found live: a bare id (no `studio_artifact:` prefix) 404'd
+    because `StudioArtifact.get()` derived the table from the id itself and
+    found none. The route now normalizes before the lookup."""
+    monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "1")
+    _install_fake_artifacts(monkeypatch)
+    _FakeArtifact.records = {
+        "studio_artifact:1": _FakeArtifact(
+            id="studio_artifact:1",
+            notebook_id="notebook:alpha",
+            artifact_type="report",
+            title="Report",
+        )
+    }
+
+    response = _client().get("/api/studio/artifacts/1")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "studio_artifact:1"
+
+
 def test_update_artifact_patches_only_supplied_fields(monkeypatch):
     monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "1")
     _install_fake_artifacts(monkeypatch)
@@ -1061,6 +1082,27 @@ def test_delete_artifact_response_serialises_when_driver_returns_record_id(monke
 
     assert response.status_code == 200
     assert response.json() == {"deleted": True, "id": "studio_artifact:1"}
+
+
+def test_delete_artifact_accepts_bare_id(monkeypatch):
+    """v0.8.126 — a bare id on DELETE deletes the prefixed record."""
+    monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "1")
+    _install_fake_artifacts(monkeypatch)
+    _FakeArtifact.records = {
+        "studio_artifact:1": _FakeArtifact(
+            id="studio_artifact:1",
+            notebook_id="notebook:alpha",
+            artifact_type="report",
+            title="Report",
+        )
+    }
+
+    response = _client().delete("/api/studio/artifacts/1")
+
+    assert response.status_code == 200
+    assert response.json() == {"deleted": True, "id": "studio_artifact:1"}
+    assert "studio_artifact:1" in _FakeArtifact.deleted
+    assert "studio_artifact:1" not in _FakeArtifact.records
 
 
 def test_generate_artifact_is_hidden_when_feature_flag_disabled(monkeypatch):

@@ -63,6 +63,8 @@ from .common import (
     _require_evidence_studio,
     _sync_artifact_generation_service_dependencies,
     _workflow_run_response,
+    normalize_artifact_id,
+    normalize_notebook_id,
     router,
 )
 
@@ -576,6 +578,7 @@ async def list_studio_artifacts(
     notebook_id: str,
 ) -> list[StudioArtifactResponse]:
     _require_evidence_studio()
+    notebook_id = normalize_notebook_id(notebook_id)
     if not await _notebook_record_exists(notebook_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -598,6 +601,7 @@ async def get_studio_artifact(
     artifact_id: str,
 ) -> StudioArtifactResponse:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     try:
         artifact = await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError):
@@ -617,6 +621,7 @@ async def update_studio_artifact(
     payload: StudioArtifactUpdate,
 ) -> StudioArtifactResponse:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     try:
         artifact = await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError):
@@ -742,6 +747,7 @@ async def generate_studio_artifact(
     artifact_id: str,
 ) -> StudioArtifactResponse:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     _sync_artifact_generation_service_dependencies()
     artifact = await artifact_generation_service.generate_studio_artifact(artifact_id)
     return _artifact_response(artifact)
@@ -750,6 +756,7 @@ async def generate_studio_artifact(
 @router.delete("/artifacts/{artifact_id}")
 async def delete_studio_artifact(artifact_id: str) -> dict[str, object]:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     try:
         artifact = await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError):

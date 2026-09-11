@@ -344,3 +344,22 @@ async def _notebook_record_exists(notebook_id: str) -> bool:
         {"notebook_id": ensure_record_id(notebook_id)},
     )
     return bool(rows)
+
+
+# v0.8.126 — found live: `GET/PATCH/DELETE /studio/artifacts/<bare id>` (no
+# `studio_artifact:` prefix) 404s because `StudioArtifact.get()` hands the
+# bare id straight to `ObjectModel.get()`, which derives the table from the
+# id itself (`deeper_notebook/domain/base.py`) and fails with "No class
+# found for table <bare-id>" instead of a clean 404. Other routers already
+# accept both forms (see `api/routers/source_chat.py`'s
+# `source_id if source_id.startswith("source:") else f"source:{source_id}"`);
+# every Studio route that takes an `artifact_id` or `notebook_id` should
+# normalize it the same way before it reaches the domain layer.
+def normalize_artifact_id(raw: str) -> str:
+    """Prefix a bare Studio artifact id with its `studio_artifact:` table."""
+    return raw if raw.startswith("studio_artifact:") else f"studio_artifact:{raw}"
+
+
+def normalize_notebook_id(raw: str) -> str:
+    """Prefix a bare notebook id with its `notebook:` table."""
+    return raw if raw.startswith("notebook:") else f"notebook:{raw}"

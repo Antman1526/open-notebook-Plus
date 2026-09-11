@@ -26,6 +26,8 @@ from .common import (
     _LegacyPatchSyncRoute,
     _require_evidence_studio,
     _sync_artifact_generation_service_dependencies,
+    normalize_artifact_id,
+    normalize_notebook_id,
 )
 
 router = APIRouter(route_class=_LegacyPatchSyncRoute)
@@ -83,6 +85,8 @@ async def _load_owned_mind_map(
     artifact_id: str, notebook_id: str
 ) -> tuple[StudioArtifact, MindMapDocument]:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
+    notebook_id = normalize_notebook_id(notebook_id)
     try:
         artifact = await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError) as exc:

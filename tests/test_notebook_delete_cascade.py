@@ -42,6 +42,26 @@ class _FakeSource:
         self.cleanup_calls += 1
 
 
+class _FakeStudioArtifact:
+    """Delete spy for `StudioArtifact.get_for_notebook()` results.
+
+    v0.8.126 — used by `make_notebook(..., studio_artifacts=[...])` to
+    verify `Notebook.delete()` cascades Studio artifacts before the atomic
+    SurrealQL block, without touching the real database layer.
+    """
+
+    def __init__(self, artifact_id: str, *, fail: bool = False) -> None:
+        self.id = artifact_id
+        self.fail = fail
+        self.delete_calls = 0
+
+    async def delete(self) -> bool:
+        self.delete_calls += 1
+        if self.fail:
+            raise RuntimeError("simulated studio artifact delete failure")
+        return True
+
+
 @pytest.fixture()
 def make_notebook(monkeypatch):
     from deeper_notebook.domain import notebook as notebook_module
@@ -52,9 +72,11 @@ def make_notebook(monkeypatch):
         transaction_result: Any = None,
         transaction_error: Exception | None = None,
         sources: list[Any] | None = None,
+        studio_artifacts: list[Any] | None = None,
     ):
         calls: list[tuple[str, dict[str, Any]]] = []
         sources = sources or []
+        studio_artifacts = studio_artifacts or []
 
         async def fake_repo_query(
             query: str,
@@ -79,10 +101,21 @@ def make_notebook(monkeypatch):
         async def get_sources(_self):
             return sources
 
+        # v0.8.126 — default empty so pre-existing tests (which assert
+        # exactly one `repo_query` call: the atomic transaction) are
+        # unaffected; pass `studio_artifacts=[...]` to exercise the cascade.
+        async def fake_get_for_notebook(_notebook_id):
+            return studio_artifacts
+
         monkeypatch.setattr(notebook_module, "repo_query", fake_repo_query)
         monkeypatch.setattr(notebook_module.Notebook, "get_notes", get_notes)
         monkeypatch.setattr(notebook_module.Notebook, "get_sources", get_sources)
         monkeypatch.setattr(notebook_module, "ensure_record_id", lambda value: value)
+        monkeypatch.setattr(
+            notebook_module.StudioArtifact,
+            "get_for_notebook",
+            fake_get_for_notebook,
+        )
 
         notebook = notebook_module.Notebook(
             id="notebook:test-cascade",
@@ -560,3 +593,52 @@ def test_embedded_surreal_guard_throw_rolls_back_every_delete(
         assert len(db.query("SELECT VALUE id FROM artifact")) == (
             2 if extra_note else 1
         )
+
+
+# v0.8.126 — Studio artifacts (and their export files / revisions) used to
+# survive a notebook delete: `Notebook.delete()` never looked them up.
+def test_delete_cascades_studio_artifacts_before_transaction(make_notebook):
+    artifact_a = _FakeStudioArtifact("studio_artifact:a")
+    artifact_b = _FakeStudioArtifact("studio_artifact:b")
+    notebook, calls = make_notebook(
+        [],
+        studio_artifacts=[artifact_a, artifact_b],
+    )
+
+    result = asyncio.run(notebook.delete())
+
+    # Still exactly one repo_query call: the atomic transaction. Studio
+    # artifact deletion goes through `StudioArtifact.delete()` (mocked in
+    # this test), not a raw repo_query, and must happen before it.
+    _transaction(calls)
+    assert artifact_a.delete_calls == 1
+    assert artifact_b.delete_calls == 1
+    assert result["studio_artifacts_deleted"] == 2
+
+
+def test_failing_studio_artifact_delete_does_not_abort_notebook_delete(make_notebook):
+    ok_artifact = _FakeStudioArtifact("studio_artifact:ok")
+    failing_artifact = _FakeStudioArtifact("studio_artifact:broken", fail=True)
+    notebook, calls = make_notebook(
+        [],
+        studio_artifacts=[failing_artifact, ok_artifact],
+    )
+
+    result = asyncio.run(notebook.delete())
+
+    _transaction(calls)
+    assert failing_artifact.delete_calls == 1
+    assert ok_artifact.delete_calls == 1
+    # The failing artifact is logged and skipped, not counted, while the
+    # notebook delete itself still completes successfully.
+    assert result["studio_artifacts_deleted"] == 1
+    assert result["deleted_notes"] == 0
+
+
+def test_delete_with_no_studio_artifacts_reports_zero(make_notebook):
+    notebook, calls = make_notebook([])
+
+    result = asyncio.run(notebook.delete())
+
+    _transaction(calls)
+    assert result["studio_artifacts_deleted"] == 0

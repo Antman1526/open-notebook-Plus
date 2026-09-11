@@ -70,6 +70,7 @@ from .common import (
     _submit_studio_generation_command,
     _workflow_run_response,
     _workflow_steps_for_artifact,
+    normalize_artifact_id,
     router,
 )
 
@@ -528,6 +529,7 @@ async def create_studio_workflow_run(
     payload: StudioWorkflowRunCreate,
 ) -> StudioWorkflowRunResponse:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     try:
         artifact = await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError):
@@ -568,6 +570,7 @@ async def list_studio_workflow_runs(
     artifact_id: str,
 ) -> list[StudioWorkflowRunResponse]:
     _require_evidence_studio()
+    artifact_id = normalize_artifact_id(artifact_id)
     try:
         await StudioArtifact.get(artifact_id)
     except (KeyError, NotFoundError):

@@ -862,6 +862,39 @@ class Notebook(ObjectModel):
                 ensure_record_id(note.id) for note in notes if note.id is not None
             ]
 
+            # v0.8.126 — found live: an artifact row (with export files on
+            # disk) survived a notebook delete. Studio artifacts own host
+            # filesystem state (export files, revisions), so they can't be
+            # folded into the atomic SurrealQL cascade below; delete them
+            # here, BEFORE the transaction, via `StudioArtifact.delete()`
+            # (which since v0.8.125 cascades revisions and removes export
+            # files). A single artifact failing to delete is logged and
+            # does NOT abort the notebook delete — the notebook row still
+            # goes, matching the atomic block's own best-effort posture for
+            # post-commit cleanup.
+            studio_artifacts_deleted = 0
+            try:
+                studio_artifacts = await StudioArtifact.get_for_notebook(self.id)
+            except Exception as exc:
+                logger.warning(
+                    "Could not list Studio artifacts for notebook {} during "
+                    "delete: {}",
+                    self.id,
+                    exc,
+                )
+                studio_artifacts = []
+            for artifact in studio_artifacts:
+                try:
+                    await artifact.delete()
+                    studio_artifacts_deleted += 1
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to delete Studio artifact {} for notebook {}: {}",
+                        artifact.id,
+                        self.id,
+                        exc,
+                    )
+
             rows = await repo_query(
                 """
                 BEGIN TRANSACTION;
@@ -987,18 +1020,21 @@ class Notebook(ObjectModel):
 
             logger.info(
                 "Deleted notebook {} atomically: {} notes, {} exclusive "
-                "sources, {} unlinked sources, {} chat sessions",
+                "sources, {} unlinked sources, {} chat sessions, {} studio "
+                "artifacts",
                 self.id,
                 result["deleted_notes"],
                 result["deleted_sources"],
                 result["unlinked_sources"],
                 len(deleted_chat_session_ids),
+                studio_artifacts_deleted,
             )
             return {
                 "deleted_notes": result["deleted_notes"],
                 "deleted_sources": result["deleted_sources"],
                 "unlinked_sources": result["unlinked_sources"],
                 "deleted_chat_session_ids": deleted_chat_session_ids,
+                "studio_artifacts_deleted": studio_artifacts_deleted,
             }
 
         except ExternalNoteReadOnlyError:

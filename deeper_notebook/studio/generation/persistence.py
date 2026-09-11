@@ -91,6 +91,40 @@ def _artifact_export_path(export_dir: Path, stem: str, suffix: str) -> Path:
     raise RuntimeError(f"Could not allocate export path for {stem}{suffix}")
 
 
+def _export_target_path(
+    export_dir: Path,
+    existing: dict[str, str],
+    key: str,
+    stem: str,
+    suffix: str,
+) -> Path:
+    """Resolve where a `key` export should be written.
+
+    # v0.8.126 — found live: `_artifact_export_path` allocates a fresh
+    `-2`, `-3`, ... path whenever a same-named file already exists on
+    disk, which is the common case on every re-persist. Callers recorded
+    that fresh path in `artifact.export_paths` and moved on, leaving the
+    PREVIOUS file — still referenced by nothing — orphaned next to it
+    (seen live: `...course-pack.md` orphaned beside `...course-pack-2.md`).
+    Mirrors `persist_single_export`'s "write over the recorded path"
+    behavior: when `existing[key]` is already on record and resolves
+    inside `export_dir`, reuse it so the write overwrites it in place.
+    A recorded path outside `export_dir` — the same containment check
+    `StudioArtifact._cleanup_export_files` uses — is never written to; a
+    fresh in-root path is allocated instead, exactly as before.
+    """
+    current = existing.get(key)
+    if current:
+        try:
+            resolved_dir = export_dir.resolve()
+            candidate = Path(current).resolve()
+            if resolved_dir in candidate.parents:
+                return Path(current)
+        except OSError:
+            pass
+    return _artifact_export_path(export_dir, stem, suffix)
+
+
 def _artifact_markdown_export(artifact: StudioArtifact, content: str) -> str:
     source_ids = [str(source_id) for source_id in artifact.source_ids]
     lines = [
@@ -713,8 +747,14 @@ def _persist_office_exports(
     artifact: StudioArtifact,
     export_dir: Path,
     stem: str,
+    existing: dict[str, str],
 ) -> dict[str, str]:
-    """Persist editable Office files only from validated structured documents."""
+    """Persist editable Office files only from validated structured documents.
+
+    # v0.8.126 — `existing` (the artifact's export_paths before this run)
+    lets each format write over its own recorded path instead of always
+    allocating a fresh `-2` one; see `_export_target_path`.
+    """
     try:
         document = parse_payload_document(
             artifact.artifact_type, artifact.output_payload
@@ -727,7 +767,7 @@ def _persist_office_exports(
     results: dict[str, str] = {}
 
     if isinstance(document, (GenericDocument, CoursePackDocument, ResearchRunDocument)):
-        docx_path = _artifact_export_path(export_dir, stem, ".docx")
+        docx_path = _export_target_path(export_dir, existing, "docx", stem, ".docx")
         try:
             export_document(document, docx_path)
             results["docx"] = str(docx_path)
@@ -740,7 +780,7 @@ def _persist_office_exports(
             )
 
         if isinstance(document, CoursePackDocument):
-            epub_path = _artifact_export_path(export_dir, stem, ".epub")
+            epub_path = _export_target_path(export_dir, existing, "epub", stem, ".epub")
             try:
                 write_course_pack_epub(document, epub_path)
                 results["epub"] = str(epub_path)
@@ -752,7 +792,7 @@ def _persist_office_exports(
                     type(exc).__name__,
                 )
 
-            pdf_path = _artifact_export_path(export_dir, stem, ".pdf")
+            pdf_path = _export_target_path(export_dir, existing, "pdf", stem, ".pdf")
             try:
                 write_course_pack_pdf(document, pdf_path)
                 results["pdf"] = str(pdf_path)
@@ -766,7 +806,7 @@ def _persist_office_exports(
         return results
 
     if isinstance(document, DataTableDocument):
-        xlsx_path = _artifact_export_path(export_dir, stem, ".xlsx")
+        xlsx_path = _export_target_path(export_dir, existing, "xlsx", stem, ".xlsx")
         try:
             export_spreadsheet(document, xlsx_path)
             results["xlsx"] = str(xlsx_path)
@@ -842,14 +882,20 @@ def _persist_research_bundle(
     export_dir: Path,
     stem: str,
     export_paths: dict[str, str],
+    existing: dict[str, str],
 ) -> dict[str, str]:
-    """Create an immutable integrity bundle after every other export succeeds."""
+    """Create an immutable integrity bundle after every other export succeeds.
+
+    # v0.8.126 — `existing` (the artifact's export_paths before this run)
+    lets a re-persist write over its recorded bundle path instead of
+    always allocating a fresh `-2` one; see `_export_target_path`.
+    """
     try:
         # A bundle is a source-of-record export, so only structured artifacts
         # that pass the existing Studio payload validation are eligible.
         parse_payload_document(artifact.artifact_type, artifact.output_payload)
-        bundle_path = _artifact_export_path(
-            export_dir, f"{stem}-research-bundle", ".zip"
+        bundle_path = _export_target_path(
+            export_dir, existing, "research_bundle", f"{stem}-research-bundle", ".zip"
         )
         result = {"research_bundle": str(bundle_path)}
         artifact.export_paths = {**export_paths, **result}
@@ -882,30 +928,44 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
     export_dir = _artifact_export_dir()
     export_dir.mkdir(parents=True, exist_ok=True)
 
+    # v0.8.126 — the artifact's previously recorded export paths, so every
+    # allocation below can write over its own recorded path (via
+    # `_export_target_path`) instead of unconditionally allocating a fresh
+    # `-2` one and orphaning the file it replaces.
+    existing = (
+        artifact.export_paths if isinstance(artifact.export_paths, dict) else {}
+    )
+
     artifact_slug = _artifact_export_slug(artifact.id, fallback="artifact")
     title_slug = _artifact_export_slug(artifact.title, fallback=artifact.artifact_type)
     stem = f"{artifact_slug}-{title_slug}"
 
-    markdown_path = _artifact_export_path(export_dir, stem, ".md")
-    json_path = _artifact_export_path(export_dir, stem, ".json")
+    markdown_path = _export_target_path(export_dir, existing, "markdown", stem, ".md")
+    json_path = _export_target_path(export_dir, existing, "json", stem, ".json")
     export_paths = {
         "markdown": str(markdown_path),
         "json": str(json_path),
     }
     course_pack_modules = _course_pack_modules(content)
     if artifact.artifact_type in _COURSE_PACK_ARTIFACT_TYPES:
-        instructor_path = _artifact_export_path(
-            export_dir, f"{stem}-instructor-guide", ".md"
+        instructor_path = _export_target_path(
+            export_dir, existing, "instructor_guide", f"{stem}-instructor-guide", ".md"
         )
-        learner_path = _artifact_export_path(
-            export_dir, f"{stem}-learner-handout", ".md"
+        learner_path = _export_target_path(
+            export_dir, existing, "learner_handout", f"{stem}-learner-handout", ".md"
         )
-        checklist_path = _artifact_export_path(
-            export_dir, f"{stem}-module-checklist", ".json"
+        checklist_path = _export_target_path(
+            export_dir, existing, "module_checklist", f"{stem}-module-checklist", ".json"
         )
-        assessment_path = _artifact_export_path(export_dir, f"{stem}-assessment", ".md")
-        scorm_path = _artifact_export_path(export_dir, f"{stem}-scorm", ".zip")
-        xapi_path = _artifact_export_path(export_dir, f"{stem}-xapi", ".zip")
+        assessment_path = _export_target_path(
+            export_dir, existing, "assessment", f"{stem}-assessment", ".md"
+        )
+        scorm_path = _export_target_path(
+            export_dir, existing, "scorm_package", f"{stem}-scorm", ".zip"
+        )
+        xapi_path = _export_target_path(
+            export_dir, existing, "xapi_package", f"{stem}-xapi", ".zip"
+        )
         export_paths.update(
             {
                 "instructor_guide": str(instructor_path),
@@ -920,7 +980,9 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
         _data_table_csv(content) if artifact.artifact_type == "data_table" else ""
     )
     if data_table_csv:
-        csv_path = _artifact_export_path(export_dir, f"{stem}-data-table", ".csv")
+        csv_path = _export_target_path(
+            export_dir, existing, "csv", f"{stem}-data-table", ".csv"
+        )
         export_paths["csv"] = str(csv_path)
     markdown_path.write_text(
         _artifact_markdown_export(artifact, content), encoding="utf-8"
@@ -975,6 +1037,7 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
             artifact=artifact,
             export_dir=export_dir,
             stem=stem,
+            existing=existing,
         )
     )
     export_paths.update(
@@ -991,6 +1054,7 @@ def persist_artifact_exports(artifact: StudioArtifact, content: str) -> dict[str
             export_dir=export_dir,
             stem=stem,
             export_paths=export_paths,
+            existing=existing,
         )
     )
     content_hash = artifact_content_hash(artifact, content)

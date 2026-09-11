@@ -121,6 +121,56 @@ def test_persist_artifact_exports_records_export_hashes(
     assert get_stale_export_formats(artifact) == []
 
 
+def test_persist_artifact_exports_twice_reuses_paths_and_leaves_no_orphans(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """v0.8.126 — found live: re-persisting allocated a fresh `-2` path for
+    every format whenever a same-named file already existed on disk (the
+    common case on any re-persist), leaving the previous file — still
+    referenced by nothing — orphaned next to it (seen live:
+    `...course-pack.md` orphaned beside `...course-pack-2.md`)."""
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
+    artifact = _sample_course_pack_artifact()
+    content = artifact.output_payload["content"]
+
+    first_paths = persist_artifact_exports(artifact, content)
+    files_after_first = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    second_paths = persist_artifact_exports(artifact, content)
+    files_after_second = sorted(p.name for p in tmp_path.iterdir() if p.is_file())
+
+    assert second_paths == first_paths
+    assert files_after_second == files_after_first
+    assert not any("-2." in name for name in files_after_second)
+    for path_str in first_paths.values():
+        assert Path(path_str).is_file()
+
+
+def test_persist_artifact_exports_ignores_recorded_path_outside_export_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """v0.8.126 — a recorded export path outside the export root (the same
+    containment check `StudioArtifact._cleanup_export_files` uses) must
+    never be written to; a fresh in-root path is allocated instead."""
+    export_dir = tmp_path / "exports"
+    monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(export_dir))
+    artifact = _sample_course_pack_artifact()
+    content = artifact.output_payload["content"]
+
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    outside_markdown = outside_dir / "escaped.md"
+    outside_markdown.write_text("must not be overwritten", encoding="utf-8")
+    artifact.export_paths = {"markdown": str(outside_markdown)}
+
+    export_paths = persist_artifact_exports(artifact, content)
+
+    markdown_path = Path(export_paths["markdown"])
+    assert markdown_path != outside_markdown
+    assert export_dir.resolve() in markdown_path.resolve().parents
+    assert outside_markdown.read_text(encoding="utf-8") == "must not be overwritten"
+
+
 def test_is_export_stale_detects_content_drift(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("DEEPER_NOTEBOOK_ARTIFACT_EXPORT_DIR", str(tmp_path))
     artifact = _sample_course_pack_artifact()

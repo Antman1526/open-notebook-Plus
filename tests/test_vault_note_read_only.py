@@ -175,6 +175,11 @@ async def test_notebook_delete_maps_persisted_external_guard_to_typed_error(
         AsyncMock(return_value=external_notes),
     )
     monkeypatch.setattr(Notebook, "get_sources", AsyncMock(return_value=[]))
+    # v0.8.126 — Notebook.delete now lists studio artifacts first (its own
+    # repo_query); isolate it so the transaction's call count stays exact.
+    monkeypatch.setattr(
+        notebook_module.StudioArtifact, "get_for_notebook", AsyncMock(return_value=[])
+    )
     query = AsyncMock(side_effect=RuntimeError("external_note_read_only"))
     monkeypatch.setattr(notebook_module, "repo_query", query)
 
