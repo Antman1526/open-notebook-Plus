@@ -1022,6 +1022,7 @@ export const bnIN = {
       restartRequired: "পরিবর্তন প্রয়োগ করতে লঞ্চার রিস্টার্ট করুন — পরিবেশ ভেরিয়েবল শুধুমাত্র স্টার্টআপে পড়া হয়।",
     },
     observability: {
+      workerDesc: "অ্যাসিঙ্ক কাজ (পডকাস্ট, এমবেডিং, ইমপোর্ট) পরিচালনাকারী ব্যাকগ্রাউন্ড কমান্ড ওয়ার্কার।",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

@@ -1023,6 +1023,7 @@ export const frFR = {
       restartRequired: "Redémarrez le lanceur pour appliquer les modifications — les variables d'environnement ne sont lues qu'au démarrage.",
     },
     observability: {
+      workerDesc: "Processus d'arrière-plan qui exécute les tâches asynchrones (podcasts, embeddings, imports).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

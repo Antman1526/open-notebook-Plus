@@ -1025,6 +1025,7 @@ export const plPL = {
       restartRequired: "Uruchom launcher ponownie, aby zastosować te zmiany — zmienne środowiskowe są odczytywane raz przy starcie.",
     },
     observability: {
+      workerDesc: "Proces w tle obsługujący zadania asynchroniczne (podcasty, osadzenia, importy).",
       title: "Konfiguracja obserwowalności",
       description: "Migawka tylko do odczytu zmiennych środowiskowych DN_*, których używa uruchomiony proces. Operatorzy zmieniają je w pliku .env, a następnie restartują — ta karta pokazuje jedynie to, co serwer obecnie widzi.",
       slowQueryLog: "Próg dziennika wolnych zapytań",

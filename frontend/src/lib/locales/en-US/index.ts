@@ -1040,6 +1040,7 @@ export const enUS = {
       restartRequired: "Restart the launcher to apply these changes — env vars are read once at startup.",
     },
     observability: {
+      workerDesc: "Background command worker servicing async jobs (podcasts, embeddings, imports).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

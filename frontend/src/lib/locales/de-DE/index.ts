@@ -1025,6 +1025,7 @@ export const deDE = {
       restartRequired: "Starte den Launcher neu, um diese Änderungen anzuwenden — Umgebungsvariablen werden nur einmal beim Start gelesen.",
     },
     observability: {
+      workerDesc: "Hintergrund-Worker für asynchrone Aufgaben (Podcasts, Embeddings, Importe).",
       title: "Observability-Konfiguration",
       description: "Schreibgeschützte Momentaufnahme der DN_*-Umgebungsvariablen, die dein laufender Prozess verwendet. Betreiber ändern diese über die .env und starten dann neu — diese Karte zeigt nur, was der Server aktuell sieht.",
       slowQueryLog: "Schwellwert für Slow-Query-Log",

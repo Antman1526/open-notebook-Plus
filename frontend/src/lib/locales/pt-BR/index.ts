@@ -1022,6 +1022,7 @@ export const ptBR = {
       restartRequired: "Reinicie o launcher para aplicar estas alterações — as variáveis de ambiente são lidas apenas na inicialização.",
     },
     observability: {
+      workerDesc: "Worker em segundo plano que atende tarefas assíncronas (podcasts, embeddings, importações).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

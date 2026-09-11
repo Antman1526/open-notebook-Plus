@@ -1023,6 +1023,7 @@ export const itIT = {
       restartRequired: "Riavvia il launcher per applicare le modifiche — le variabili d'ambiente vengono lette solo all'avvio.",
     },
     observability: {
+      workerDesc: "Worker in background che gestisce i lavori asincroni (podcast, embedding, importazioni).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

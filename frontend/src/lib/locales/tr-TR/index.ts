@@ -1024,6 +1024,7 @@ export const trTR = {
       restartRequired: "Bu değişiklikleri uygulamak için başlatıcıyı yeniden başlatın — ortam değişkenleri açılışta bir kez okunur.",
     },
     observability: {
+      workerDesc: "Eşzamansız işleri (podcast, gömme, içe aktarma) yürüten arka plan çalışanı.",
       title: "Gözlemlenebilirlik Yapılandırması",
       description: "Çalışan işleminizin kullandığı DN_* ortam değişkenlerinin salt okunur anlık görüntüsü. Operatörler bunları .env üzerinden değiştirip yeniden başlatır — bu kart yalnızca sunucunun şu anda gördüğünü gösterir.",
       slowQueryLog: "Yavaş Sorgu Günlüğü Eşiği",

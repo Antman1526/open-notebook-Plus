@@ -1021,6 +1021,7 @@ export const jaJP = {
       restartRequired: "変更を適用するにはランチャーを再起動してください。環境変数は起動時にのみ読み込まれます。",
     },
     observability: {
+      workerDesc: "非同期ジョブ（ポッドキャスト、埋め込み、インポート）を処理するバックグラウンドワーカー。",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

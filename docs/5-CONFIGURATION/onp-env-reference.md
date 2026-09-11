@@ -368,6 +368,8 @@ since chat/search/notes all work without a worker.
 
 ---
 
+> v0.8.128: one row per worker process (`worker_heartbeat:⟨host_pid⟩`); a graceful stop (atexit / SIGTERM) deletes the process's own row so it reads offline immediately, and rows older than a day are pruned on read.
+
 ## Version history of caps
 
 | Version | What changed |
@@ -401,3 +403,9 @@ since chat/search/notes all work without a worker.
 | v0.8.116 | `ONP_STREAM_HEARTBEAT_SEC`, `ONP_STREAM_IDLE_TIMEOUT_SEC` |
 | v0.8.126 | `ONP_SOURCE_SYNC_TIMEOUT_SEC`; `API_GRACEFUL_SHUTDOWN_SEC` and `API_RELOAD` documented |
 | v0.8.127 | `DN_WORKER_PROCESS`, `DN_WORKER_HEARTBEAT_STALE_SEC` |
+
+## SurrealQL projection guard (v0.8.128)
+
+| Env var | Default | What it does |
+|---|---:|---|
+| `DEEPER_NOTEBOOK_STRICT_QUERY_GUARD` | unset | `repo_query` always logs a warning when a literal `ORDER BY` field is missing from the SELECT projection (SurrealDB 2.x rejects it). Set to `1` to raise `ValueError` before the query reaches the database; the test suite runs with it set. |

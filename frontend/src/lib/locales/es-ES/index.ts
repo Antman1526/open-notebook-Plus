@@ -1024,6 +1024,7 @@ export const esES = {
       restartRequired: "Reinicia el lanzador para aplicar los cambios — las variables de entorno solo se leen al inicio.",
     },
     observability: {
+      workerDesc: "Proceso en segundo plano que atiende tareas asíncronas (pódcasts, embeddings, importaciones).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

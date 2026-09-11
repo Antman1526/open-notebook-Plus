@@ -1021,6 +1021,7 @@ export const ruRU = {
       restartRequired: "Перезапустите лаунчер для применения изменений — переменные окружения читаются только при запуске.",
     },
     observability: {
+      workerDesc: "Фоновый воркер, выполняющий асинхронные задачи (подкасты, эмбеддинги, импорт).",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

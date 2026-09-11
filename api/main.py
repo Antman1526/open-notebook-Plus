@@ -1894,6 +1894,7 @@ async def healthz_deep(probe_providers: bool = False):
                 "ok": True,
                 "error": None,
                 "age_seconds": worker_status.get("age_seconds"),
+                "active_workers": worker_status.get("active_workers_count", 1),
             }
         else:
             stale_after = resolve_env(

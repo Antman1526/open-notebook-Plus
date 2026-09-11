@@ -1026,6 +1026,7 @@ export const caES = {
       restartRequired: "Reinicia el llançador per aplicar aquests canvis — les variables d'entorn es llegeixen un sol cop en arrencar.",
     },
     observability: {
+      workerDesc: "Treballador de comandes en segon pla que atén les tasques asíncrones (pòdcasts, incrustacions, importacions).",
       title: "Configuració d'observabilitat",
       description: "Instantània de només lectura de les variables d'entorn DN_* que usa el procés en execució. Els operadors les canvien al fitxer .env i després reinicien — aquesta targeta només mostra el que el servidor veu actualment.",
       slowQueryLog: "Llindar del registre de consultes lentes",

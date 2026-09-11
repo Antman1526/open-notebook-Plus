@@ -27,7 +27,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { useObservabilitySettings } from '@/lib/hooks/use-settings'
+import { useDeepHealth } from '@/lib/hooks/use-deep-health'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { cn } from '@/lib/utils'
 
 // Small helper to render an env-derived value with optional unit
 // suffix. Centralized so we can keep the visual style consistent
@@ -60,10 +62,12 @@ function ValuePill({
 interface RowProps {
   label: string
   description: string
-  value: string | number | boolean | null
+  value?: string | number | boolean | null
   unit?: string
   /** When true, shows a yellow warning badge — used for db_pool_disabled. */
   warningWhenTrue?: boolean
+  customValue?: React.ReactNode
+  hint?: React.ReactNode
 }
 
 function ObservabilityRow({
@@ -72,6 +76,8 @@ function ObservabilityRow({
   value,
   unit,
   warningWhenTrue,
+  customValue,
+  hint,
 }: RowProps) {
   const showWarning = warningWhenTrue && value === true
   return (
@@ -87,9 +93,10 @@ function ObservabilityRow({
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground mt-1">{description}</p>
+        {hint ? <div className="mt-2">{hint}</div> : null}
       </div>
       <div className="shrink-0">
-        <ValuePill value={value} unit={unit} />
+        {customValue !== undefined ? customValue : <ValuePill value={value ?? null} unit={unit} />}
       </div>
     </div>
   )
@@ -98,6 +105,11 @@ function ObservabilityRow({
 export function ObservabilityCard() {
   const { t } = useTranslation()
   const { data, isLoading, isError, refetch } = useObservabilitySettings()
+  const { data: deepHealthData } = useDeepHealth()
+  const workerCheck = deepHealthData?.checks?.worker
+  const workerStatus = workerCheck?.status ?? 'offline'
+  const isWorkerOnline = workerCheck?.ok ?? (workerStatus === 'online')
+  const activeWorkersCount = (workerCheck as { active_workers?: number } | undefined)?.active_workers
 
   return (
     <Card>
@@ -127,6 +139,33 @@ export function ObservabilityCard() {
           </div>
         ) : (
           <div className="space-y-0">
+            <ObservabilityRow
+              label={t('setupWizard.subsystems.worker')}
+              description={t('settings.observability.workerDesc')}
+              customValue={
+                <Badge
+                  variant={isWorkerOnline ? 'default' : 'destructive'}
+                  className={cn(
+                    'font-mono text-xs',
+                    isWorkerOnline &&
+                      'bg-emerald-600 hover:bg-emerald-600 text-white dark:bg-emerald-500 dark:hover:bg-emerald-500'
+                  )}
+                >
+                  {isWorkerOnline
+                    ? activeWorkersCount && activeWorkersCount > 1
+                      ? `online (${activeWorkersCount} workers)`
+                      : 'online'
+                    : workerStatus}
+                </Badge>
+              }
+              hint={
+                !isWorkerOnline ? (
+                  <div className="rounded-md bg-muted/70 p-2 text-xs font-mono text-muted-foreground break-all">
+                    {t('setupWizard.fixes.worker')}
+                  </div>
+                ) : null
+              }
+            />
             <ObservabilityRow
               label={t('settings.observability.slowQueryLog')}
               description={t('settings.observability.slowQueryLogDesc')}

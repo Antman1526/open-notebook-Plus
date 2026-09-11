@@ -1021,6 +1021,7 @@ export const zhTW = {
       restartRequired: "重新啟動啟動器以套用更改——環境變數僅在啟動時讀取。",
     },
     observability: {
+      workerDesc: "處理非同步工作（Podcast、向量嵌入、匯入）的背景工作程序。",
       title: "Observability Configuration",
       description: "Read-only snapshot of the DN_* environment variables your running process is using. Operators change these via .env then restart — this card just shows what the server currently sees.",
       slowQueryLog: "Slow-Query Log Threshold",

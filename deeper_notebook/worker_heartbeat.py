@@ -32,7 +32,9 @@ sufficient:
 from __future__ import annotations
 
 import asyncio
+import atexit
 import os
+import signal
 import socket
 import sys
 import threading
@@ -52,9 +54,16 @@ __all__ = [
     "read_worker_status",
 ]
 
-_HEARTBEAT_RECORD = "worker_heartbeat:primary"
 _DEFAULT_INTERVAL_SEC = 60
 _DEFAULT_STALE_SEC = 180.0
+
+
+def _worker_instance_key(hostname: str | None = None, pid: int | None = None) -> str:
+    host = hostname or socket.gethostname()
+    p = pid or os.getpid()
+    safe_host = "".join(c if c.isalnum() else "_" for c in host).strip("_") or "host"
+    return f"worker_heartbeat:`{safe_host}_{p}`"
+
 
 _heartbeat_lock = threading.Lock()
 _heartbeat_thread: threading.Thread | None = None
@@ -96,13 +105,14 @@ def _coerce_datetime(value: Any) -> datetime | None:
 async def _write_heartbeat_once() -> None:
     pid = os.getpid()
     hostname = socket.gethostname()
+    record_key = _worker_instance_key(hostname, pid)
     try:
         from deeper_notebook import __version__ as app_version
     except Exception:  # pragma: no cover — defensive only
         app_version = "unknown"
 
     await repo_query(
-        f"UPSERT {_HEARTBEAT_RECORD} MERGE "
+        f"UPSERT {record_key} MERGE "
         "{ last_seen: time::now(), pid: $pid, hostname: $hostname, "
         "version: $version };",
         {"pid": pid, "hostname": hostname, "version": app_version},
@@ -119,6 +129,53 @@ def _heartbeat_loop(stop_event: threading.Event, interval_sec: float) -> None:
             break
 
 
+_shutdown_hooks_installed = False
+
+
+async def _delete_own_row() -> None:
+    """Remove this process's heartbeat row so a stopped worker reads offline
+    immediately instead of after the stale window. Best-effort."""
+    try:
+        await repo_query(f"DELETE {_worker_instance_key()};")
+    except Exception as exc:  # noqa: BLE001 — shutdown must never fail on this
+        logger.debug(f"worker heartbeat: own-row delete skipped: {exc}")
+
+
+def _run_blocking(coro) -> None:
+    """Run a coroutine from a plain thread; skip if a loop is already running here."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coro)
+        return
+    coro.close()
+
+
+def _install_shutdown_hooks() -> None:
+    """v0.8.128 — atexit + SIGTERM (chaining any prior handler) so a graceful
+    stop deletes the row. Only touches signals from the main thread."""
+    global _shutdown_hooks_installed
+    if _shutdown_hooks_installed:
+        return
+    _shutdown_hooks_installed = True
+    atexit.register(stop_heartbeat)
+    if threading.current_thread() is not threading.main_thread():
+        return
+    try:
+        previous = signal.getsignal(signal.SIGTERM)
+
+        def _on_sigterm(signum, frame):  # pragma: no cover — exercised live
+            stop_heartbeat()
+            if callable(previous) and previous not in (signal.SIG_DFL, signal.SIG_IGN):
+                previous(signum, frame)
+            else:
+                raise SystemExit(0)
+
+        signal.signal(signal.SIGTERM, _on_sigterm)
+    except (ValueError, OSError) as exc:
+        logger.debug(f"worker heartbeat: SIGTERM hook not installed: {exc}")
+
+
 def start_heartbeat(interval_sec: float = _DEFAULT_INTERVAL_SEC) -> None:
     """Start the daemon heartbeat thread. Idempotent — a second call
     while the thread is already running is a no-op."""
@@ -126,6 +183,7 @@ def start_heartbeat(interval_sec: float = _DEFAULT_INTERVAL_SEC) -> None:
     with _heartbeat_lock:
         if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
             return
+        _install_shutdown_hooks()
         stop_event = threading.Event()
         thread = threading.Thread(
             target=_heartbeat_loop,
@@ -150,6 +208,8 @@ def stop_heartbeat(timeout: float = 2.0) -> None:
         stop_event.set()
     if thread is not None:
         thread.join(timeout=timeout)
+        # v0.8.128 — only a process that was heartbeating owns a row to remove.
+        _run_blocking(_delete_own_row())
 
 
 async def read_worker_status() -> dict[str, Any]:
@@ -174,10 +234,17 @@ async def read_worker_status() -> dict[str, Any]:
         "age_seconds": None,
         "pid": None,
         "hostname": None,
+        "active_workers_count": 0,
     }
 
     try:
-        rows = await repo_query(f"SELECT * FROM {_HEARTBEAT_RECORD};")
+        rows = await repo_query("SELECT * FROM worker_heartbeat;")
+        # v0.8.128 — rows from workers that died without cleanup stay forever;
+        # prune anything older than a day (best-effort, never fails the read).
+        try:
+            await repo_query("DELETE worker_heartbeat WHERE last_seen < time::now() - 1d;")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"worker heartbeat: prune skipped: {exc}")
     except Exception as exc:
         logger.warning("worker_heartbeat: failed to read heartbeat status: {}", exc)
         return empty
@@ -185,16 +252,37 @@ async def read_worker_status() -> dict[str, Any]:
     if not rows:
         return empty
 
-    row = rows[0]
-    last_seen_dt = _coerce_datetime(row.get("last_seen"))
-    if last_seen_dt is None:
-        return {**empty, "pid": row.get("pid"), "hostname": row.get("hostname")}
+    now = datetime.now(timezone.utc)
+    active_count = 0
+    freshest_row: dict[str, Any] | None = None
+    freshest_age: float | None = None
+    freshest_dt: datetime | None = None
 
-    age_seconds = (datetime.now(timezone.utc) - last_seen_dt).total_seconds()
+    for row in rows:
+        last_seen_dt = _coerce_datetime(row.get("last_seen"))
+        if last_seen_dt is None:
+            continue
+        age_seconds = max(0.0, (now - last_seen_dt).total_seconds())
+        if age_seconds < stale_after:
+            active_count += 1
+        if freshest_age is None or age_seconds < freshest_age:
+            freshest_age = age_seconds
+            freshest_row = row
+            freshest_dt = last_seen_dt
+
+    if freshest_row is None or freshest_dt is None or freshest_age is None:
+        first = rows[0]
+        return {
+            **empty,
+            "pid": first.get("pid"),
+            "hostname": first.get("hostname"),
+        }
+
     return {
-        "online": age_seconds < stale_after,
-        "last_seen": last_seen_dt.isoformat(),
-        "age_seconds": age_seconds,
-        "pid": row.get("pid"),
-        "hostname": row.get("hostname"),
+        "online": active_count > 0,
+        "last_seen": freshest_dt.isoformat(),
+        "age_seconds": freshest_age,
+        "pid": freshest_row.get("pid"),
+        "hostname": freshest_row.get("hostname"),
+        "active_workers_count": active_count,
     }

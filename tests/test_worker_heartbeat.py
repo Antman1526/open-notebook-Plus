@@ -96,7 +96,7 @@ class TestStartStopHeartbeat:
 
         assert calls, "expected at least one repo_query call"
         query_str, bind_vars = calls[0]
-        assert "UPSERT worker_heartbeat:primary" in query_str
+        assert "UPSERT worker_heartbeat:" in query_str
         assert "time::now()" in query_str
         assert bind_vars is not None
         assert set(bind_vars) == {"pid", "hostname", "version"}
@@ -130,6 +130,7 @@ class TestReadWorkerStatus:
         assert status["hostname"] == "host-a"
         assert status["last_seen"] is not None
         assert status["age_seconds"] < 60
+        assert status["active_workers_count"] == 1
 
     async def test_offline_when_stale_row(self, monkeypatch):
         stale = datetime.now(timezone.utc) - timedelta(seconds=999)
@@ -142,6 +143,7 @@ class TestReadWorkerStatus:
 
         assert status["online"] is False
         assert status["age_seconds"] > 180
+        assert status["active_workers_count"] == 0
 
     async def test_offline_when_never_seen(self, monkeypatch):
         async def _fake_repo_query(query_str, vars=None, **kwargs):
@@ -156,6 +158,7 @@ class TestReadWorkerStatus:
             "age_seconds": None,
             "pid": None,
             "hostname": None,
+            "active_workers_count": 0,
         }
 
     async def test_offline_when_query_raises(self, monkeypatch):
@@ -167,6 +170,7 @@ class TestReadWorkerStatus:
 
         assert status["online"] is False
         assert status["last_seen"] is None
+        assert status["active_workers_count"] == 0
 
     async def test_respects_custom_stale_threshold_env(self, monkeypatch):
         monkeypatch.setenv("DEEPER_NOTEBOOK_WORKER_HEARTBEAT_STALE_SEC", "5")
@@ -180,3 +184,87 @@ class TestReadWorkerStatus:
 
         # 10s old row against a 5s configured threshold -> stale/offline.
         assert status["online"] is False
+        assert status["active_workers_count"] == 0
+
+    async def test_multi_worker_reports_count_and_freshest_worker(self, monkeypatch):
+        now = datetime.now(timezone.utc)
+        worker_1 = {"last_seen": now - timedelta(seconds=20), "pid": 101, "hostname": "node-1"}
+        worker_2 = {"last_seen": now - timedelta(seconds=5), "pid": 102, "hostname": "node-2"}
+
+        async def _fake_repo_query(query_str, vars=None, **kwargs):
+            return [worker_1, worker_2]
+
+        monkeypatch.setattr(wh, "repo_query", _fake_repo_query)
+        status = await wh.read_worker_status()
+
+        assert status["online"] is True
+        assert status["active_workers_count"] == 2
+        # Freshest worker is worker_2 (5s ago vs 20s ago)
+        assert status["pid"] == 102
+        assert status["hostname"] == "node-2"
+        assert status["age_seconds"] < 10
+
+    async def test_multi_worker_excludes_stale_from_active_count(self, monkeypatch):
+        now = datetime.now(timezone.utc)
+        active_worker = {"last_seen": now - timedelta(seconds=10), "pid": 201, "hostname": "live-host"}
+        dead_worker = {"last_seen": now - timedelta(seconds=500), "pid": 202, "hostname": "dead-host"}
+
+        async def _fake_repo_query(query_str, vars=None, **kwargs):
+            return [active_worker, dead_worker]
+
+        monkeypatch.setattr(wh, "repo_query", _fake_repo_query)
+        status = await wh.read_worker_status()
+
+        assert status["online"] is True
+        assert status["active_workers_count"] == 1
+        assert status["pid"] == 201
+        assert status["hostname"] == "live-host"
+
+
+class TestShutdownCleanup:
+    def test_stop_heartbeat_deletes_own_row(self, monkeypatch):
+        """v0.8.128 — a graceful stop removes this process's row."""
+        queries: list[str] = []
+
+        async def fake_repo_query(query, params=None):
+            queries.append(query)
+            return []
+
+        monkeypatch.setattr(wh, "repo_query", fake_repo_query)
+        monkeypatch.setattr(wh, "_shutdown_hooks_installed", True)  # no real signal hooks in tests
+        wh.start_heartbeat(interval_sec=60)
+        wh.stop_heartbeat()
+        deletes = [q for q in queries if q.strip().upper().startswith("DELETE")]
+        assert deletes, queries
+        assert wh._worker_instance_key() in deletes[-1]
+
+    def test_stop_without_start_deletes_nothing(self, monkeypatch):
+        queries: list[str] = []
+
+        async def fake_repo_query(query, params=None):
+            queries.append(query)
+            return []
+
+        monkeypatch.setattr(wh, "repo_query", fake_repo_query)
+        wh.stop_heartbeat()
+        assert queries == []
+
+    def test_shutdown_hooks_register_atexit_once(self, monkeypatch):
+        registered: list[object] = []
+        monkeypatch.setattr(wh.atexit, "register", lambda fn: registered.append(fn))
+        monkeypatch.setattr(wh, "_shutdown_hooks_installed", False)
+        monkeypatch.setattr(wh.signal, "signal", lambda *a, **k: None)
+        wh._install_shutdown_hooks()
+        wh._install_shutdown_hooks()
+        assert registered == [wh.stop_heartbeat]
+
+    async def test_read_status_prunes_day_old_rows(self, monkeypatch):
+        queries: list[str] = []
+
+        async def fake_repo_query(query, params=None):
+            queries.append(query)
+            return []
+
+        monkeypatch.setattr(wh, "repo_query", fake_repo_query)
+        await wh.read_worker_status()
+        assert any("DELETE worker_heartbeat WHERE last_seen < time::now() - 1d" in q for q in queries)
