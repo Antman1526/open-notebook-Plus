@@ -25,6 +25,55 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.126 — 2026-09-11 — Stack robustness and the seven live-run items
+
+🛠 **Source creation no longer depends on a worker.** The "synchronous"
+path submitted to the SurrealDB command queue and waited up to 300 s for
+`surreal-commands-worker`; with no worker, every source create hung. The
+`@command` decorator returns the plain coroutine, so the API now awaits
+`process_source_command` in-process under
+`DEEPER_NOTEBOOK_SOURCE_SYNC_TIMEOUT_SEC` (300). The queued async path is
+unchanged and still needs the worker.
+
+🛠 **A dev reload no longer wedges the port.** `run_api.py` passes
+`timeout_graceful_shutdown` (`API_GRACEFUL_SHUTDOWN_SEC`, default 20 s) so
+an in-flight request cannot keep the old process holding :5055. `API_HOST`,
+`API_PORT`, `API_RELOAD` are now documented too.
+
+🐛 **SurrealDB 2.x rejects `ORDER BY` on an unprojected field.** The
+browse-time 500s from the previous live run were `GET /capture/roots`:
+`SELECT path … ORDER BY created` fails to parse. Fixing it exposed
+`repo_create` returning the driver's one-element list despite its dict
+annotation. Both fixed; the same query shape was confirmed live and fixed
+in the MCP notebook list and the vault-note context builder.
+`tests/test_ordered_projection_queries.py` scans backend literals for the
+shape from now on.
+
+🐛 **Studio routes accept bare ids** (`studio_artifact:` / `notebook:`
+prefix optional, matching other routers). **Re-persisting an export writes
+over the recorded path** instead of allocating `-2` and orphaning the old
+file (research bundle included; slide-deck/infographic visual exports not
+yet). **Notebook delete cascades to studio artifacts** (revisions and files
+included) and reports the count; source unlink policy unchanged.
+
+✨ **Podcast episodes are notebook-scoped.** `PodcastEpisode.notebook_id`
+with migration 52 (the table is SCHEMAFULL), persisted at generation
+through the worker command, `get_for_notebook`, an optional filter on
+`GET /podcasts/episodes`, and the bundle export now includes a notebook's
+podcasts; a lookup failure is a warning, never a 500.
+
+🎨 **Frontend.** `ExportNotebookDialog` creates the destination (folder
+formats) or its parent (zip formats) before exporting and shows API errors
+inline. Mind map: "1 match", preview popover clamped inside the canvas,
+MiniMap colours resolved from CSS variables so it is no longer a blank
+white box in dark theme.
+
+🛠 **Degraded mode, settled by evidence.** The transformation-model
+provisioning seen in the live log was the suggested-questions route, which
+already degrades to 200; regression tests lock that in. The credentials
+500s in the shared log come from the test suite's fake-key fixtures, not
+from browsing.
+
 ## v0.8.125 — 2026-09-11 — The v0.8.124 areas, then the app run for real
 
 This release closed the five areas left by v0.8.124 and then launched the
