@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from fastapi.routing import APIRoute
 
-from . import artifacts, common, exports, mind_maps, revisions, workflows
+from . import artifacts, common, exports, mind_maps, retention, revisions, workflows
 from .common import router
 
 StudioGenerateResponse = workflows.StudioGenerateResponse
 
 
-_COMPONENTS = (common, artifacts, revisions, workflows, mind_maps, exports)
+_COMPONENTS = (common, artifacts, revisions, workflows, mind_maps, exports, retention)
 
 
 def _export_legacy_symbols() -> set[str]:
@@ -79,6 +79,9 @@ _ROUTE_ORDER = (
     "regenerate_studio_artifact_export",
     # v0.8.124 — batch export of every completed artifact as one zip.
     "export_studio_artifact_bundle",
+    # v0.8.125 — retention status + dry-run visibility from Settings.
+    "get_studio_retention_status",
+    "run_studio_retention_dry_run",
 )
 
 

@@ -117,6 +117,24 @@
     "status_code": 200
   },
   {
+    "path": "/studio/retention/status",
+    "methods": [
+      "GET"
+    ],
+    "endpoint_name": "get_studio_retention_status",
+    "response_model": "api.routers.studio.retention.RetentionStatusResponse",
+    "status_code": 200
+  },
+  {
+    "path": "/studio/retention/dry-run",
+    "methods": [
+      "POST"
+    ],
+    "endpoint_name": "run_studio_retention_dry_run",
+    "response_model": "api.routers.studio.retention.RetentionDryRunResponse",
+    "status_code": 200
+  },
+  {
     "path": "/studio/artifacts/{artifact_id}/mind-map/branches/{node_path:path}/context",
     "methods": [
       "POST"

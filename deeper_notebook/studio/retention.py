@@ -37,9 +37,10 @@ read the same way in `api/main.py`'s lifespan.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -68,6 +69,36 @@ class RetentionReport:
     exports_removed: int = 0
     bytes_reclaimed: int = 0
     dry_run: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """v0.8.125 — plain-dict form for the Settings status/dry-run API."""
+        return asdict(self)
+
+
+# v0.8.125 — set by `run_retention_loop` after each pass so the Settings
+# status endpoint can show "last run" without a real-time job runner.
+# Module-level state is fine here: one retention loop per process, same
+# pattern as other background-job state in this codebase.
+_LAST_REPORT: Optional[RetentionReport] = None
+_LAST_RUN_AT: Optional[datetime] = None
+
+
+def get_retention_status() -> dict[str, Any]:
+    """v0.8.125 — snapshot for GET /studio/retention/status.
+
+    Reads the same env knobs `run_retention_loop` reads, plus whatever the
+    loop's most recent pass recorded (None until the first pass, and always
+    None while the job is disabled since the loop never runs a pass)."""
+    interval_hours = _retention_interval_hours()
+    return {
+        "enabled": interval_hours > 0,
+        "interval_hours": interval_hours,
+        "revision_keep_per_artifact": _revision_keep_per_artifact(),
+        "stale_export_max_age_days": _stale_export_max_age_days(),
+        "dry_run_default": _retention_dry_run(),
+        "last_run_at": _LAST_RUN_AT.isoformat() if _LAST_RUN_AT is not None else None,
+        "last_report": _LAST_REPORT.to_dict() if _LAST_REPORT is not None else None,
+    }
 
 
 def _revision_keep_per_artifact() -> int:
@@ -388,13 +419,17 @@ async def run_retention_loop(stop_event, *, interval_hours: Optional[float] = No
     dry_run = _retention_dry_run()
     interval_seconds = interval_hours * 3600
 
+    global _LAST_REPORT, _LAST_RUN_AT
+
     while not stop_event.is_set():
         try:
-            await prune_studio_retention(
+            report = await prune_studio_retention(
                 revision_keep_per_artifact=keep,
                 stale_export_max_age_days=max_age_days,
                 dry_run=dry_run,
             )
+            _LAST_REPORT = report
+            _LAST_RUN_AT = datetime.now(timezone.utc)
         except Exception as exc:
             logger.warning("Studio retention loop iteration failed: {}", exc)
 
