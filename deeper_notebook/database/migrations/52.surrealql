@@ -1,0 +1,10 @@
+-- v0.8.126 — notebook-scoped podcast episodes.
+-- The episode table is SCHEMAFULL (migration 7), so SurrealDB silently
+-- drops any field not defined here. PodcastEpisode.notebook_id (new) lets
+-- an episode be listed by the notebook it was generated from; without this
+-- migration, saves would appear to succeed while the value vanished, and
+-- PodcastEpisode.get_for_notebook() would always return nothing against a
+-- real database (unit tests mock the DB and wouldn't catch this).
+DEFINE FIELD IF NOT EXISTS notebook_id ON TABLE episode TYPE option<string>;
+
+DEFINE INDEX IF NOT EXISTS idx_episode_notebook_id ON TABLE episode COLUMNS notebook_id CONCURRENTLY;

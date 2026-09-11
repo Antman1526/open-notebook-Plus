@@ -554,6 +554,13 @@ class PodcastEpisode(ObjectModel):
     editorial_brief: Optional[dict[str, Any]] = Field(default=None)
     model_plan_receipts: list[dict[str, Any]] = Field(default_factory=list)
     retry_submitted: PodcastRetrySubmission | None = Field(default=None)
+    # v0.8.126 — episodes were not notebook-scoped: nothing could list "this
+    # notebook's episodes", so the v0.8.125 bundle export's podcast branch
+    # always bundled zero episodes. None on legacy rows (and on any episode
+    # created from raw content rather than a notebook).
+    notebook_id: Optional[str] = Field(
+        default=None, description="Notebook this episode was generated from, if any"
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -625,3 +632,13 @@ class PodcastEpisode(ObjectModel):
         data["mode"] = normalize_podcast_mode(data.get("mode")).value
 
         return data
+
+    # v0.8.126 — notebook-scoped episode listing (see `notebook_id` above).
+    @classmethod
+    async def get_for_notebook(cls, notebook_id: str) -> list["PodcastEpisode"]:
+        """All episodes generated from the given notebook, newest first."""
+        result = await repo_query(
+            "SELECT * FROM episode WHERE notebook_id = $notebook_id ORDER BY created DESC",
+            {"notebook_id": notebook_id},
+        )
+        return [cls(**row) for row in (result or [])]

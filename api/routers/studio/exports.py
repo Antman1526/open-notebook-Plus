@@ -97,8 +97,9 @@ class NotebookArtifactBundleRequest(BaseModel):
         ),
     )
     # v0.8.125 — include podcast episode audio/transcript alongside artifact
-    # exports. See `_load_notebook_episodes` for why this currently always
-    # bundles zero episodes.
+    # exports. v0.8.126 — episodes are now notebook-scoped (see
+    # `_load_notebook_episodes`), so this actually bundles the notebook's
+    # episodes rather than always zero.
     include_media: bool = Field(
         True,
         description=(
@@ -159,17 +160,23 @@ async def _regenerate_stale_exports(
                 )
 
 
-# v0.8.125 — `PodcastEpisode` (deeper_notebook/podcasts/models.py) has no
-# `notebook_id` field and no relation table links an episode back to a
-# notebook. `PodcastService.list_episodes()` (api/podcast_service.py, the
-# same query GET /podcasts/episodes uses) calls `PodcastEpisode.get_all()`
-# globally with zero notebook filtering — there is no notebook-scoped
-# episode query in this codebase to reuse. Bundling every episode in the
-# install into every notebook's export would silently leak unrelated
-# audio, so this bundles nothing rather than guess. Kept as its own
-# function so a future notebook-episode link only needs a body change here.
-async def _load_notebook_episodes(notebook_id: str) -> list[Any]:
-    return []
+# v0.8.126 — `PodcastEpisode` now carries `notebook_id`
+# (deeper_notebook/podcasts/models.py), set at generation time when a
+# notebook is the source, and `PodcastEpisode.get_for_notebook()` queries
+# on it directly. Delegate to that instead of the previous always-empty
+# stub (v0.8.125) so the bundle's podcast branch actually bundles the
+# notebook's episodes. Kept as its own function so exports.py's own
+# call site doesn't need to change again if episode lookup grows more
+# rules (e.g. excluding failed/in-flight episodes) later.
+async def _load_notebook_episodes(notebook_id: str, warnings: list[str]) -> list[Any]:
+    """Episodes for the notebook; a lookup failure is a warning, never a 500."""
+    from deeper_notebook.podcasts.models import PodcastEpisode
+
+    try:
+        return await PodcastEpisode.get_for_notebook(notebook_id)
+    except Exception as exc:  # noqa: BLE001 — media is optional in a bundle
+        warnings.append(f"Podcast episodes could not be listed: {type(exc).__name__}")
+        return []
 
 
 @router.post(
@@ -210,7 +217,7 @@ async def export_studio_artifact_bundle(
     if req.regenerate_stale:
         await _regenerate_stale_exports(artifacts, warnings)
 
-    episodes = await _load_notebook_episodes(notebook_id) if req.include_media else []
+    episodes = await _load_notebook_episodes(notebook_id, warnings) if req.include_media else []
 
     zip_compression = _COMPRESSION_BY_NAME[req.compression]
     try:

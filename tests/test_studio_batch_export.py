@@ -84,6 +84,18 @@ def _register(fake_cls, notebook_id: str, artifact: "_FakeArtifact") -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_real_episode_lookup(monkeypatch):
+    # v0.8.126 — the bundle route lists notebook episodes; keep unit tests off
+    # the database (tests that need episodes override this per test).
+    from deeper_notebook.podcasts.models import PodcastEpisode
+
+    async def _none(_notebook_id):
+        return []
+
+    monkeypatch.setattr(PodcastEpisode, "get_for_notebook", _none)
+
+
+@pytest.fixture(autouse=True)
 def _evidence_studio_enabled(monkeypatch):
     monkeypatch.setenv("DEEPER_NOTEBOOK_EVIDENCE_STUDIO", "1")
 
@@ -277,10 +289,10 @@ class _FakeEpisode:
 
 
 # v0.8.125 — write_notebook_artifact_bundle's podcast-bundling path, tested
-# directly against the function (not the route): PodcastEpisode has no
-# notebook_id and no notebook relation exists in this codebase, so the
-# route itself always passes `episodes=[]` (see
-# api/routers/studio/exports.py::_load_notebook_episodes).
+# directly against the function (not the route). v0.8.126 — PodcastEpisode
+# is now notebook-scoped (see api/routers/studio/exports.py::
+# _load_notebook_episodes), covered end-to-end via the route below in
+# test_bundle_export_include_media_true_bundles_notebook_episodes.
 def test_write_bundle_includes_podcast_audio_inside_root(monkeypatch, tmp_path):
     audio_root = tmp_path / "podcasts" / "episodes"
     audio_root.mkdir(parents=True)
@@ -453,12 +465,14 @@ def test_bundle_export_include_media_false_bundles_no_podcasts(monkeypatch, tmp_
     assert body["media_count"] == 0
 
 
-def test_bundle_export_include_media_true_bundles_zero_episodes_not_notebook_scoped(
+def test_bundle_export_include_media_true_bundles_notebook_episodes(
     monkeypatch, tmp_path
 ):
-    """PodcastEpisode has no notebook relation, so even with
-    include_media=True (the default) the route bundles zero episodes,
-    without error."""
+    """v0.8.126 — PodcastEpisode is now notebook-scoped: with
+    include_media=True (the default), episodes returned by
+    PodcastEpisode.get_for_notebook are bundled into the zip."""
+    from deeper_notebook.podcasts.models import PodcastEpisode
+
     fake_cls = _install_fake_artifacts(monkeypatch)
     md_path = tmp_path / "report.md"
     md_path.write_text("# Report", encoding="utf-8")
@@ -477,6 +491,22 @@ def test_bundle_export_include_media_true_bundles_zero_episodes_not_notebook_sco
     )
     monkeypatch.setattr(persistence, "get_stale_export_formats", lambda _a: [])
 
+    audio_root = tmp_path / "podcasts" / "episodes"
+    audio_root.mkdir(parents=True)
+    monkeypatch.setattr(persistence, "_PODCAST_AUDIO_ROOT", audio_root)
+    episode_dir = audio_root / "ep1"
+    episode_dir.mkdir()
+    audio_path = episode_dir / "audio.mp3"
+    audio_path.write_bytes(b"fake-mp3-bytes")
+
+    captured_notebook_id = {}
+
+    async def fake_get_for_notebook(notebook_id):
+        captured_notebook_id["value"] = notebook_id
+        return [_FakeEpisode("episode:1", "My Episode", str(audio_path))]
+
+    monkeypatch.setattr(PodcastEpisode, "get_for_notebook", fake_get_for_notebook)
+
     destination = tmp_path / "bundle.zip"
     response = _client().post(
         "/api/studio/notebooks/notebook:alpha/exports/bundle",
@@ -485,8 +515,12 @@ def test_bundle_export_include_media_true_bundles_zero_episodes_not_notebook_sco
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["media_count"] == 0
+    assert body["media_count"] == 1
     assert body["warnings"] == []
+    assert captured_notebook_id["value"] == "notebook:alpha"
+
+    with zipfile.ZipFile(destination) as zf:
+        assert "podcasts/episode-1/audio.mp3" in set(zf.namelist())
 
 
 def test_bundle_export_regenerates_stale_and_records_per_format_failure_as_warning(

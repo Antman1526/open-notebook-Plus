@@ -72,6 +72,9 @@ def full_model_dump(model):
 
 class PodcastGenerationInput(CommandInput):
     episode_profile: str
+    # v0.8.126 — persisted onto the episode so a notebook can list and bundle
+    # its podcasts. Optional: profile-only generations have no notebook.
+    notebook_id: Optional[str] = None
     speaker_profile: str
     episode_name: str
     content: str
@@ -316,6 +319,7 @@ async def generate_podcast_command(
         # Create the record for the episode and associate with the ongoing command
         episode = PodcastEpisode(
             name=input_data.episode_name,
+            notebook_id=input_data.notebook_id,
             episode_profile=full_model_dump(episode_profile.model_dump()),
             speaker_profile=full_model_dump(speaker_profile.model_dump()),
             command=ensure_record_id(input_data.execution_context.command_id)

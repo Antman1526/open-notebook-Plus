@@ -794,6 +794,9 @@ async def list_podcast_episodes(
     limit: int = Query(
         50, ge=1, le=200, description="Return at most N episodes (default 50, max 200)"
     ),
+    notebook_id: Optional[str] = Query(
+        None, description="Scope results to episodes generated from this notebook"
+    ),
 ):
     """List podcast episodes with offset/limit pagination.
 
@@ -810,9 +813,13 @@ async def list_podcast_episodes(
     `audio_file` are skipped — those are in-flight failures that
     never produced anything useful. The `total` header reflects the
     count AFTER this filter is applied, not the raw row count.
+
+    v0.8.126 — optional `notebook_id` scopes the list to episodes
+    generated from that notebook; unfiltered behavior is unchanged
+    when it's omitted.
     """
     try:
-        episodes = await PodcastService.list_episodes()
+        episodes = await PodcastService.list_episodes(notebook_id=notebook_id)
 
         response_episodes = []
         for episode in episodes:

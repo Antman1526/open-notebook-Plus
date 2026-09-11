@@ -288,6 +288,8 @@ class PodcastService:
             # persisted by pre-0.8.95 desktop clients; new workers persist the
             # same text as custom_prompt so retries can be exact.
             command_args = {
+                # v0.8.126 — carried to the worker so the episode is notebook-scoped.
+                "notebook_id": notebook_id,
                 "episode_profile": episode_profile_name,
                 "speaker_profile": speaker_profile_name,
                 "episode_name": episode_name,
@@ -527,9 +529,16 @@ class PodcastService:
             raise HTTPException(status_code=500, detail="Failed to get job status")
 
     @staticmethod
-    async def list_episodes() -> list:
-        """List all podcast episodes"""
+    async def list_episodes(notebook_id: Optional[str] = None) -> list:
+        """List podcast episodes.
+
+        v0.8.126 — optional `notebook_id` scopes the list to episodes
+        generated from that notebook (`PodcastEpisode.get_for_notebook`).
+        Omitted/None keeps the previous unfiltered, all-episodes behavior.
+        """
         try:
+            if notebook_id:
+                return await PodcastEpisode.get_for_notebook(notebook_id)
             episodes = await PodcastEpisode.get_all(order_by="created desc")
             return episodes
         except Exception as e:
