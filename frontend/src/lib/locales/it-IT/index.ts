@@ -655,6 +655,7 @@ export const itIT = {
     resultsFound: "{count} risultati trovati",
     matches: "Corrispondenze ({count})",
     noResultsFor: "Nessun risultato trovato per \"{query}\"",
+    viewEvidence: "Visualizza prove per {title}",
     notSet: "Non impostato",
     saveToNotebook: "Salva nel quaderno",
     saveSuccess: "Salvato con successo nel quaderno",
@@ -1277,6 +1278,7 @@ export const itIT = {
     filesRejectedPlural: "{count} file rifiutati",
     unsupportedType: "tipo non supportato {ext}",
     fileTooLarge: "il file è di {size} MB; il limite è {cap} MB",
+    trustMargin: "La generazione rimane esplicita e verificabile prima che venga prodotto qualsiasi output.",
     export: {
       // v0.8.118 — Localizzazione di ArtifactExportMenu.tsx. Queste stringhe erano hardcoded finora.
       regionLabel: "Esportazioni dell'artefatto",

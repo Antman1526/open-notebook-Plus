@@ -296,3 +296,43 @@ async def test_studio_artifact_delete_cleans_up_export_files(
 
     outside_file.unlink(missing_ok=True)
 
+
+@pytest.mark.asyncio
+async def test_studio_artifact_delete_cleans_up_video_overviews(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    video_root = tmp_path / "video-overviews"
+    video_root.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("deeper_notebook.config.DATA_FOLDER", str(tmp_path))
+
+    artifact = _sample_course_pack_artifact()
+    artifact.id = "studio_artifact:vid123"
+    slug = "studio_artifact-vid123"
+    artifact_dir = video_root / slug
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+
+    mp4_file = artifact_dir / "overview.mp4"
+    vtt_file = artifact_dir / "captions.vtt"
+    mp4_file.write_bytes(b"dummy mp4 data")
+    vtt_file.write_text("WEBVTT\n00:00.000 --> 00:01.000\nHello")
+
+    artifact.export_paths = {
+        "video_mp4": str(mp4_file),
+        "video_captions": str(vtt_file),
+    }
+
+    monkeypatch.setattr(
+        "deeper_notebook.domain.base.repo_delete", AsyncMock(return_value=True)
+    )
+
+    deleted = await artifact.delete()
+    assert deleted is True
+
+    assert not mp4_file.exists()
+    assert not vtt_file.exists()
+    assert not artifact_dir.exists()
+    assert video_root.exists()
+
+

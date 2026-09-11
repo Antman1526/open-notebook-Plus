@@ -627,7 +627,7 @@ export default function StudioPage() {
               )}
             </Button>
           </div>
-        </>} trustMargin={<p>Generation remains explicit and reviewable before any output is produced.</p>} />
+        </>} trustMargin={<p>{t('studio.trustMargin')}</p>} />
       </div>
     </AppShell>
   )

@@ -653,6 +653,7 @@ export const zhCN = {
     resultsFound: "{count} 个结果",
     matches: "匹配项 ({count})",
     noResultsFor: "未找到 “{query}” 的结果",
+    viewEvidence: "查看 {title} 的证据",
     notSet: "未设置",
     saveToNotebook: "保存到笔记本",
     saveSuccess: "成功保存到笔记本",
@@ -1277,6 +1278,7 @@ export const zhCN = {
     filesRejectedPlural: "{count} 个文件被拒绝",
     unsupportedType: "不支持的类型 {ext}",
     fileTooLarge: "文件大小为 {size} MB；上限为 {cap} MB",
+    trustMargin: "在生成任何输出之前，生成过程保持明确且可审查。",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx 本地化。这些字符串此前一直是硬编码的。
       regionLabel: "产物导出",

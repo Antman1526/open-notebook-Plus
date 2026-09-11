@@ -656,6 +656,7 @@ export const trTR = {
     resultsFound: "{count} sonuç bulundu",
     matches: "Eşleşmeler ({count})",
     noResultsFor: "“{query}” için sonuç bulunamadı",
+    viewEvidence: "{title} için kanıtları görüntüle",
     notSet: "Ayarlanmadı",
     saveToNotebook: "Deftere Kaydet",
     saveSuccess: "Deftere başarıyla kaydedildi",
@@ -1277,6 +1278,7 @@ export const trTR = {
     filesRejectedPlural: "{count} dosya reddedildi",
     unsupportedType: "desteklenmeyen tür {ext}",
     fileTooLarge: "dosya {size} MB; üst sınır {cap} MB",
+    trustMargin: "Herhangi bir çıktı üretilmeden önce oluşturma süreci açık ve incelenebilir kalır.",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx yerelleştirmesi. Bu dizeler şimdiye kadar sabit kodlanmıştı.
       regionLabel: "Artefakt dışa aktarımları",

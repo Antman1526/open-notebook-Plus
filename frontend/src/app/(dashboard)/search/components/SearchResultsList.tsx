@@ -131,19 +131,25 @@ function renderSearchResultCard(
                   </p>
                 )}
               </div>
-              {sourceResult && result.matches?.[0] ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => onViewEvidence(result)}
-                  aria-label={`View evidence for ${result.title}`}
-                  className="gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  View evidence for {result.title}
-                </Button>
-              ) : null}
+              {sourceResult && result.matches?.[0] ? (() => {
+                const template = t('searchPage.viewEvidence', { defaultValue: 'View evidence for {title}' })
+                const label = template === 'searchPage.viewEvidence'
+                  ? `View evidence for ${result.title}`
+                  : template.replace('{title}', result.title)
+                return (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onViewEvidence(result)}
+                    aria-label={label}
+                    className="gap-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                )
+              })() : null}
             </div>
           </div>
         </div>

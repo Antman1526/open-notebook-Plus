@@ -657,6 +657,7 @@ export const plPL = {
     resultsFound: "Znaleziono wyników: {count}",
     matches: "Dopasowania ({count})",
     noResultsFor: "Brak wyników dla „{query}”",
+    viewEvidence: "Wyświetl dowody dla {title}",
     notSet: "Nie ustawiono",
     saveToNotebook: "Zapisz do notatnika",
     saveSuccess: "Pomyślnie zapisano do notatnika",
@@ -1278,6 +1279,7 @@ export const plPL = {
     filesRejectedPlural: "Odrzucono plików: {count}",
     unsupportedType: "nieobsługiwany typ {ext}",
     fileTooLarge: "plik ma {size} MB; limit to {cap} MB",
+    trustMargin: "Generowanie pozostaje jawne i możliwe do sprawdzenia przed utworzeniem jakichkolwiek wyników.",
     export: {
       // v0.8.118 — Lokalizacja ArtifactExportMenu.tsx. Te ciągi były dotąd zakodowane na sztywno.
       regionLabel: "Eksporty artefaktu",

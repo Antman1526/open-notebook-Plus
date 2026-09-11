@@ -26,18 +26,21 @@ interface MindMapProps {
   open?: boolean
   onSelectSource?: (sourceId: string) => void
   onSelectNote?: (noteId: string) => void
+  onSelectArtifact?: (artifactId: string) => void
 }
 
 const NODE_BG: Record<string, string> = {
   notebook: 'var(--dn-graph-fallback)',
   source: 'var(--dn-graph-source)',
   note: 'var(--dn-graph-note)',
+  studio_artifact: 'var(--dn-graph-artifact, var(--dn-graph-note))',
 }
 
 const NODE_FG: Record<string, string> = {
   notebook: 'var(--dn-graph-fallback-foreground)',
   source: 'var(--dn-graph-source-foreground)',
   note: 'var(--dn-graph-note-foreground)',
+  studio_artifact: 'var(--dn-graph-artifact-foreground, var(--dn-graph-note-foreground))',
 }
 
 function nodeStyle(type: string): CSSProperties {
@@ -68,6 +71,7 @@ export default function MindMap({
   open = true,
   onSelectSource,
   onSelectNote,
+  onSelectArtifact,
 }: MindMapProps) {
   const { t } = useTranslation()
   const { data, isLoading, isError } = useNotebookGraph(notebookId, open)
@@ -118,8 +122,9 @@ export default function MindMap({
       const type = typeById.get(node.id)
       if (type === 'source') onSelectSource?.(node.id)
       else if (type === 'note') onSelectNote?.(node.id)
+      else if (type === 'studio_artifact') onSelectArtifact?.(node.id)
     },
-    [typeById, onSelectSource, onSelectNote]
+    [typeById, onSelectSource, onSelectNote, onSelectArtifact]
   )
 
   if (isLoading) {

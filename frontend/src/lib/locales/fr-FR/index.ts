@@ -655,6 +655,7 @@ export const frFR = {
     resultsFound: "{count} résultats trouvés",
     matches: "Correspondances ({count})",
     noResultsFor: "Aucun résultat trouvé pour “{query}”",
+    viewEvidence: "Voir les preuves pour {title}",
     notSet: "Non défini",
     saveToNotebook: "Enregistrer dans le Carnet",
     saveSuccess: "Enregistré avec succès dans le carnet",
@@ -1279,6 +1280,7 @@ export const frFR = {
     filesRejectedPlural: "{count} fichiers rejetés",
     unsupportedType: "type non pris en charge {ext}",
     fileTooLarge: "le fichier fait {size} Mo ; la limite est de {cap} Mo",
+    trustMargin: "La génération reste explicite et vérifiable avant toute production de résultat.",
     export: {
       // v0.8.118 — Localisation d'ArtifactExportMenu.tsx. Ces chaînes étaient codées en dur jusqu'ici.
       regionLabel: "Exports de l'artefact",

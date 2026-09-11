@@ -35,10 +35,12 @@ describe('MindMap semantic theme roles', () => {
           { id: 'notebook:one', type: 'notebook', label: 'Notebook' },
           { id: 'source:one', type: 'source', label: 'Source' },
           { id: 'note:one', type: 'note', label: 'Note' },
+          { id: 'artifact:one', type: 'studio_artifact', label: 'Artifact' },
         ],
         edges: [
           { source: 'notebook:one', target: 'source:one' },
           { source: 'notebook:one', target: 'note:one' },
+          { source: 'notebook:one', target: 'artifact:one' },
         ],
       },
       isLoading: false,
@@ -63,7 +65,11 @@ describe('MindMap semantic theme roles', () => {
       background: 'var(--dn-graph-note)',
       color: 'var(--dn-graph-note-foreground)',
     })
-    expect(props.edges).toHaveLength(2)
+    expect(props.nodes.find(node => node.id === 'artifact:one')?.style).toMatchObject({
+      background: 'var(--dn-graph-artifact, var(--dn-graph-note))',
+      color: 'var(--dn-graph-artifact-foreground, var(--dn-graph-note-foreground))',
+    })
+    expect(props.edges).toHaveLength(3)
     expect(props.edges.every(edge => edge.style.stroke === 'var(--dn-graph-edge)')).toBe(true)
   })
 })

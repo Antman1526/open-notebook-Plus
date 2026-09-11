@@ -637,15 +637,25 @@ class Notebook(ObjectModel):
 
     async def get_graph(self) -> dict[str, Any]:
         """v0.8.83 — mind-map graph (improvement roadmap, Batch 3).
+        v0.8.122 — Studio artifacts in mind-map graph with grounded_in source edges.
 
-        Returns the notebook as a hub node with its sources and notes as
-        connected nodes, grounded in the existing ``reference``
-        (source→notebook) and ``artifact`` (note→notebook) edges — no schema
-        change. Node ids are the record ids so the frontend can deep-link to
-        each item; labels are trimmed to keep the payload small.
+        Returns the notebook as a hub node with its sources, notes, and
+        studio artifacts as connected nodes, grounded in the existing
+        ``reference`` (source→notebook), ``artifact`` (note→notebook),
+        ``studio_artifact`` (artifact→notebook), and ``grounded_in``
+        (artifact→source) edges — no schema change. Node ids are the record
+        ids so the frontend can deep-link to each item; labels are trimmed
+        to keep the payload small.
         """
         sources = await self.get_sources()
         notes = await self.get_notes()
+        try:
+            artifacts = await StudioArtifact.get_for_notebook(str(self.id))
+        except Exception as exc:
+            logger.debug(
+                f"Could not load studio artifacts for notebook {self.id} graph: {exc}"
+            )
+            artifacts = []
 
         def _label(text: Optional[str], fallback: str) -> str:
             cleaned = (text or "").strip() or fallback
@@ -659,6 +669,7 @@ class Notebook(ObjectModel):
             }
         ]
         edges: list[dict[str, Any]] = []
+        source_id_set = {str(s.id) for s in sources}
         for s in sources:
             nodes.append(
                 {
@@ -681,6 +692,24 @@ class Notebook(ObjectModel):
             edges.append(
                 {"source": str(self.id), "target": str(n.id), "kind": "artifact"}
             )
+        for a in artifacts:
+            nodes.append(
+                {
+                    "id": str(a.id),
+                    "type": "studio_artifact",
+                    "label": _label(a.title, "Untitled artifact"),
+                    "artifact_type": getattr(a, "artifact_type", None),
+                }
+            )
+            edges.append(
+                {"source": str(self.id), "target": str(a.id), "kind": "studio_artifact"}
+            )
+            for sid in (getattr(a, "source_ids", None) or []):
+                sid_str = str(sid)
+                if sid_str in source_id_set:
+                    edges.append(
+                        {"source": str(a.id), "target": sid_str, "kind": "grounded_in"}
+                    )
         return {"nodes": nodes, "edges": edges}
 
     async def get_chat_sessions(
@@ -1849,28 +1878,63 @@ class StudioArtifact(ObjectModel):
         """Safely unlink on-disk export files when an artifact is deleted.
 
         Guards against symlink traversal and directory escapes by requiring
-        resolved paths to stay inside the Studio export root.
+        resolved paths to stay inside the Studio export root or video root.
+        Also removes artifact-specific video directories if empty.
         """
+        from deeper_notebook.config import DATA_FOLDER
         from deeper_notebook.studio.generation.persistence import _artifact_export_dir
 
+        allowed_roots: list[Path] = []
         try:
-            export_root = _artifact_export_dir().resolve()
+            allowed_roots.append(_artifact_export_dir().resolve())
         except Exception as exc:
             logger.warning(
                 f"Failed to resolve export directory for artifact {self.id} cleanup: {exc}"
             )
-            return
+
+        video_root: Optional[Path] = None
+        try:
+            video_root = (Path(DATA_FOLDER) / "video-overviews").resolve()
+            allowed_roots.append(video_root)
+        except Exception as exc:
+            logger.warning(
+                f"Failed to resolve video directory for artifact {self.id} cleanup: {exc}"
+            )
 
         for path_str in (self.export_paths or {}).values():
             if not path_str or not isinstance(path_str, str):
                 continue
             try:
                 candidate = Path(path_str).resolve()
-                if candidate.is_file() and export_root in candidate.parents:
+                if candidate.is_file() and any(
+                    root in candidate.parents for root in allowed_roots
+                ):
                     candidate.unlink(missing_ok=True)
             except Exception as exc:
                 logger.warning(
                     f"Failed to clean up export file {path_str} for artifact {self.id}: {exc}"
+                )
+
+        if video_root is not None and getattr(self, "id", None):
+            try:
+                slug = str(self.id).replace(":", "-")
+                artifact_video_dir = (video_root / slug).resolve()
+                if artifact_video_dir.is_dir() and video_root in artifact_video_dir.parents:
+                    for child in list(artifact_video_dir.iterdir()):
+                        try:
+                            if child.is_file():
+                                child.unlink(missing_ok=True)
+                        except Exception as c_exc:
+                            logger.warning(
+                                f"Failed to unlink video artifact child file {child}: {c_exc}"
+                            )
+                    try:
+                        artifact_video_dir.rmdir()
+                    except Exception:
+                        pass
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to clean up video overview directory for artifact {self.id}: {exc}"
                 )
 
     async def delete(self) -> bool:

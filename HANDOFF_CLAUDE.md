@@ -3,7 +3,8 @@
 **Date**: September 10, 2026  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits & Additions** (v0.8.115 – v0.8.121):
+**Latest Commits & Additions** (v0.8.115 – v0.8.122):
+- `feat(studio): video overview disk safety, mind map note editing, graph artifact grounding & i18n polish` (v0.8.122)
 - `feat(studio): export content integrity, orphaned export cleanup, and batch stale refresh` (v0.8.121)
 - `db815041`: `feat(studio): surface export staleness and per-item regeneration in Evidence Studio` (v0.8.120)
 - `948b1ba8`: `fix(i18n): resolve translation gaps behind defaultValue across all 14 locales` (v0.8.120)
@@ -77,54 +78,65 @@ All gates are currently passing 100%:
 
 ## 4. Key Architectural Additions & Features
 
-1. **Notebook Export & Executive Synthesis Content Integrity (v0.8.121)**:
+1. **Video Overview Orphaned File Disk Safety (v0.8.122)**:
+   - `StudioArtifact._cleanup_export_files()` in `deeper_notebook/domain/notebook.py` unlinks generated video overview assets (`video_mp4`, `video_captions`) located in `DATA_FOLDER / "video-overviews" / {artifact_slug}` upon artifact deletion.
+   - Enforces strict path traversal containment checks (`candidate.is_file() and any(root in candidate.parents for root in allowed_roots)`).
+   - Recursively sweeps and prunes empty artifact video directories to prevent disk accumulation.
+
+2. **Mind Map Interactive Note Reading & Editing (v0.8.122)**:
+   - Wired `NoteEditorDialog` into `MindMapButton.tsx` and connected `onSelectNote` callback.
+   - Clicking note nodes in the React Flow mind map immediately opens the note editor modal with full markdown editing, live updates, and query cache invalidation.
+
+3. **Knowledge Graph Studio Artifact Grounding (v0.8.122)**:
+   - `Notebook.get_graph()` in `deeper_notebook/domain/notebook.py` fetches `StudioArtifact.get_for_notebook(self.id)`.
+   - Adds studio artifacts as graph nodes (`type: "studio_artifact"`) with radial hub connections and creates `"grounded_in"` edges to the notebook's referenced sources (`source_ids`).
+   - Extended `MindMap.tsx` and semantic theme styling to render artifact nodes and handle `onSelectArtifact`.
+
+4. **Complete 14-Locale i18n Polish (v0.8.122)**:
+   - Localized `searchPage.viewEvidence` (`"View evidence for {title}"`) and `studio.trustMargin` across all 14 supported locales.
+   - Maintained 100% `{title}` placeholder parity and 0 unused keys across all languages.
+
+5. **Notebook Export & Executive Synthesis Content Integrity (v0.8.121)**:
    - `Notebook.get_sources(include_full_text: bool = False)` and `Notebook.get_notes(include_content: bool = False)` in `deeper_notebook/domain/notebook.py`.
    - Preserves fast query times for sidebar lists (`False` default) while supplying full note markdown and source full text to export and synthesis pipelines (`True`).
    - Added lazy hydration fallbacks in `api/routers/exports.py` and `api/routers/notebooks.py` so content is never omitted on disk or in cross-source synthesis.
 
-2. **Orphaned Export File Cleanup (v0.8.121)**:
+6. **Orphaned Export File Cleanup (v0.8.121)**:
    - `StudioArtifact.delete()` in `deeper_notebook/domain/notebook.py` unlinks generated export files on disk before deleting the database row.
    - Guarded against path traversal and escapes: resolves paths and ensures they are strictly contained inside `_artifact_export_dir()`.
 
-3. **Batch Stale Export Refresh (v0.8.121)**:
+7. **Batch Stale Export Refresh (v0.8.121)**:
    - `ArtifactExportMenu.tsx` surfaces a "Refresh all outdated ({count})" batch button whenever two or more export formats are marked stale.
    - Sequentially triggers regeneration per format to prevent disk and database write races.
-   - Complete localization across all 14 languages with 100% `{count}` placeholder parity.
 
-4. **Multi-File On-Demand Export Regeneration & Format Aliases (v0.8.120)**:
+8. **Multi-File On-Demand Export Regeneration & Format Aliases (v0.8.120)**:
    - `POST /studio/artifacts/{id}/exports/{format}` supports course pack bundles (`scorm_package`, `xapi_package`, `research_bundle`, `instructor_guide`, `learner_handout`, `module_checklist`, `assessment`) alongside single-file formats (`docx`, `pptx`, `pdf`, `xlsx`, `csv`, `markdown`, `json`, `png`, `svg`).
    - Format aliases (`scorm`, `xapi`, `bundle`, `svg`, `checklist`) canonicalized via `canonical_export_format`.
 
-5. **Export Freshness Tracking & UI Stale Badging (v0.8.120)**:
+9. **Export Freshness Tracking & UI Stale Badging (v0.8.120)**:
    - Artifact content SHA-256 hashes persisted per export in `output_payload["export_hashes"]`.
    - Backend tracks `stale_export_formats` using `is_export_stale` and exposes them in `StudioArtifactResponse`.
    - Export menu surfaces an amber "Outdated" badge and per-item 1-click regenerate action.
 
-6. **PDF Bold Font Pairing on macOS (v0.8.120)**:
-   - When `Arial Unicode.ttf` is selected as the body font, headings pair with `Arial Bold.ttf` for high-contrast bold titles without fallback degradation.
-
-7. **Stream Resilience (v0.8.115 / v0.8.116)**:
-   - `frontend/src/lib/utils/stream-stall.ts`: per-read idle-timeout guard (`readWithIdleTimeout`, `StreamStallError`).
-   - `api/utils/stream_keepalive.py`: heartbeat frames + server-side idle limit wrapped around the streaming endpoints.
-
-8. **Obsidian Vault Exporter & Bidirectional Sync**:
+10. **Obsidian Vault Exporter & Bidirectional Sync**:
    - `api/routers/exports.py`: Exports notebook contents as `"obsidian_folder"` or `"obsidian_zip"` with YAML frontmatter, `[[wikilinks]]`, `Index.md` Map of Content, and `.obsidian/app.json`.
 
 ---
 
 ## 5. Completed Items & Next Areas to Explore
 
-### Recently Completed in v0.8.120 – v0.8.121
+### Recently Completed in v0.8.121 – v0.8.122
+- [x] **Video overview disk safety and directory cleanup:** `StudioArtifact.delete()` safely unlinks video overviews and deletes artifact video folders with path traversal containment.
+- [x] **Mind map interactive note editing:** Connected `NoteEditorDialog` to React Flow note nodes via `MindMapButton.tsx`.
+- [x] **Knowledge graph studio artifact integration:** Embedded `studio_artifact` nodes and `"grounded_in"` edges into `Notebook.get_graph()`.
+- [x] **14-locale i18n polish:** Zero remaining hardcoded text in search evidence button and studio trust margin, with 100% placeholder parity.
 - [x] **Notebook export and executive synthesis content integrity:** Added `include_full_text` and `include_content` flags to domain methods with defensive fallback lazy hydration.
 - [x] **Orphaned export file cleanup on artifact deletion:** Implemented `StudioArtifact.delete()` with sandboxed file unlinking.
 - [x] **Batch stale export refresh:** Added "Refresh all outdated ({count})" batch button in `ArtifactExportMenu.tsx`.
-- [x] **Translation gaps resolved across all 14 locales:** Audited all 141 unlocalized translation keys; 100% key and placeholder parity maintained across 14 languages.
-- [x] **Bold Unicode font pairing on macOS:** Paired Arial Unicode with Arial Bold for clear headings.
-- [x] **Multi-file on-demand export regeneration:** Supported all course-pack bundle formats with friendly aliases.
 
 ### Next Recommended Areas to Explore
-1. **Inline format previews:** Preview EPUB or SVG diagrams directly inside the Evidence Studio artifact drawer.
-2. **Streaming chunk backpressure:** Fine-tune backpressure buffering for low-memory containerized environments.
+1. **Interactive Artifact Viewer Modal from Mind Map:** Add direct single-click previewing of Studio artifacts when clicking `studio_artifact` nodes in the Mind Map.
+2. **Audio/Video Playback in Mind Map:** Play video overview or podcast directly in an inline popover modal from graph nodes.
 3. **Automated archive compaction:** Compact older studio revisions or export zip bundles past a configurable age threshold.
 
 ---

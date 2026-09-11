@@ -653,6 +653,7 @@ export const zhTW = {
     resultsFound: "{count} 個結果",
     matches: "匹配項 ({count})",
     noResultsFor: "未找到 “{query}” 的結果",
+    viewEvidence: "檢視 {title} 的證據",
     notSet: "未設定",
     saveToNotebook: "儲存到筆記本",
     saveSuccess: "成功儲存到筆記本",
@@ -1277,6 +1278,7 @@ export const zhTW = {
     filesRejectedPlural: "{count} 個檔案被拒絕",
     unsupportedType: "不支援的類型 {ext}",
     fileTooLarge: "檔案大小為 {size} MB；上限為 {cap} MB",
+    trustMargin: "在產生任何輸出之前，生成過程保持明確且可審查。",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx 在地化。這些字串先前一直是硬編碼的。
       regionLabel: "產出物匯出",

@@ -668,6 +668,7 @@ export const enUS = {
     resultsFound: "{count} results found",
     matches: "Matches ({count})",
     noResultsFor: "No results found for “{query}”",
+    viewEvidence: "View evidence for {title}",
     notSet: "Not set",
     saveToNotebook: "Save to Notebook",
     saveSuccess: "Successfully saved to notebook",
@@ -1298,6 +1299,7 @@ export const enUS = {
     filesRejectedPlural: "{count} files rejected",
     unsupportedType: "unsupported type {ext}",
     fileTooLarge: "file is {size} MB; cap is {cap} MB",
+    trustMargin: "Generation remains explicit and reviewable before any output is produced.",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx localization. These strings were
       // hardcoded until now.

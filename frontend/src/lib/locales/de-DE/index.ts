@@ -657,6 +657,7 @@ export const deDE = {
     resultsFound: "{count} Ergebnisse gefunden",
     matches: "Treffer ({count})",
     noResultsFor: "Keine Ergebnisse für „{query}“ gefunden",
+    viewEvidence: "Belege für {title} anzeigen",
     notSet: "Nicht festgelegt",
     saveToNotebook: "In Notebook speichern",
     saveSuccess: "Erfolgreich im Notebook gespeichert",
@@ -1278,6 +1279,7 @@ export const deDE = {
     filesRejectedPlural: "{count} Dateien abgelehnt",
     unsupportedType: "nicht unterstützter Typ {ext}",
     fileTooLarge: "Datei ist {size} MB; das Limit liegt bei {cap} MB",
+    trustMargin: "Die Generierung bleibt explizit und überprüfbar, bevor eine Ausgabe erzeugt wird.",
     export: {
       // v0.8.118 — Lokalisierung von ArtifactExportMenu.tsx. Diese Strings waren bisher hartkodiert.
       regionLabel: "Artefakt-Exporte",

@@ -25,6 +25,16 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.122 — 2026-09-10 — Video Overview Disk Safety, Mind Map Note Editing, Graph Artifact Grounding & i18n Polish
+
+🔒 **Video overview orphaned file disk safety.** `StudioArtifact._cleanup_export_files()` now unlinks video overview assets (`video_mp4`, `video_captions`) located under `DATA_FOLDER / "video-overviews" / {artifact_slug}` upon artifact deletion, preventing disk bloat while enforcing strict directory containment to protect against path traversal. It also safely prunes empty artifact video directories.
+
+✨ **Mind map interactive note reading and editing.** In `MindMapButton.tsx`, wired `onSelectNote` to open `NoteEditorDialog` with full query invalidation, markdown editing, and title management, enabling immediate inline reading and editing of note nodes directly from the React Flow mind map without leaving the view.
+
+✨ **Studio artifact integration and source grounding in knowledge graph.** In `Notebook.get_graph()`, Studio artifacts are now retrieved and incorporated into the notebook's graph as `studio_artifact` nodes linked to the notebook hub. Grounding edges (`kind: "grounded_in"`) are automatically generated between each artifact and its referenced sources (`source_ids`). Extended `MindMap.tsx` and theme styling to render studio artifact nodes seamlessly.
+
+🌐 **14-locale i18n polish & placeholder parity.** Replaced remaining hardcoded UI text in `SearchResultsList.tsx` (`"View evidence for {title}"`) and `studio/page.tsx` (`trustMargin`) with `t('searchPage.viewEvidence')` and `t('studio.trustMargin')`. Both keys were added across all 14 supported locales (`en-US`, `zh-CN`, `zh-TW`, `ja-JP`, `pt-BR`, `es-ES`, `fr-FR`, `de-DE`, `it-IT`, `ru-RU`, `tr-TR`, `pl-PL`, `ca-ES`, `bn-IN`) with 100% `{title}` placeholder parity and 0 unused keys.
+
 ## v0.8.121 — 2026-09-10 — Export & Synthesis Content Integrity, Artifact File Cleanup & Batch Refresh
 
 🐛 **Notebook export and executive synthesis content integrity.** `Notebook.get_sources()` and `Notebook.get_notes()` were previously omitting `source.full_text` and `note.content` via SurrealQL `omit` clauses. When exporting notebooks to disk (`/notebooks/{id}/export`) or generating executive cross-source synthesis (`/notebooks/{id}/synthesis`), note bodies rendered as `(no content)` and source texts rendered as `(no full text)`. Added `include_full_text: bool = False` to `get_sources()` and `include_content: bool = False` to `get_notes()`, keeping sidebar listing fast while allowing export and synthesis callers to fetch full text. Added lazy hydration fallbacks in both endpoints so note and source bodies are always preserved even if called with mocked or partial projections.

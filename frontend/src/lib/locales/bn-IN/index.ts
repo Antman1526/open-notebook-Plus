@@ -653,6 +653,7 @@ export const bnIN = {
     resultsFound: "{count}টি ফলাফল পাওয়া গেছে",
     matches: "মিল ({count})",
     noResultsFor: "\"{query}\" এর জন্য কোনো ফলাফল পাওয়া যায়নি",
+    viewEvidence: "{title} এর প্রমাণ দেখুন",
     notSet: "সেট করা হয়নি",
     saveToNotebook: "নোটবুকে সংরক্ষণ করুন",
     saveSuccess: "সফলভাবে নোটবুকে সংরক্ষণ করা হয়েছে",
@@ -1278,6 +1279,7 @@ export const bnIN = {
     filesRejectedPlural: "{count}টি ফাইল প্রত্যাখ্যাত",
     unsupportedType: "অসমর্থিত ধরন {ext}",
     fileTooLarge: "ফাইলটি {size} MB; সীমা {cap} MB",
+    trustMargin: "কোনো আউটপুট তৈরি হওয়ার আগে জেনারেশন সুস্পষ্ট এবং পর্যালোচনাযোগ্য থাকে।",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx-এর লোকালাইজেশন। এই স্ট্রিংগুলো এতদিন হার্ডকোড করা ছিল।
       regionLabel: "আর্টিফ্যাক্ট এক্সপোর্ট",

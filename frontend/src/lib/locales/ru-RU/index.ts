@@ -653,6 +653,7 @@ export const ruRU = {
     resultsFound: "Найдено результатов: {count}",
     matches: "Совпадения ({count})",
     noResultsFor: "Нет результатов для «{query}»",
+    viewEvidence: "Просмотреть доказательства для {title}",
     notSet: "Не задано",
     saveToNotebook: "Сохранить в блокнот",
     saveSuccess: "Успешно сохранено в блокнот",
@@ -1277,6 +1278,7 @@ export const ruRU = {
     filesRejectedPlural: "{count} файлов отклонено",
     unsupportedType: "неподдерживаемый тип {ext}",
     fileTooLarge: "файл {size} МБ; ограничение {cap} МБ",
+    trustMargin: "Генерация остается явной и проверяемой до создания какого-либо результата.",
     export: {
       // v0.8.118 — Локализация ArtifactExportMenu.tsx. Эти строки были жёстко закодированы до сих пор.
       regionLabel: "Экспорт артефакта",

@@ -653,6 +653,7 @@ export const jaJP = {
     resultsFound: "{count}件の結果",
     matches: "一致（{count}件）",
     noResultsFor: "「{query}」に一致する結果がありません",
+    viewEvidence: "{title} の根拠を表示",
     notSet: "未設定",
     saveToNotebook: "ノートブックに保存",
     saveSuccess: "ノートブックに保存しました",
@@ -1277,6 +1278,7 @@ export const jaJP = {
     filesRejectedPlural: "{count} 個のファイルが拒否されました",
     unsupportedType: "サポートされていない種類 {ext}",
     fileTooLarge: "ファイルサイズ {size} MB；上限は {cap} MB",
+    trustMargin: "出力が生成される前に、生成内容は明示的かつ確認可能な状態に保たれます。",
     export: {
       // v0.8.118 — ArtifactExportMenu.tsx のローカライズ。これらの文字列はこれまでハードコードされていた。
       regionLabel: "アーティファクトのエクスポート",

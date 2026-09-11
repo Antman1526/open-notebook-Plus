@@ -655,6 +655,7 @@ export const esES = {
     resultsFound: "{count} resultados encontrados",
     matches: "Coincidencias ({count})",
     noResultsFor: "No se encontraron resultados para \"{query}\"",
+    viewEvidence: "Ver evidencias de {title}",
     notSet: "No configurado",
     saveToNotebook: "Guardar en cuaderno",
     saveSuccess: "Guardado exitosamente en el cuaderno",
@@ -1280,6 +1281,7 @@ export const esES = {
     filesRejectedPlural: "{count} archivos rechazados",
     unsupportedType: "tipo no admitido {ext}",
     fileTooLarge: "el archivo es de {size} MB; el límite es {cap} MB",
+    trustMargin: "La generación sigue siendo explícita y revisable antes de que se produzca cualquier resultado.",
     export: {
       // v0.8.118 — Localización de ArtifactExportMenu.tsx. Estas cadenas estaban codificadas hasta ahora.
       regionLabel: "Exportaciones del artefacto",

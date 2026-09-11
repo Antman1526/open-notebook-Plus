@@ -654,6 +654,7 @@ export const ptBR = {
     resultsFound: "{count} resultados encontrados",
     matches: "Correspondências ({count})",
     noResultsFor: "Nenhum resultado encontrado para \"{query}\"",
+    viewEvidence: "Ver evidências de {title}",
     notSet: "Não definido",
     saveToNotebook: "Salvar no Caderno",
     saveSuccess: "Salvo no caderno com sucesso",
@@ -1278,6 +1279,7 @@ export const ptBR = {
     filesRejectedPlural: "{count} arquivos rejeitados",
     unsupportedType: "tipo não suportado {ext}",
     fileTooLarge: "o arquivo tem {size} MB; limite é {cap} MB",
+    trustMargin: "A geração permanece explícita e revisável antes de qualquer resultado ser produzido.",
     export: {
       // v0.8.118 — Localização do ArtifactExportMenu.tsx. Essas strings estavam fixas no código até agora.
       regionLabel: "Exportações do artefato",

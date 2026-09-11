@@ -72,3 +72,43 @@ async def test_get_graph_empty_notebook(monkeypatch):
     graph = await _notebook().get_graph()
     assert len(graph["nodes"]) == 1 and graph["nodes"][0]["type"] == "notebook"
     assert graph["edges"] == []
+
+
+async def test_get_graph_includes_studio_artifacts_with_grounding(monkeypatch):
+    from deeper_notebook.domain.notebook import StudioArtifact
+
+    async def fake_sources(self):
+        return [
+            SimpleNamespace(id="source:1", title="Quantum Computing"),
+            SimpleNamespace(id="source:2", title="Neural Nets"),
+        ]
+
+    async def fake_notes(self):
+        return [SimpleNamespace(id="note:1", title="Notes")]
+
+    async def fake_artifacts(notebook_id):
+        return [
+            SimpleNamespace(
+                id="studio_artifact:report_1",
+                title="Executive Brief",
+                artifact_type="report",
+                source_ids=["source:1", "source:non_existent"],
+            )
+        ]
+
+    monkeypatch.setattr(Notebook, "get_sources", fake_sources)
+    monkeypatch.setattr(Notebook, "get_notes", fake_notes)
+    monkeypatch.setattr(StudioArtifact, "get_for_notebook", fake_artifacts)
+
+    graph = await _notebook().get_graph()
+    by_id = {n["id"]: n for n in graph["nodes"]}
+    assert "studio_artifact:report_1" in by_id
+    assert by_id["studio_artifact:report_1"]["type"] == "studio_artifact"
+    assert by_id["studio_artifact:report_1"]["label"] == "Executive Brief"
+    assert by_id["studio_artifact:report_1"]["artifact_type"] == "report"
+
+    edges = {(e["source"], e["target"]): e["kind"] for e in graph["edges"]}
+    assert edges[("notebook:abc", "studio_artifact:report_1")] == "studio_artifact"
+    assert edges[("studio_artifact:report_1", "source:1")] == "grounded_in"
+    assert ("studio_artifact:report_1", "source:non_existent") not in edges
+

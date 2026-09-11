@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { SourceDialog } from '@/components/source/SourceDialog'
+import { NoteEditorDialog } from '@/app/(dashboard)/notebooks/components/NoteEditorDialog'
 import { useTranslation } from '@/lib/hooks/use-translation'
 
 const MindMap = dynamic(() => import('./MindMap'), {
@@ -27,6 +28,7 @@ export function MindMapButton({ notebookId }: { notebookId: string }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [sourceId, setSourceId] = useState<string | null>(null)
+  const [noteId, setNoteId] = useState<string | null>(null)
 
   return (
     <>
@@ -50,6 +52,7 @@ export function MindMapButton({ notebookId }: { notebookId: string }) {
               notebookId={notebookId}
               open={open}
               onSelectSource={(id) => setSourceId(id)}
+              onSelectNote={(id) => setNoteId(id)}
             />
           </div>
         </DialogContent>
@@ -61,6 +64,15 @@ export function MindMapButton({ notebookId }: { notebookId: string }) {
           if (!o) setSourceId(null)
         }}
         sourceId={sourceId ?? ''}
+      />
+
+      <NoteEditorDialog
+        open={!!noteId}
+        onOpenChange={(o) => {
+          if (!o) setNoteId(null)
+        }}
+        notebookId={notebookId}
+        note={noteId ? { id: noteId, title: null, content: null } : undefined}
       />
     </>
   )

@@ -658,6 +658,7 @@ export const caES = {
     resultsFound: "S'han trobat {count} resultats",
     matches: "Coincidències ({count})",
     noResultsFor: "No s'han trobat resultats per a «{query}»",
+    viewEvidence: "Veure evidències per a {title}",
     notSet: "No configurat",
     saveToNotebook: "Desa al quadern",
     saveSuccess: "S'ha desat correctament al quadern",
@@ -1279,6 +1280,7 @@ export const caES = {
     filesRejectedPlural: "{count} fitxers rebutjats",
     unsupportedType: "tipus no admès {ext}",
     fileTooLarge: "el fitxer fa {size} MB; el límit és {cap} MB",
+    trustMargin: "La generació es manté explícita i revisable abans de produir qualsevol resultat.",
     export: {
       // v0.8.118 — Localització d'ArtifactExportMenu.tsx. Aquestes cadenes estaven codificades fins ara.
       regionLabel: "Exportacions de l'artefacte",
