@@ -29,6 +29,7 @@ function makeBundleMock(
       artifact_count: 2,
       skipped: 0,
       warnings: [],
+      media_count: 0,
     }),
     isPending: false,
     ...overrides,
@@ -101,6 +102,38 @@ describe('ExportAllArtifactsDialog', () => {
           compression: 'deflated',
           regenerate_stale: true,
         }),
+      })
+    })
+  })
+
+  // v0.8.125 — "Include podcast audio and video" checkbox, default on.
+  it('submits include_media default-on, and false when unchecked', async () => {
+    const bundleMock = makeBundleMock()
+    vi.mocked(useExportNotebookArtifactBundle).mockReturnValue(bundleMock)
+    render(<ExportAllArtifactsDialog {...baseProps} />)
+
+    await waitFor(() => {
+      const input = screen.getByLabelText('notebooks.exportDestination') as HTMLInputElement
+      expect(input.value).toContain('abc123-artifacts.zip')
+    })
+
+    fireEvent.click(screen.getByText('notebooks.export.button'))
+
+    await waitFor(() => {
+      expect(bundleMock.mutateAsync).toHaveBeenCalledWith({
+        notebookId: 'notebook:abc123',
+        data: expect.objectContaining({ include_media: true }),
+      })
+    })
+
+    vi.mocked(bundleMock.mutateAsync).mockClear()
+    fireEvent.click(screen.getByLabelText('studio.export.includeMedia'))
+    fireEvent.click(screen.getByText('notebooks.export.button'))
+
+    await waitFor(() => {
+      expect(bundleMock.mutateAsync).toHaveBeenCalledWith({
+        notebookId: 'notebook:abc123',
+        data: expect.objectContaining({ include_media: false }),
       })
     })
   })

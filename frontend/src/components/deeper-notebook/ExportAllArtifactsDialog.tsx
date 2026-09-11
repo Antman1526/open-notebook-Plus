@@ -83,6 +83,8 @@ export function ExportAllArtifactsDialog({
   const [overwrite, setOverwrite] = useState(false)
   const [compression, setCompression] = useState<StudioBundleCompression>('deflated')
   const [regenerateStale, setRegenerateStale] = useState(true)
+  // v0.8.125 — include podcast episode audio/transcript in the bundle.
+  const [includeMedia, setIncludeMedia] = useState(true)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const slug = useMemo(() => slugFromNotebookId(notebookId), [notebookId])
@@ -104,6 +106,7 @@ export function ExportAllArtifactsDialog({
       setOverwrite(false)
       setCompression('deflated')
       setRegenerateStale(true)
+      setIncludeMedia(true)
       setPickerOpen(false)
     }
   }, [open])
@@ -123,6 +126,7 @@ export function ExportAllArtifactsDialog({
           overwrite,
           compression,
           regenerate_stale: regenerateStale,
+          include_media: includeMedia,
         },
       })
       onOpenChange(false)
@@ -209,6 +213,21 @@ export function ExportAllArtifactsDialog({
                 className="text-sm leading-tight cursor-pointer"
               >
                 {t('studio.export.regenerateStale')}
+              </Label>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="export-bundle-include-media"
+                checked={includeMedia}
+                onCheckedChange={(v) => setIncludeMedia(v === true)}
+                disabled={isPending}
+              />
+              <Label
+                htmlFor="export-bundle-include-media"
+                className="text-sm leading-tight cursor-pointer"
+              >
+                {t('studio.export.includeMedia')}
               </Label>
             </div>
 
