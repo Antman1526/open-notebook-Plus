@@ -51,6 +51,8 @@ interface SourceCardProps {
   showVisualCover?: boolean
   contextMode?: ContextMode
   onContextModeChange?: (mode: ContextMode) => void
+  // v0.8.128 — explicit notebookId scoping when rendered inside a notebook
+  notebookId?: string | null
 }
 
 const SOURCE_TYPE_ICONS = {
@@ -197,7 +199,8 @@ export function SourceCard({
   showRemoveFromNotebook = false,
   showVisualCover,
   contextMode,
-  onContextModeChange
+  onContextModeChange,
+  notebookId,
 }: SourceCardProps) {
   const { t } = useTranslation()
   const sourceVisualsEnabled = useSourceVisualsEnabled()
@@ -205,6 +208,12 @@ export function SourceCard({
   const shouldShowVisualCover = visualCoversEnabled && (showVisualCover ?? true)
   const openPodcastReview = usePodcastStudioStore((state) => state.open)
   const statusConfigMap = getStatusConfig(t)
+  const resolvedNotebookId =
+    notebookId ??
+    ((source as SourceListResponse & { notebooks?: string[] }).notebooks &&
+    (source as SourceListResponse & { notebooks?: string[] }).notebooks!.length > 0
+      ? (source as SourceListResponse & { notebooks?: string[] }).notebooks![0]
+      : null)
   
   // Only fetch status for sources that might have async processing
   const sourceWithStatus = source as SourceListResponse & { command_id?: string; status?: string }
@@ -532,7 +541,8 @@ export function SourceCard({
                   e.stopPropagation()
                   openPodcastReview(
                     [{ kind: 'app_source', sourceId: source.id, inclusionMode: 'full' }],
-                    'quick'
+                    'quick',
+                    resolvedNotebookId
                   )
                 }}
                 disabled={Boolean(podcastDisabledReason)}
@@ -548,7 +558,8 @@ export function SourceCard({
                   e.stopPropagation()
                   openPodcastReview(
                     [{ kind: 'app_source', sourceId: source.id, inclusionMode: 'insights' }],
-                    'quick'
+                    'quick',
+                    resolvedNotebookId
                   )
                 }}
                 disabled={Boolean(insightsPodcastDisabledReason)}

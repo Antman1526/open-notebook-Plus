@@ -317,6 +317,7 @@ export function SourcesColumn({
                       onRefresh={onRefresh}
                       showVisualCover={showVisualCover}
                       showRemoveFromNotebook={true}
+                      notebookId={notebookId}
                       contextMode={contextSelections?.[source.id]}
                       onContextModeChange={onContextModeChange
                         ? (mode) => onContextModeChange(source.id, mode)
@@ -344,6 +345,7 @@ export function SourcesColumn({
                     onRefresh={onRefresh}
                     showVisualCover={showVisualCover}
                     showRemoveFromNotebook={true}
+                    notebookId={notebookId}
                     contextMode={contextSelections?.[source.id]}
                     onContextModeChange={onContextModeChange
                       ? (mode) => onContextModeChange(source.id, mode)

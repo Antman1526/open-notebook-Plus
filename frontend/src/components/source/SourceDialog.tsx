@@ -12,6 +12,8 @@ interface SourceDialogProps {
   // v0.8.79 — citing sentence to highlight when opened from a citation
   // (improvement roadmap, Batch 2). Forwarded to SourceDetailContent.
   highlightQuery?: string
+  // v0.8.128 — notebookId forward to SourceDetailContent
+  notebookId?: string | null
 }
 
 /**
@@ -20,7 +22,7 @@ interface SourceDialogProps {
  * Displays source details in a modal dialog.
  * Includes a "Chat with source" button that navigates to the full source page in-app.
  */
-export function SourceDialog({ open, onOpenChange, sourceId, highlightQuery }: SourceDialogProps) {
+export function SourceDialog({ open, onOpenChange, sourceId, highlightQuery, notebookId }: SourceDialogProps) {
   const { t } = useTranslation()
   const router = useRouter()
   // Ensure source ID has 'source:' prefix for API calls and routing
@@ -57,6 +59,7 @@ export function SourceDialog({ open, onOpenChange, sourceId, highlightQuery }: S
             onChatClick={handleChatClick}
             onClose={handleClose}
             highlightQuery={highlightQuery}
+            notebookId={notebookId}
           />
         </div>
       </DialogContent>

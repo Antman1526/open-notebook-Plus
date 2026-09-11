@@ -85,6 +85,8 @@ interface SourceDetailContentProps {
   // it as a highlighted "Cited passage" callout at the top. Best-effort: no
   // match → no callout.
   highlightQuery?: string
+  // v0.8.128 — explicit notebookId scoping when opened in notebook context
+  notebookId?: string | null
 }
 
 function formatProvenanceEntries(provenance: Record<string, unknown> | undefined) {
@@ -173,11 +175,15 @@ export function SourceDetailContent({
   onChatClick,
   onClose,
   highlightQuery,
+  notebookId,
 }: SourceDetailContentProps) {
   const { t, language } = useTranslation()
   const queryClient = useQueryClient()
   const openPodcastReview = usePodcastStudioStore((state) => state.open)
   const [source, setSource] = useState<SourceDetailResponse | null>(null)
+  const resolvedNotebookId =
+    notebookId ??
+    (source?.notebooks && source.notebooks.length > 0 ? source.notebooks[0] : null)
   // v0.8.78 — located cited passage (from highlightQuery). Best-effort.
   const [citedPassage, setCitedPassage] = useState<{ snippet: string; score: number } | null>(null)
   const citedPassageRef = useRef<HTMLDivElement | null>(null)
@@ -698,7 +704,7 @@ export function SourceDetailContent({
                 <DropdownMenuItem
                   onClick={() => openPodcastReview([{
                     kind: 'app_source', sourceId: source.id, inclusionMode: 'full',
-                  }], 'quick')}
+                  }], 'quick', resolvedNotebookId)}
                   disabled={hasNoExtractedText}
                 >
                   <Podcast className="mr-2 h-4 w-4" />

@@ -26,6 +26,7 @@ export function QuickPodcastDialog() {
   const isOpen = usePodcastStudioStore((state) => state.isOpen)
   const destination = usePodcastStudioStore((state) => state.destination)
   const selections = usePodcastStudioStore((state) => state.selections)
+  const notebookId = usePodcastStudioStore((state) => state.notebookId)
   const handoffToStudio = usePodcastStudioStore((state) => state.handoffToStudio)
   const dismiss = usePodcastStudioStore((state) => state.dismiss)
   const router = useRouter()
@@ -100,6 +101,7 @@ export function QuickPodcastDialog() {
         speakerProfile,
         episodeName: readiness.preview.entries[0]?.title ?? 'Deeper Notebook podcast',
         reviewOutline: true,
+        notebookId: notebookId ?? undefined,
       })
       dismiss()
     } catch {

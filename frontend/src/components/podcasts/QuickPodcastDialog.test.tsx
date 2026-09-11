@@ -138,7 +138,41 @@ describe('QuickPodcastDialog', () => {
     fireEvent.click(continueButton)
     fireEvent.click(screen.getByRole('button', { name: 'Confirm production' }))
 
-    await waitFor(() => expect(podcastsApi.submitStudioPodcast).toHaveBeenCalledOnce())
+    await waitFor(() => expect(podcastsApi.submitStudioPodcast).toHaveBeenCalledWith(
+      expect.objectContaining({ notebookId: 'notebook:research' }),
+    ))
+    expect(usePodcastStudioStore.getState().isOpen).toBe(false)
+  })
+
+  it('forwards explicit notebookId when opened from a source selection', async () => {
+    vi.mocked(podcastsApi.getPodcastReadiness).mockResolvedValue({
+      preview: {
+        selectionFingerprint: 's'.repeat(64), entries: [{
+          stableId: 'source:one', title: 'Source 1', authorityKind: 'app_owned',
+          relativeLocator: null, revisionId: null, fingerprint: 'd'.repeat(64),
+          state: 'included', reason: 'included', estimatedCharacters: 50,
+        }], includedCharacters: 50, requiresBatchEngine: false,
+        currentWorkerEligible: true, blockedReasons: [],
+      }, stagePlans: [], ready: true, blockedReasons: [],
+    })
+    vi.mocked(podcastsApi.submitStudioPodcast).mockResolvedValue({
+      jobId: 'command:podcast-two', status: 'submitted', message: 'accepted',
+      episodeProfile: 'Local Episode', episodeName: 'Source 1', mode: 'deep_dive',
+    })
+    usePodcastStudioStore.getState().open([{
+      kind: 'app_source', sourceId: 'source:one', inclusionMode: 'full',
+    }], 'quick', 'notebook:alpha')
+
+    render(<QuickPodcastDialog />)
+
+    const continueButton = await screen.findByRole('button', { name: 'Continue to confirmation' })
+    await waitFor(() => expect(continueButton).toBeEnabled())
+    fireEvent.click(continueButton)
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm production' }))
+
+    await waitFor(() => expect(podcastsApi.submitStudioPodcast).toHaveBeenCalledWith(
+      expect.objectContaining({ notebookId: 'notebook:alpha' }),
+    ))
     expect(usePodcastStudioStore.getState().isOpen).toBe(false)
   })
 })

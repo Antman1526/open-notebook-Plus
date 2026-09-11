@@ -76,6 +76,12 @@ describe('podcast studio store', () => {
     expect(usePodcastStudioStore.getState().notebookId).toBeNull()
   })
 
+  it('accepts an explicit notebookId for non-notebook selections', () => {
+    usePodcastStudioStore.getState().open([selection], 'quick', 'notebook:scoped')
+
+    expect(usePodcastStudioStore.getState().notebookId).toBe('notebook:scoped')
+  })
+
   it('clears notebookId on dismiss', () => {
     usePodcastStudioStore.getState().open(
       [{ kind: 'notebook', notebookId: 'notebook:research' }],

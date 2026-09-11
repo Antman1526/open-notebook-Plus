@@ -19,7 +19,11 @@ interface PodcastStudioState {
   // with `notebook_id` without every call site threading it through.
   notebookId: string | null
   invoker: HTMLElement | null
-  open: (selections: PodcastSelection[], destination: PodcastDestination) => void
+  open: (
+    selections: PodcastSelection[],
+    destination: PodcastDestination,
+    explicitNotebookId?: string | null,
+  ) => void
   handoffToStudio: () => void
   dismiss: () => void
 }
@@ -38,7 +42,7 @@ const emptyStudioState = {
  */
 export const usePodcastStudioStore = create<PodcastStudioState>()((set, get) => ({
   ...emptyStudioState,
-  open: (selections, destination) => {
+  open: (selections, destination, explicitNotebookId) => {
     const parsed = selections.map((selection) => podcastSelectionSchema.parse(selection))
     const activeElement = typeof document === 'undefined' ? null : document.activeElement
     const notebookSelection = parsed.find((selection) => selection.kind === 'notebook')
@@ -46,7 +50,7 @@ export const usePodcastStudioStore = create<PodcastStudioState>()((set, get) => 
       isOpen: true,
       destination,
       selections: normalizePodcastSelections(parsed),
-      notebookId: notebookSelection ? notebookSelection.notebookId : null,
+      notebookId: explicitNotebookId ?? (notebookSelection ? notebookSelection.notebookId : null),
       invoker: activeElement instanceof HTMLElement ? activeElement : null,
     })
   },
