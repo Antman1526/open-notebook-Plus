@@ -1,14 +1,14 @@
 # Project Handoff: Deeper Notebook (for Claude)
 
-**Date**: September 11, 2026 (v0.8.126)  
+**Date**: September 11, 2026 (v0.8.127)  
 **Repository Path**: `/Users/Antman/Desktop/BrainPulse Ventures LLC/DeeperNotebook/Deeper-Notebook`  
 **Current Branch**: `main`  
-**Latest Commits & Additions** (v0.8.115 – v0.8.126):
-- `c4c5609b`: `fix(db): ORDER BY fields must be projected on SurrealDB 2.x; repo_create returns a dict` (v0.8.126, found live)
-- `d7b6d1c8`: `fix(frontend): notebook export dialog first-use gap; mind map plural, popover clamp, dark minimap` (v0.8.126)
-- `50eabdb0`: `feat(podcasts): notebook-scoped episodes; bundle export includes a notebook's podcasts` (v0.8.126, migration 52)
-- `22a14da7`: `fix(studio): accept bare ids, stop orphaning export files, cascade notebook delete to artifacts` (v0.8.126)
-- `a3c0f3b7`: `fix(api): synchronous source processing runs in-process; bounded graceful shutdown on reload` (v0.8.126)
+**Latest Commits & Additions** (v0.8.115 – v0.8.127):
+- `04dbc218`: `feat(health): background worker heartbeat surfaced in /healthz/deep and the setup wizard` (v0.8.127, verified live)
+- `e761a3cb`: `feat(podcasts): Podcast Studio submissions carry the notebook id` (v0.8.127)
+- `2a32727e`: `fix(studio): visual exports write over their recorded paths too` (v0.8.127)
+- `0f02658d` / `f4178266`: sources without a command row report "completed"; tests log to a temp dir (v0.8.127)
+- `c4c5609b` / `a3c0f3b7` / `22a14da7` / `50eabdb0` / `d7b6d1c8`: the v0.8.126 batch
 - `0942cfcb` / `a5c50a36` / `d8fb2759`: the three v0.8.125 live-run bug fixes
 - `80d67390` / `711aee12` / `8108d1c1`: bundle export, mind map preview/search/cluster, retention job (v0.8.124)
 - `8b48a72e`: `feat(studio): mind map deep-linking, semantic minimap, bundle cleanup & canvas filter chips` (v0.8.123)
@@ -148,25 +148,22 @@ All gates are currently passing 100%:
 
 ## 5. Completed Items & Next Areas to Explore
 
-### Recently Completed in v0.8.126
-- [x] All seven v0.8.125 open items (notebook export dialog gap, bare studio ids, mind map plural/clamp/minimap, podcast notebook scoping + migration 52, export path orphans, notebook delete cascade to artifacts, degraded-mode 500s settled by evidence).
-- [x] **Stack robustness**: the sync source path runs in-process (no worker needed), and a dev reload releases the port within `API_GRACEFUL_SHUTDOWN_SEC`.
-- [x] **Query-shape class fixed and guarded**: SurrealDB 2.x needs the `ORDER BY` field in the projection. Three live instances fixed (capture roots, MCP notebook list, vault-note context builder); `tests/test_ordered_projection_queries.py` scans for the shape.
-- [x] `repo_create` now honours its dict annotation (the 2.x driver returns a list).
+### Recently Completed in v0.8.127
+- [x] All five v0.8.126 open items: worker heartbeat + health row + wizard hint (verified live: degraded with no worker, online within one tick), sync-source status derivation, visual export orphans, Podcast Studio notebook scoping, test log isolation.
 
 ### Running the stack locally (verified 2026-09-11)
-- SurrealDB: `docker compose -f docker-compose.yml up -d surrealdb` (health at `:8000/health`).
-- API: `API_RELOAD=false uv run --env-file .env run_api.py` while others edit; with reload on, shutdown is now bounded (20 s).
-- Worker: `uv run --env-file .env surreal-commands-worker --import-modules commands` — needed for queued work (podcasts, embeddings, async source processing, studio generation). **Synchronous source creates no longer need it.**
-- Frontend: `cd frontend && npm run dev`. The setup wizard auto-advances once any notebook exists.
-- Seeding a completed course pack without an LLM: create the artifact, then `PATCH /studio/artifacts/{id}` (prefix now optional) with `output_payload = build_structured_payload(parse_artifact_document("course_pack", {...}), markdown)`.
+- SurrealDB: `docker compose -f docker-compose.yml up -d surrealdb`.
+- API: `API_RELOAD=false uv run --env-file .env run_api.py` while others edit (reload shutdown bounded at 20 s anyway).
+- Worker: `DEEPER_NOTEBOOK_WORKER_PROCESS=1 uv run --env-file .env surreal-commands-worker --import-modules commands` (the Makefile and desktop launcher set the flag; without it argv detection still works). `/healthz/deep` and the setup wizard now say when it is missing. Synchronous source creates do not need it.
+- macOS has no `timeout`; do not wrap the worker in it when scripting.
+- Frontend: `cd frontend && npm run dev`.
 
 ### Next Recommended Areas to Explore
-1. **Visual export orphans.** `_persist_visual_exports` (slide deck, infographic) and `_persist_trusted_svg_chart` still allocate a new suffix on re-persist; apply the write-over-recorded-path helper used elsewhere.
-2. **Podcast Studio submit lacks a notebook.** `/podcasts/studio/submit` (`api/schemas/podcast_studio.py`) has no `notebook_id`, so episodes made that way stay unscoped. Thread it through like the standard generation path.
-3. **Test suite writes to the shared log directory.** Fixture runs with fake keys land in `~/.deeper-notebook/logs` as ERROR lines (72 "credentials" failures), polluting live diagnostics. Point tests at a temp log dir in `conftest.py`.
-4. **Queued work has no worker presence signal.** With no worker, async source creates, podcasts and studio generation sit in `queued` until the stale-command reaper marks them failed. Surface "no worker detected" in Settings or the setup wizard (e.g. a heartbeat row the worker writes every minute).
-5. **Anki export SQL is scanned as SurrealQL.** The query-shape guard skips files importing sqlite3; if SQL and SurrealQL ever share a file, tag the SurrealQL strings instead.
+1. **Quick podcast dialog from a source view is still unscoped.** `QuickPodcastDialog.tsx` / `SourceDetailContent.tsx` open the Studio with a source-kind selection that carries no notebook id; thread the notebook id from the source detail context.
+2. **Worker row in Settings, not only the wizard.** The wizard auto-advances once a notebook exists, so a worker that dies later is only visible in `/healthz/deep`; add the worker status to the Settings observability card.
+3. **Heartbeat for multiple workers.** The row is `worker_heartbeat:primary`; a second worker overwrites it. Key by hostname+pid and report a count if horizontal workers are ever run.
+4. **Query-shape guard coverage.** `tests/test_ordered_projection_queries.py` checks literal strings only; templated projections (`{FIELDS}`, `__X__`) are trusted. Consider a runtime check in `repo_query` under a debug flag that parses ORDER BY against the projection.
+5. **`extracted_char_count` as completion proxy.** Status derivation treats any extracted text as "completed"; a source that failed mid-way with partial text would also read completed. If failures can leave partial text, persist an explicit outcome on the source instead.
 
 ---
 

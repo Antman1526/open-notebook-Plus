@@ -25,6 +25,31 @@ focused commit; each ships with regression tests.
 
 ## Unreleased
 
+## v0.8.127 — 2026-09-11 — The five v0.8.126 open items
+
+✨ **Background worker heartbeat.** The worker upserts
+`worker_heartbeat:primary` every 60 s; detection is gated on
+`DEEPER_NOTEBOOK_WORKER_PROCESS` (set by the Makefile and the desktop
+launcher on the worker spawn) or the worker argv, so the API, which
+imports the same `commands` package, never heartbeats. `/healthz/deep`
+gains a `worker` subsystem (`degraded` when absent, never `not_ready`),
+and the setup wizard renders the row with a copy-paste hint. Verified
+live: degraded with no worker, online within one tick after starting it.
+
+🐛 **Processed sources without a command row report "completed."** The
+v0.8.126 in-process sync path (and sources predating command tracking)
+returned no status; list and detail now derive it from extracted text.
+
+🐛 **Visual exports write over their recorded paths** (slide deck,
+infographic, SVG chart), completing the v0.8.126 orphan fix.
+
+✨ **Podcast Studio submissions carry the notebook id**, so Studio-made
+episodes are scoped and bundle with the notebook. The Quick dialog from a
+source detail view still does not; recorded below.
+
+🛠 **Tests no longer write to the operator's log directory.** conftest
+points `DEEPER_NOTEBOOK_LOG_DIR` at a per-session temp dir.
+
 ## v0.8.126 — 2026-09-11 — Stack robustness and the seven live-run items
 
 🛠 **Source creation no longer depends on a worker.** The "synchronous"
